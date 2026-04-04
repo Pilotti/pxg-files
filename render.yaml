@@ -26,10 +26,7 @@ services:
       - key: ADMIN_TOKEN_TTL_SECONDS
         value: "43200"
       - key: CORS_ALLOWED_ORIGINS
-        fromService:
-          type: web
-          name: pxg-files-frontend
-          property: url
+        sync: false
 
   - type: web
     name: pxg-files-frontend
@@ -40,10 +37,7 @@ services:
     autoDeploy: true
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: pxg-files-backend
-          property: url
+        sync: false
     routes:
       - type: rewrite
         source: /*
