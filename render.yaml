@@ -36,6 +36,8 @@ services:
     staticPublishPath: dist
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
       - key: VITE_API_URL
         sync: false
     routes:
