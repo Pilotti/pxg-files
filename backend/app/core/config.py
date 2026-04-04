@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "admin123"
     ADMIN_SECRET_KEY: str = "change-this-admin-secret"
     ADMIN_TOKEN_TTL_SECONDS: int = 43200
+    CORS_ALLOWED_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:8000,http://127.0.0.1:8000,http://localhost,http://127.0.0.1"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -53,6 +54,15 @@ class Settings(BaseSettings):
     @property
     def admin_token_ttl_seconds(self) -> int:
         return self.ADMIN_TOKEN_TTL_SECONDS
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        raw = str(self.CORS_ALLOWED_ORIGINS or "").strip()
+        if not raw:
+            return []
+        if raw == "*":
+            return ["*"]
+        return [item.strip() for item in raw.split(",") if item.strip()]
 
 
 settings = Settings()

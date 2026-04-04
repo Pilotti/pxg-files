@@ -2,7 +2,7 @@ import { STORAGE_KEYS } from "../constants/storage-keys.js"
 import { clearStoredValues, getStoredValue, removeStoredValue, setStoredValue } from "./storage.js"
 import { parseApiError, safeReadJson } from "./http-client.js"
 
-export const API_URL = "/api"
+export const API_URL = (import.meta.env.VITE_API_URL || "/api").trim()
 
 let isRefreshing = false
 let refreshPromise = null
