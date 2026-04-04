@@ -1,0 +1,77 @@
+.app-loader {
+  width: 100%;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.app-loader--fullscreen {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(79, 140, 255, 0.12), transparent 32%),
+    rgba(6, 10, 18, 0.98);
+}
+
+.app-loader__card {
+  width: min(100%, 400px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: rgba(12, 20, 36, 0.96);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.app-loader__spinner {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(79, 140, 255, 0.95);
+  animation: app-loader-spin 0.85s linear infinite;
+}
+
+.app-loader__title {
+  margin-top: 18px;
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.app-loader__text {
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+@keyframes app-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-loader {
+    padding: 16px;
+  }
+
+  .app-loader__card {
+    border-radius: 20px;
+    padding: 24px 18px;
+  }
+
+  .app-loader__title {
+    font-size: 1.18rem;
+  }
+
+  .app-loader__text {
+    font-size: 0.92rem;
+  }
+}

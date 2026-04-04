@@ -1,0 +1,1101 @@
+.hunts-page {
+  position: relative;
+  z-index: 1;
+}
+
+.hunts-page__shell {
+  display: grid;
+  gap: 0;
+}
+
+.hunts-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.hunts-page__header-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.hunts-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.hunts-page__title {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.hunts-page__subtitle {
+  color: var(--text-soft);
+  max-width: 760px;
+  line-height: 1.6;
+}
+
+.hunts-page__primary-button,
+.hunts-page__ghost-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.hunts-page__primary-button:hover,
+.hunts-page__ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.hunts-page__button--selected {
+  border: 1px solid rgba(80, 200, 120, 0.18);
+  background: linear-gradient(180deg, rgba(18, 40, 28, 0.92), rgba(10, 24, 18, 0.88));
+  color: #dff8e7;
+  box-shadow: 0 16px 34px rgba(11, 32, 20, 0.24);
+}
+
+.hunts-page__primary-button {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.26);
+}
+
+.hunts-page__ghost-button {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.hunts-page__primary-button:disabled,
+.hunts-page__ghost-button:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.hunts-page__stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(9, 16, 31, 0.72);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  min-height: 280px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transform-origin: top center;
+  transition: min-height 0.28s ease, padding 0.28s ease, border-radius 0.28s ease,
+    transform 0.28s ease, opacity 0.22s ease, box-shadow 0.28s ease, background 0.28s ease;
+  animation: hunts-card-enter 0.32s ease;
+}
+
+.hunts-page__stat-card--success {
+  border-color: rgba(80, 200, 120, 0.16);
+  background: linear-gradient(180deg, rgba(18, 40, 28, 0.92), rgba(10, 24, 18, 0.88));
+}
+
+.hunts-page__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+  transition: grid-template-columns 0.28s ease, gap 0.28s ease, margin-bottom 0.28s ease;
+}
+
+.hunts-page__stats-grid--history {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.hunts-page__stat-label {
+  color: rgba(226, 232, 255, 0.65);
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+}
+
+.hunts-page__stat-value {
+  font-size: 1.8rem;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.hunts-page__stat-value--split {
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+
+.hunts-page__stat-split-value {
+  display: grid;
+  gap: 6px;
+}
+
+.hunts-page__stat-split-line {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 700;
+}
+
+.hunts-page__stat-split-line--player {
+  color: #8ef0ae;
+}
+
+.hunts-page__stat-card--compact {
+  min-height: 132px;
+  padding: 18px;
+  justify-content: center;
+  transform: scale(0.94) translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14);
+}
+
+.hunts-page__stat-card--compact .hunts-page__stat-value {
+  font-size: 1.35rem;
+}
+
+.hunts-page__stat-card--compact .hunts-page__stat-value--split {
+  font-size: 0.95rem;
+}
+
+.hunts-page__stat-card--compact .hunts-page__stat-label {
+  font-size: 0.7rem;
+}
+
+@keyframes hunts-card-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.hunts-page__history-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: rgba(9, 16, 31, 0.74);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  padding: 18px;
+  display: grid;
+  gap: 18px;
+}
+
+.hunts-page__history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hunts-page__history-title {
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.hunts-page__history-subtitle,
+.hunts-page__history-placeholder-copy {
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.hunts-page__history-placeholder {
+  min-height: 260px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 20px;
+  text-align: center;
+}
+
+.hunts-page__history-placeholder-title {
+  color: #f4f7ff;
+  font-size: 1.04rem;
+}
+
+.hunts-page__upload-box {
+  min-height: 260px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.hunts-page__upload-label {
+  color: #f4f7ff;
+  font-weight: 700;
+}
+
+.hunts-page__upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.hunts-page__dropzone {
+  border: 1px dashed rgba(128, 164, 255, 0.34);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(56, 94, 199, 0.14), transparent 58%),
+    rgba(12, 20, 40, 0.76);
+  padding: 20px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hunts-page__dropzone:hover {
+  border-color: rgba(128, 164, 255, 0.52);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(17, 27, 58, 0.32);
+}
+
+.hunts-page__dropzone-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.05);
+  color: #d9e5ff;
+}
+
+.hunts-page__dropzone-title {
+  color: #f4f7ff;
+  font-size: 1rem;
+}
+
+.hunts-page__dropzone-copy {
+  color: rgba(226, 232, 255, 0.72);
+  font-size: 0.9rem;
+}
+
+.hunts-page__dropzone-action {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e7efff;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.hunts-page__upload-help {
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
+.hunts-page__debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: rgba(226, 232, 255, 0.86);
+  font-size: 0.9rem;
+}
+
+.hunts-page__debug-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.hunts-page__file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hunts-page__file-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hunts-page__file-toolbar-label {
+  color: rgba(226, 232, 255, 0.8);
+  font-size: 0.88rem;
+}
+
+.hunts-page__file-clear {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.hunts-page__file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  gap: 12px;
+}
+
+.hunts-page__file-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hunts-page__file-preview {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  aspect-ratio: 16 / 10;
+}
+
+.hunts-page__file-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hunts-page__file-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+}
+
+.hunts-page__file-name {
+  font-size: 0.78rem;
+  color: #d9e5ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hunts-page__file-remove {
+  border: 1px solid rgba(255, 104, 104, 0.26);
+  background: rgba(255, 104, 104, 0.12);
+  color: #ffd2d2;
+  border-radius: 10px;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.hunts-page__preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(2, 6, 20, 0.86);
+  backdrop-filter: blur(3px);
+  padding: 20px;
+  display: grid;
+  place-items: center;
+}
+
+.hunts-page__preview-modal {
+  width: min(980px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 14, 28, 0.98);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.hunts-page__preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hunts-page__preview-title {
+  color: #f4f7ff;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hunts-page__preview-close {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.hunts-page__preview-image {
+  width: 100%;
+  max-height: calc(100vh - 140px);
+  object-fit: contain;
+  background: #060b14;
+  display: block;
+}
+
+.hunts-page__file-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #d9e5ff;
+  font-size: 0.84rem;
+}
+
+.hunts-page__process-button {
+  width: fit-content;
+}
+
+.hunts-page__upload-error {
+  color: #ffb3b3;
+  border: 1px solid rgba(255, 104, 104, 0.2);
+  background: rgba(255, 104, 104, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.hunts-page__ocr-summary {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(9, 16, 31, 0.66);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.hunts-page__ocr-summary-title {
+  color: #f4f7ff;
+}
+
+.hunts-page__ocr-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  color: rgba(226, 232, 255, 0.76);
+}
+
+.hunts-page__ocr-warnings {
+  margin: 0;
+  padding-left: 18px;
+  color: #ffe39b;
+  display: grid;
+  gap: 6px;
+}
+
+.hunts-page__drops-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(9, 16, 31, 0.6);
+}
+
+.hunts-page__drops-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.hunts-page__drops-table th,
+.hunts-page__drops-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.hunts-page__drops-table th {
+  color: rgba(226, 232, 255, 0.76);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+}
+
+.hunts-page__drops-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hunts-page__table-input {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 0 12px;
+}
+
+.hunts-page__table-input--qty {
+  max-width: 120px;
+}
+
+.hunts-page__item-name {
+  color: #f4f7ff;
+  font-weight: 700;
+}
+
+.hunts-page__item-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hunts-page__item-inline--editable {
+  min-width: 280px;
+}
+
+.hunts-page__item-inline--editable .hunts-page__table-input--qty {
+  width: 88px;
+  flex: 0 0 88px;
+}
+
+.hunts-page__saving-pill {
+  margin-top: 6px;
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  color: #8ef0ae;
+  border: 1px solid rgba(80, 200, 120, 0.2);
+  background: rgba(80, 200, 120, 0.14);
+}
+
+.hunts-page__total-sale-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hunts-page__delta-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.hunts-page__delta-pill--positive {
+  color: #8ef0ae;
+  border: 1px solid rgba(80, 200, 120, 0.25);
+  background: rgba(80, 200, 120, 0.14);
+}
+
+.hunts-page__delta-pill--negative {
+  color: #ff9f9f;
+  border: 1px solid rgba(239, 88, 88, 0.28);
+  background: rgba(239, 88, 88, 0.16);
+}
+
+@media (max-width: 1100px) {
+  .hunts-page__shell {
+    max-width: none;
+  }
+
+  .hunts-page__stats-grid--history {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .hunts-page__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hunts-page__header-actions,
+  .hunts-page__stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hunts-page__header-actions {
+    display: grid;
+  }
+
+  .hunts-page__stat-card {
+    min-height: 220px;
+    padding: 20px;
+  }
+
+  .hunts-page__stats-grid--history {
+    grid-template-columns: 1fr;
+  }
+
+  .hunts-page__stat-card--compact {
+    min-height: 140px;
+    padding: 18px;
+  }
+
+  .hunts-page__stat-value {
+    font-size: 1.5rem;
+  }
+
+  .hunts-page__ocr-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hunts-page__file-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Session list (history) ─────────────────────────────────── */
+
+.hunts-page__session-list {
+  display: grid;
+  gap: 10px;
+}
+
+.hunts-page__session-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(9, 16, 31, 0.6);
+  overflow: hidden;
+  transition: border-color 0.18s ease;
+}
+
+.hunts-page__session-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.hunts-page__session-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+
+.hunts-page__session-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.hunts-page__session-date {
+  color: #f4f7ff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.hunts-page__session-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(226, 232, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.hunts-page__session-badge--enemies {
+  color: #8ef0ae;
+  border-color: rgba(80, 200, 120, 0.22);
+  background: rgba(80, 200, 120, 0.12);
+}
+
+.hunts-page__session-values {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hunts-page__session-label {
+  color: rgba(226, 232, 255, 0.55);
+  font-size: 0.78rem;
+}
+
+.hunts-page__session-value {
+  color: #f4f7ff;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.hunts-page__session-value--player {
+  color: #8ef0ae;
+}
+
+.hunts-page__session-value--positive {
+  color: #8ef0ae;
+}
+
+.hunts-page__session-value--negative {
+  color: #ff6b6b;
+}
+
+.hunts-page__session-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.hunts-page__session-action-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
+
+.hunts-page__session-delete-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 88, 88, 0.28);
+  background: rgba(239, 88, 88, 0.12);
+  color: #ff9f9f;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.16s ease, border-color 0.16s ease;
+  flex-shrink: 0;
+}
+
+.hunts-page__session-delete-btn:hover {
+  background: rgba(239, 88, 88, 0.22);
+  border-color: rgba(239, 88, 88, 0.44);
+}
+
+.hunts-page__session-detail {
+  padding: 14px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: grid;
+  gap: 14px;
+}
+
+.hunts-page__session-notes {
+  color: rgba(226, 232, 255, 0.76);
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hunts-page__session-detail-block {
+  display: grid;
+  gap: 10px;
+}
+
+.hunts-page__session-detail-title {
+  color: rgba(226, 232, 255, 0.65);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hunts-page__session-enemies-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hunts-page__session-enemy-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  color: #d9e5ff;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Nova hunt: save section ─────────────────────────────────── */
+
+.hunts-page__hunt-save-section {
+  display: grid;
+  gap: 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 20px;
+}
+
+.hunts-page__hunt-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.hunts-page__hunt-meta-row {
+  display: grid;
+  gap: 8px;
+}
+
+.hunts-page__hunt-notes-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.hunts-page__hunt-notes-input:focus {
+  outline: none;
+  border-color: rgba(128, 164, 255, 0.36);
+}
+
+/* ── Enemies section ─────────────────────────────────────────── */
+
+.hunts-page__enemies-section {
+  display: grid;
+  gap: 10px;
+}
+
+.hunts-page__enemy-search-wrap {
+  position: relative;
+}
+
+.hunts-page__consumable-add-btn {
+  margin-top: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
+
+.hunts-page__enemy-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(10, 18, 36, 0.98);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.36);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.hunts-page__enemy-suggestion-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #d9e5ff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.hunts-page__enemy-suggestion-btn:hover {
+  background: rgba(128, 164, 255, 0.14);
+}
+
+.hunts-page__enemy-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.hunts-page__enemy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hunts-page__enemy-name {
+  flex: 1;
+  color: #f4f7ff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hunts-page__enemy-empty {
+  color: rgba(226, 232, 255, 0.5);
+  font-size: 0.86rem;
+}
+
+.hunts-page__hunt-saved-msg {
+  color: #8ef0ae;
+  border: 1px solid rgba(80, 200, 120, 0.22);
+  background: rgba(80, 200, 120, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.hunts-page__no-price {
+  color: rgba(226, 232, 255, 0.38);
+}
+
+@media (max-width: 640px) {
+  .hunts-page__hunt-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .hunts-page__session-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .hunts-page__session-values {
+    flex-wrap: wrap;
+  }
+}
+.hunts-page__enemy-suggestion-btn {
+  justify-content: space-between;
+}
+
+.hunts-page__consumable-price {
+  color: rgba(226, 232, 255, 0.48);
+  font-size: 0.8rem;
+  margin-left: auto;
+  padding-left: 12px;
+  flex-shrink: 0;
+}
+
+.hunts-page__consumable-total {
+  color: rgba(255, 200, 110, 0.88);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.hunts-page__consumable-summary {
+  color: rgba(226, 232, 255, 0.72);
+  font-size: 0.88rem;
+  padding: 6px 0 0;
+}
+
+.hunts-page__consumable-summary strong {
+  color: rgba(255, 200, 110, 0.9);
+}
+
+.hunts-page__profit-value--positive {
+  color: #8ef0ae;
+}
+
+.hunts-page__profit-value--negative {
+  color: #ff9f9f;
+}
+
+/* ── Charts section ──────────────────────────────────────────── */
+
+.hunts-page__charts-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 28px;
+  margin-bottom: 8px;
+}
+
+.hunts-page__chart-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  padding: 20px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hunts-page__chart-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.hunts-page__chart-legend {
+  display: flex;
+  gap: 16px;
+}
+
+.hunts-page__chart-legend-item {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.hunts-page__chart-legend-item::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.hunts-page__chart-legend-item--npc::before {
+  background: var(--chart-line-npc, #7c6af5);
+}
+
+.hunts-page__chart-legend-item--venda::before {
+  background: var(--chart-line-venda, #3ec97c);
+}
+
+@media (max-width: 768px) {
+  .hunts-page__charts-section {
+    grid-template-columns: 1fr;
+  }
+}

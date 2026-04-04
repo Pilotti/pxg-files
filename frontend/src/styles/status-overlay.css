@@ -1,0 +1,91 @@
+.ui-feedback-lock {
+  overflow: hidden;
+}
+
+.status-overlay {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-overlay--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(7, 12, 22, 0.72);
+  backdrop-filter: blur(14px);
+  padding: 24px;
+}
+
+.status-overlay--page {
+  min-height: 280px;
+  padding: 16px;
+}
+
+.status-overlay__card {
+  width: min(440px, 100%);
+  min-height: 220px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(17, 26, 43, 0.96), rgba(10, 16, 28, 0.98));
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.34);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.status-overlay__spinner-wrap {
+  width: 76px;
+  height: 76px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.status-overlay__spinner {
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(106, 165, 255, 0.92);
+  border-right-color: rgba(106, 165, 255, 0.58);
+  animation: statusOverlaySpin 0.92s linear infinite;
+}
+
+.status-overlay__spinner-glow {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(106, 165, 255, 0.22), transparent 70%);
+  filter: blur(6px);
+}
+
+.status-overlay__title {
+  font-size: clamp(1.3rem, 2vw, 1.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.status-overlay__text {
+  margin-top: 10px;
+  max-width: 320px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+@keyframes statusOverlaySpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

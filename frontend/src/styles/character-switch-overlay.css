@@ -1,0 +1,54 @@
+.character-switch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(5, 10, 20, 0.62);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.character-switch-overlay__card {
+  width: min(100%, 360px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: rgba(12, 20, 36, 0.96);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.character-switch-overlay__spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(79, 140, 255, 0.95);
+  animation: character-switch-spin 0.8s linear infinite;
+}
+
+.character-switch-overlay__title {
+  margin-top: 16px;
+  font-size: 1.2rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.character-switch-overlay__text {
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+@keyframes character-switch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
