@@ -706,7 +706,7 @@
   font-weight: 600;
 }
 
-@keyframes tasks-page-fade-in {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n\n@keyframes tasks-card-slide-in {\n  from {\n    opacity: 0;\n    transform: translateY(12px) scale(0.98);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0) scale(1);\n  }\n}
+@keyframes tasks-page-fade-in {
   from {
     opacity: 0;
   }
