@@ -962,9 +962,6 @@ export default function HuntsPage() {
               <div className="hunts-page__history-header">
                 <div>
                   <h3 className="hunts-page__history-title">Nova hunt</h3>
-                  <p className="hunts-page__history-subtitle">
-                    Envie screenshots para o OCR do Tesseract reconhecer os drops automaticamente.
-                  </p>
                 </div>
               </div>
 
@@ -988,16 +985,10 @@ export default function HuntsPage() {
                     Clique para selecionar as imagens
                   </strong>
                   <span className="hunts-page__dropzone-copy">
-                    PNG e JPG com envio multiplo para OCR. Voce tambem pode colar com Ctrl+V.
+                    Apenas PNG e JPG. Voce pode enviar varias imagens de uma vez para a analise.
                   </span>
                   <span className="hunts-page__dropzone-action">Escolher arquivos</span>
                 </label>
-
-                <p className="hunts-page__upload-help">
-                  {selectedFiles.length
-                    ? `${selectedFiles.length} arquivo(s) pronto(s) para processamento.`
-                    : "Você pode enviar várias imagens na mesma análise."}
-                </p>
 
                 {selectedFiles.length ? (
                   <>
