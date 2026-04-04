@@ -69,6 +69,16 @@ function formatCompactDlValue(value) {
   return `${compact} dl`
 }
 
+const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png"])
+
+function isAcceptedImageFile(file) {
+  const mimeType = String(file?.type || "").toLowerCase()
+  if (ACCEPTED_IMAGE_MIME_TYPES.has(mimeType)) return true
+
+  const fileName = String(file?.name || "").toLowerCase()
+  return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png")
+}
+
 export default function HuntsPage() {
   const { activeCharacter } = useCharacter()
   const [viewMode, setViewMode] = useState("overview")
@@ -77,6 +87,7 @@ export default function HuntsPage() {
   const [isUploadingDrops, setIsUploadingDrops] = useState(false)
   const [dropsResult, setDropsResult] = useState(null)
   const [dropsRows, setDropsRows] = useState([])
+  const [dropsWarnings, setDropsWarnings] = useState([])
   const [savingPriceMap, setSavingPriceMap] = useState({})
   const [dropsError, setDropsError] = useState("")
 
@@ -361,10 +372,19 @@ export default function HuntsPage() {
     const files = Array.from(event.target.files || [])
     if (!files.length) return
 
+    const acceptedFiles = files.filter(isAcceptedImageFile)
+    const rejectedCount = files.length - acceptedFiles.length
+
+    if (!acceptedFiles.length) {
+      setDropsError("Envie apenas imagens JPG ou PNG.")
+      event.target.value = ""
+      return
+    }
+
     setSelectedFiles((current) => {
       const next = [...current]
 
-      for (const file of files) {
+      for (const file of acceptedFiles) {
         const duplicate = next.some(
           (entry) =>
             entry.file.name === file.name
@@ -385,7 +405,66 @@ export default function HuntsPage() {
     })
 
     event.target.value = ""
-    setDropsError("")
+    setDropsError(rejectedCount > 0 ? "Alguns arquivos foram ignorados. Apenas JPG ou PNG sao permitidos." : "")
+    setDropsWarnings([])
+    setDropsResult(null)
+    setDropsRows([])
+  }
+
+  function handlePasteImages(event) {
+    const clipboardItems = Array.from(event.clipboardData?.items || [])
+    if (!clipboardItems.length) return
+
+    const pastedFiles = clipboardItems
+      .filter((item) => item.kind === "file")
+      .map((item) => item.getAsFile())
+      .filter(Boolean)
+
+    if (!pastedFiles.length) return
+
+    event.preventDefault()
+
+    const acceptedFiles = pastedFiles.filter(isAcceptedImageFile)
+    if (!acceptedFiles.length) {
+      setDropsError("A colagem aceita apenas imagens JPG ou PNG.")
+      return
+    }
+
+    const normalizedFiles = acceptedFiles.map((file, index) => {
+      if (file.name) return file
+
+      const ext = String(file.type || "").toLowerCase() === "image/jpeg" ? "jpg" : "png"
+      return new File([file], `colagem-${Date.now()}-${index}.${ext}`, {
+        type: file.type,
+        lastModified: Date.now(),
+      })
+    })
+
+    setSelectedFiles((current) => {
+      const next = [...current]
+
+      for (const file of normalizedFiles) {
+        const duplicate = next.some(
+          (entry) =>
+            entry.file.name === file.name
+            && entry.file.lastModified === file.lastModified
+            && entry.file.size === file.size,
+        )
+
+        if (duplicate) continue
+
+        next.push({
+          id: `${file.name}-${file.lastModified}-${file.size}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+        })
+      }
+
+      return next
+    })
+
+    setDropsError(acceptedFiles.length !== pastedFiles.length ? "Alguns itens colados foram ignorados. Apenas JPG ou PNG sao permitidos." : "")
+    setDropsWarnings([])
     setDropsResult(null)
     setDropsRows([])
   }
@@ -413,6 +492,7 @@ export default function HuntsPage() {
       return []
     })
     setPreviewFile(null)
+    setDropsWarnings([])
   }
 
   function normalizeRows(rows = []) {
@@ -480,6 +560,7 @@ export default function HuntsPage() {
 
     setIsUploadingDrops(true)
     setDropsError("")
+    setDropsWarnings([])
     setDropsResult(null)
 
     try {
@@ -508,8 +589,10 @@ export default function HuntsPage() {
 
       setDropsResult(payload)
       setDropsRows(normalizeRows(payload?.rows || []))
+      setDropsWarnings(Array.isArray(payload?.warnings) ? payload.warnings : [])
     } catch (error) {
       setDropsError(error.message || "Erro ao enviar imagens para OCR.")
+      setDropsWarnings([])
     } finally {
       setIsUploadingDrops(false)
     }
@@ -674,7 +757,7 @@ export default function HuntsPage() {
           ) : null}
 
           {isHistoryOpen ? (
-            <section className="hunts-page__history-panel">
+            <section className="hunts-page__history-panel" onPaste={handlePasteImages}>
               <div className="hunts-page__history-header">
                 <div>
                   <h3 className="hunts-page__history-title">Histórico de hunts</h3>
@@ -894,7 +977,7 @@ export default function HuntsPage() {
                   id="hunts-drops-upload"
                   className="hunts-page__upload-input"
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                   multiple
                   onChange={handleSelectFiles}
                 />
@@ -905,7 +988,7 @@ export default function HuntsPage() {
                     Clique para selecionar as imagens
                   </strong>
                   <span className="hunts-page__dropzone-copy">
-                    PNG, JPG e WEBP com envio múltiplo para OCR.
+                    PNG e JPG com envio multiplo para OCR. Voce tambem pode colar com Ctrl+V.
                   </span>
                   <span className="hunts-page__dropzone-action">Escolher arquivos</span>
                 </label>
@@ -982,6 +1065,12 @@ export default function HuntsPage() {
                       <span>Drops finais: {dropsResult.summary.final_rows ?? 0}</span>
                     </div>
                   </div>
+                ) : null}
+
+                {dropsWarnings.length ? (
+                  <p className="hunts-page__upload-error" role="status">
+                    {dropsWarnings.join(" | ")}
+                  </p>
                 ) : null}
 
                 {dropsRows.length ? (

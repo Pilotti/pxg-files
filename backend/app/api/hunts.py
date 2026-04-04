@@ -69,15 +69,18 @@ async def process_drops_ocr(
         session_dir = None
 
     for index, upload in enumerate(files, start=1):
+        file_name = upload.filename or f"imagem_{index}"
+
         if not upload.content_type or not upload.content_type.startswith("image/"):
-            warnings.append(f"Arquivo ignorado: {upload.filename}")
+            warnings.append(f"Imagem invalida: {file_name}")
             continue
 
         content = await upload.read()
+        before_lines = len(recognized_lines)
         debug_notes: list[str] = []
         image_debug_dir = None
         if session_dir is not None:
-            image_name = (upload.filename or f"imagem_{index}").replace(" ", "_")
+            image_name = file_name.replace(" ", "_")
             image_name = "".join(char for char in image_name if char.isalnum() or char in {"_", ".", "-"})
             image_debug_dir = session_dir / f"{index:02d}_{image_name}"
 
@@ -85,8 +88,10 @@ async def process_drops_ocr(
             recognized_lines.extend(
                 extract_drop_lines_from_image(content, debug_dir=image_debug_dir, debug_notes=debug_notes)
             )
+            if len(recognized_lines) == before_lines:
+                warnings.append(f"Imagem invalida: {file_name}")
         except Exception as exc:
-            warnings.append(f"Falha ao processar {upload.filename}: {exc}")
+            warnings.append(f"Imagem invalida: {file_name}")
 
     unique_lines, duplicates_ignored = deduplicate_drop_lines(recognized_lines)
     player_prices = get_account_player_prices(current_user.id)
@@ -137,7 +142,7 @@ async def process_drops_ocr(
             duplicates_ignored=duplicates_ignored,
             final_rows=len(rows),
         ),
-        warnings=[],
+        warnings=warnings,
     )
 
 
