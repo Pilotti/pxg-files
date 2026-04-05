@@ -20,14 +20,16 @@ const tabs = [
 ]
 
 const accentOptions = [
-  { value: "violet", label: "Violeta", hint: "Padrão do app" },
-  { value: "blue", label: "Azul", hint: "Mais técnico" },
-  { value: "emerald", label: "Esmeralda", hint: "Mais limpo" },
-  { value: "amber", label: "Âmbar", hint: "Mais quente" },
-  { value: "rose", label: "Rosa", hint: "Mais vibrante" },
-  { value: "cyan", label: "Ciano", hint: "Mais futurista" },
-  { value: "indigo", label: "Índigo", hint: "Mais profundo" },
-  { value: "lime", label: "Lima", hint: "Mais energético" },
+  { value: "volcanic", label: "Volcanic", hint: "Vermelho" },
+  { value: "raibolt", label: "Raibolt", hint: "Amarelo" },
+  { value: "orebound", label: "Orebound", hint: "Preto" },
+  { value: "naturia", label: "Naturia", hint: "Verde" },
+  { value: "gardestrike", label: "Gardestrike", hint: "Marrom" },
+  { value: "ironhard", label: "Ironhard", hint: "Cinza" },
+  { value: "wingeon", label: "Wingeon", hint: "Branco" },
+  { value: "psycraft", label: "Psycraft", hint: "Rosa" },
+  { value: "seavell", label: "Seavell", hint: "Azul" },
+  { value: "malefic", label: "Malefic", hint: "Roxo" },
 ]
 
 const startupOptions = [

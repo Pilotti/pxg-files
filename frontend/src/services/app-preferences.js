@@ -1,7 +1,7 @@
 const STORAGE_KEY = "pxg_app_preferences";
 
 export const DEFAULT_APP_PREFERENCES = {
-  accent: "violet",
+  accent: "malefic",
   density: "comfortable",
   reducedMotion: false,
   startupPage: "/inicio",
@@ -11,46 +11,87 @@ export const DEFAULT_APP_PREFERENCES = {
 };
 
 const ACCENT_MAP = {
-  violet: {
-    primary: "#8b5cf6",
-    strong: "#7c3aed",
-    ring: "rgba(139, 92, 246, 0.24)",
+  volcanic: {
+    primary: "#ef4444",
+    strong: "#b91c1c",
+    ring: "rgba(239, 68, 68, 0.28)",
+    tint: "rgba(239, 68, 68, 0.22)",
+    surface: "rgba(80, 22, 24, 0.38)",
   },
-  blue: {
+  raibolt: {
+    primary: "#facc15",
+    strong: "#ca8a04",
+    ring: "rgba(250, 204, 21, 0.28)",
+    tint: "rgba(250, 204, 21, 0.2)",
+    surface: "rgba(76, 58, 14, 0.36)",
+  },
+  orebound: {
+    primary: "#111827",
+    strong: "#030712",
+    ring: "rgba(148, 163, 184, 0.28)",
+    tint: "rgba(148, 163, 184, 0.16)",
+    surface: "rgba(10, 14, 20, 0.52)",
+  },
+  naturia: {
+    primary: "#22c55e",
+    strong: "#15803d",
+    ring: "rgba(34, 197, 94, 0.28)",
+    tint: "rgba(34, 197, 94, 0.2)",
+    surface: "rgba(18, 64, 36, 0.36)",
+  },
+  gardestrike: {
+    primary: "#92400e",
+    strong: "#78350f",
+    ring: "rgba(180, 83, 9, 0.28)",
+    tint: "rgba(180, 83, 9, 0.2)",
+    surface: "rgba(66, 40, 20, 0.4)",
+  },
+  ironhard: {
+    primary: "#6b7280",
+    strong: "#4b5563",
+    ring: "rgba(107, 114, 128, 0.3)",
+    tint: "rgba(107, 114, 128, 0.18)",
+    surface: "rgba(46, 54, 66, 0.38)",
+  },
+  wingeon: {
+    primary: "#e5e7eb",
+    strong: "#cbd5e1",
+    ring: "rgba(229, 231, 235, 0.3)",
+    tint: "rgba(229, 231, 235, 0.16)",
+    surface: "rgba(90, 101, 121, 0.34)",
+  },
+  psycraft: {
+    primary: "#ec4899",
+    strong: "#be185d",
+    ring: "rgba(236, 72, 153, 0.3)",
+    tint: "rgba(236, 72, 153, 0.2)",
+    surface: "rgba(93, 34, 74, 0.38)",
+  },
+  seavell: {
     primary: "#3b82f6",
-    strong: "#2563eb",
-    ring: "rgba(59, 130, 246, 0.24)",
+    strong: "#1d4ed8",
+    ring: "rgba(59, 130, 246, 0.28)",
+    tint: "rgba(59, 130, 246, 0.2)",
+    surface: "rgba(26, 54, 102, 0.36)",
   },
-  emerald: {
-    primary: "#10b981",
-    strong: "#059669",
-    ring: "rgba(16, 185, 129, 0.24)",
+  malefic: {
+    primary: "#8b5cf6",
+    strong: "#6d28d9",
+    ring: "rgba(139, 92, 246, 0.3)",
+    tint: "rgba(139, 92, 246, 0.2)",
+    surface: "rgba(55, 34, 94, 0.38)",
   },
-  amber: {
-    primary: "#f59e0b",
-    strong: "#d97706",
-    ring: "rgba(245, 158, 11, 0.24)",
-  },
-  rose: {
-    primary: "#f43f5e",
-    strong: "#e11d48",
-    ring: "rgba(244, 63, 94, 0.24)",
-  },
-  cyan: {
-    primary: "#06b6d4",
-    strong: "#0891b2",
-    ring: "rgba(6, 182, 212, 0.24)",
-  },
-  indigo: {
-    primary: "#6366f1",
-    strong: "#4f46e5",
-    ring: "rgba(99, 102, 241, 0.24)",
-  },
-  lime: {
-    primary: "#84cc16",
-    strong: "#65a30d",
-    ring: "rgba(132, 204, 22, 0.24)",
-  },
+};
+
+const LEGACY_ACCENT_MAP = {
+  violet: "malefic",
+  blue: "seavell",
+  emerald: "naturia",
+  amber: "raibolt",
+  rose: "psycraft",
+  cyan: "seavell",
+  indigo: "malefic",
+  lime: "naturia",
 };
 
 const DENSITY_MAP = {
@@ -75,9 +116,16 @@ function isBrowser() {
 }
 
 function normalizePreferences(prefs = {}) {
-  return {
+  const merged = {
     ...DEFAULT_APP_PREFERENCES,
     ...(prefs || {}),
+  };
+
+  const normalizedAccent = LEGACY_ACCENT_MAP[merged.accent] || merged.accent;
+  merged.accent = ACCENT_MAP[normalizedAccent] ? normalizedAccent : DEFAULT_APP_PREFERENCES.accent;
+
+  return {
+    ...merged,
   };
 }
 
@@ -107,12 +155,14 @@ export function applyAppPreferences(prefs = {}) {
 
   const safePrefs = normalizePreferences(prefs);
   const root = document.documentElement;
-  const accent = ACCENT_MAP[safePrefs.accent] || ACCENT_MAP.violet;
+  const accent = ACCENT_MAP[safePrefs.accent] || ACCENT_MAP.malefic;
   const density = DENSITY_MAP[safePrefs.density] || DENSITY_MAP.comfortable;
 
   root.style.setProperty("--primary", accent.primary);
   root.style.setProperty("--primary-strong", accent.strong);
   root.style.setProperty("--focus-ring", accent.ring);
+  root.style.setProperty("--theme-tint", accent.tint);
+  root.style.setProperty("--theme-surface", accent.surface);
   root.style.setProperty("--ui-control-height", density.control);
   root.style.setProperty("--ui-gap", density.contentGap);
   root.style.setProperty("--ui-card-padding", density.cardPadding);

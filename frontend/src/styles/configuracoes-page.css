@@ -233,7 +233,7 @@
 .settings-accent-grid,
 .settings-density-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -288,14 +288,16 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.settings-accent-card__swatch--violet { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-.settings-accent-card__swatch--blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.settings-accent-card__swatch--emerald { background: linear-gradient(135deg, #10b981, #059669); }
-.settings-accent-card__swatch--amber { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.settings-accent-card__swatch--rose { background: linear-gradient(135deg, #f43f5e, #e11d48); }
-.settings-accent-card__swatch--cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
-.settings-accent-card__swatch--indigo { background: linear-gradient(135deg, #6366f1, #4f46e5); }
-.settings-accent-card__swatch--lime { background: linear-gradient(135deg, #84cc16, #65a30d); }
+.settings-accent-card__swatch--volcanic { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.settings-accent-card__swatch--raibolt { background: linear-gradient(135deg, #facc15, #ca8a04); }
+.settings-accent-card__swatch--orebound { background: linear-gradient(135deg, #111827, #030712); }
+.settings-accent-card__swatch--naturia { background: linear-gradient(135deg, #22c55e, #15803d); }
+.settings-accent-card__swatch--gardestrike { background: linear-gradient(135deg, #92400e, #78350f); }
+.settings-accent-card__swatch--ironhard { background: linear-gradient(135deg, #6b7280, #4b5563); }
+.settings-accent-card__swatch--wingeon { background: linear-gradient(135deg, #e5e7eb, #cbd5e1); }
+.settings-accent-card__swatch--psycraft { background: linear-gradient(135deg, #ec4899, #be185d); }
+.settings-accent-card__swatch--seavell { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.settings-accent-card__swatch--malefic { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
 
 .settings-toggle-card {
   display: flex;
@@ -369,9 +371,12 @@
   .settings-page__summary-grid,
   .settings-account-overview,
   .settings-session-grid,
-  .settings-accent-grid,
   .settings-density-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-accent-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -398,10 +403,13 @@
   .settings-page__summary-grid,
   .settings-account-overview,
   .settings-session-grid,
-  .settings-accent-grid,
   .settings-density-grid,
   .settings-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settings-accent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .settings-page__content {
