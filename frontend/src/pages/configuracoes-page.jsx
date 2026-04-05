@@ -69,31 +69,6 @@ export default function ConfiguracoesPage() {
 
   const activeTab = useMemo(() => getActiveTab(location.search), [location.search])
 
-  const settingsCards = useMemo(() => {
-    const totalCharacters = characters.length
-    const favoriteCount = characters.filter((character) => character.is_favorite).length
-
-    return [
-      {
-        label: "Personagens",
-        value: String(totalCharacters).padStart(2, "0"),
-        helper: totalCharacters === 1 ? "1 personagem cadastrado" : `${totalCharacters} personagens cadastrados`,
-      },
-      {
-        label: "Ativo agora",
-        value: activeCharacter?.nome || activeCharacter?.name || "—",
-        helper: activeCharacter
-          ? `${activeCharacter.cla || activeCharacter.class || "Sem clã"} • Nível ${activeCharacter.nivel ?? activeCharacter.level ?? "--"}`
-          : "Nenhum personagem selecionado",
-      },
-      {
-        label: "Principal",
-        value: favoriteCount > 0 ? "Definido" : "Pendente",
-        helper: favoriteCount > 0 ? "Há um principal marcado na conta" : "Defina um favorito para a conta",
-      },
-    ]
-  }, [characters, activeCharacter])
-
   useEffect(() => {
     setPreferences(readAppPreferences())
   }, [])
@@ -175,35 +150,6 @@ export default function ConfiguracoesPage() {
       <Topbar />
 
       <section className="settings-page">
-        <div className="settings-page__hero">
-          <div>
-            <span className="settings-page__eyebrow">Painel de preferências</span>
-            <h1 className="settings-page__hero-title">Tudo o que personaliza a sua conta.</h1>
-            <p className="settings-page__hero-text">
-              As alterações abaixo já são aplicadas na interface e ficam salvas localmente neste dispositivo.
-            </p>
-          </div>
-
-          <div className={saveState === "error" ? "settings-page__save-state settings-page__save-state--error" : "settings-page__save-state"}>
-            {saveState === "idle" && "Preferências prontas"}
-            {saveState === "saved" && "Preferências salvas"}
-            {saveState === "reset" && "Preferências restauradas"}
-            {saveState === "exported" && "Backup exportado"}
-            {saveState === "imported" && "Preferências importadas"}
-            {saveState === "error" && "Arquivo inválido"}
-          </div>
-        </div>
-
-        <div className="settings-page__summary-grid">
-          {settingsCards.map((card) => (
-            <article key={card.label} className="settings-summary-card">
-              <span className="settings-summary-card__label">{card.label}</span>
-              <strong className="settings-summary-card__value">{card.value}</strong>
-              <p className="settings-summary-card__helper">{card.helper}</p>
-            </article>
-          ))}
-        </div>
-
         <div className="settings-page__tabs" role="tablist" aria-label="Abas das configurações">
           {tabs.map((tab) => (
             <button
