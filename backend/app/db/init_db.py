@@ -76,9 +76,9 @@ def init_db() -> None:
 
         seed_tasks()
         seed_quests()
-    except Exception:
+    except Exception as exc:
         # Keep startup resilient even if seed data has inconsistencies.
-        pass
+        print(f"[init_db] seed sync skipped due to error: {exc}")
 
 
 if __name__ == "__main__":

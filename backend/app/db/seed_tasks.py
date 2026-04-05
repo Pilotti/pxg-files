@@ -383,16 +383,27 @@ quests = [
 def seed_tasks():
     db = SessionLocal()
     try:
-        existing = db.query(TaskTemplate).first()
-        if existing:
-            print("Tasks já existem. Abortando seed.")
-            return
-
+        added = 0
+        skipped = 0
         for task in tasks:
+            existing = (
+                db.query(TaskTemplate)
+                .filter(
+                    TaskTemplate.name == task["name"],
+                    TaskTemplate.continent == task["continent"],
+                )
+                .first()
+            )
+
+            if existing:
+                skipped += 1
+                continue
+
             db.add(TaskTemplate(**task))
+            added += 1
 
         db.commit()
-        print(f"Tasks inseridas com sucesso: {len(tasks)} tasks adicionadas.")
+        print(f"Tasks sincronizadas: {added} adicionadas, {skipped} já existentes.")
     finally:
         db.close()
 
@@ -400,16 +411,27 @@ def seed_tasks():
 def seed_quests():
     db = SessionLocal()
     try:
-        existing = db.query(QuestTemplate).first()
-        if existing:
-            print("Quests já existem. Abortando seed.")
-            return
-
+        added = 0
+        skipped = 0
         for quest in quests:
+            existing = (
+                db.query(QuestTemplate)
+                .filter(
+                    QuestTemplate.name == quest["name"],
+                    QuestTemplate.continent == quest["continent"],
+                )
+                .first()
+            )
+
+            if existing:
+                skipped += 1
+                continue
+
             db.add(QuestTemplate(**quest))
+            added += 1
 
         db.commit()
-        print("Quests inseridas com sucesso.")
+        print(f"Quests sincronizadas: {added} adicionadas, {skipped} já existentes.")
     finally:
         db.close()
 
