@@ -222,6 +222,22 @@ export default function HuntsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCharacter?.id])
 
+  useEffect(() => {
+    if (!isNewHuntOpen) return undefined
+
+    const handleWindowPaste = (event) => {
+      const target = event.target
+      const isEditableTarget = target instanceof HTMLElement
+        && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+
+      if (isEditableTarget) return
+      handlePasteImages(event)
+    }
+
+    window.addEventListener("paste", handleWindowPaste)
+    return () => window.removeEventListener("paste", handleWindowPaste)
+  }, [isNewHuntOpen])
+
   async function loadSessions() {
     setIsLoadingHistory(true)
     try {
@@ -757,7 +773,7 @@ export default function HuntsPage() {
           ) : null}
 
           {isHistoryOpen ? (
-            <section className="hunts-page__history-panel" onPaste={handlePasteImages}>
+            <section className="hunts-page__history-panel">
               <div className="hunts-page__history-header">
                 <div>
                   <h3 className="hunts-page__history-title">Histórico de hunts</h3>
@@ -958,7 +974,7 @@ export default function HuntsPage() {
           ) : null}
 
           {isNewHuntOpen ? (
-            <section className="hunts-page__history-panel">
+            <section className="hunts-page__history-panel" onPaste={handlePasteImages}>
               <div className="hunts-page__history-header">
                 <div>
                   <h3 className="hunts-page__history-title">Nova hunt</h3>
@@ -985,7 +1001,7 @@ export default function HuntsPage() {
                     Clique para selecionar as imagens
                   </strong>
                   <span className="hunts-page__dropzone-copy">
-                    Apenas PNG e JPG. Voce pode enviar varias imagens de uma vez para a analise.
+                    Apenas PNG e JPG. Voce pode enviar varias imagens de uma vez para a analise ou colar com Ctrl+V.
                   </span>
                   <span className="hunts-page__dropzone-action">Escolher arquivos</span>
                 </label>

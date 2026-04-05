@@ -881,8 +881,14 @@
 }
 
 .hunts-page__hunt-notes-input:focus {
-  outline: none;
-  border-color: rgba(128, 164, 255, 0.36);
+  outline: 2px solid rgba(255, 255, 255, 0.95);
+  outline-offset: 0;
+  border-color: rgba(255, 255, 255, 0.95);
+}
+
+.hunts-page__hunt-notes-input:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.95);
+  outline-offset: 0;
 }
 
 /* ── Enemies section ─────────────────────────────────────────── */
