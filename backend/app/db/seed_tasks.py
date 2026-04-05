@@ -1,4 +1,7 @@
-﻿from app.db.session import SessionLocal
+﻿import json
+from pathlib import Path
+
+from app.db.session import SessionLocal
 from app.models.tasks import TaskTemplate, QuestTemplate
 
 
@@ -17,6 +20,82 @@ def normalize_task_type(task_type_str):
         return "outro"
     
     return normalized
+
+
+def normalize_continent(continent_value):
+    normalized = str(continent_value or "").strip().lower()
+    if normalized == "nightmare":
+        return "nightmare_world"
+    return normalized
+
+
+def load_versioned_nightmare_tasks():
+    data_file = Path(__file__).resolve().parents[1] / "data" / "nightmare_tasks.json"
+    if not data_file.exists():
+        return []
+
+    try:
+        raw_data = json.loads(data_file.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"Erro ao ler nightmare_tasks.json: {exc}")
+        return []
+
+    if not isinstance(raw_data, list):
+        print("nightmare_tasks.json inválido: esperado array de tasks.")
+        return []
+
+    normalized_tasks = []
+    for item in raw_data:
+        if not isinstance(item, dict):
+            continue
+
+        name = str(item.get("name") or "").strip()
+        continent = normalize_continent(item.get("continent"))
+        if not name or not continent:
+            continue
+
+        raw_task_type = item.get("task_type")
+        if isinstance(raw_task_type, list):
+            task_type = [normalize_task_type(value) for value in raw_task_type if str(value).strip()]
+        elif raw_task_type is None:
+            task_type = []
+        else:
+            task_type = [normalize_task_type(raw_task_type)]
+
+        if not task_type:
+            task_type = ["outro"]
+
+        nw_level = item.get("nw_level")
+        if nw_level in ("", None):
+            nw_level = None
+        else:
+            try:
+                nw_level = int(nw_level)
+            except Exception:
+                nw_level = None
+
+        try:
+            min_level = int(item.get("min_level", 0))
+        except Exception:
+            min_level = 0
+
+        normalized_tasks.append(
+            {
+                "name": name,
+                "description": item.get("description"),
+                "task_type": task_type,
+                "continent": continent,
+                "min_level": min_level,
+                "nw_level": nw_level,
+                "reward_text": item.get("reward_text"),
+                "npc_name": item.get("npc_name") or name,
+                "coordinate": item.get("coordinate") or "0,0,0",
+                "city": item.get("city"),
+                "is_active": bool(item.get("is_active", True)),
+            }
+        )
+
+    return normalized_tasks
 
 
 # ========================
@@ -383,9 +462,15 @@ quests = [
 def seed_tasks():
     db = SessionLocal()
     try:
+        nightmare_tasks = load_versioned_nightmare_tasks()
+        all_tasks = tasks + nightmare_tasks
+
+        if nightmare_tasks:
+            print(f"nightmare_tasks.json carregado: {len(nightmare_tasks)} tasks")
+
         added = 0
         skipped = 0
-        for task in tasks:
+        for task in all_tasks:
             existing = (
                 db.query(TaskTemplate)
                 .filter(
