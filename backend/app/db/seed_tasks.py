@@ -29,19 +29,19 @@ def normalize_continent(continent_value):
     return normalized
 
 
-def load_versioned_nightmare_tasks():
-    data_file = Path(__file__).resolve().parents[1] / "data" / "nightmare_tasks.json"
+def load_versioned_tasks_file(file_name, label):
+    data_file = Path(__file__).resolve().parents[1] / "data" / file_name
     if not data_file.exists():
         return []
 
     try:
         raw_data = json.loads(data_file.read_text(encoding="utf-8"))
     except Exception as exc:
-        print(f"Erro ao ler nightmare_tasks.json: {exc}")
+        print(f"Erro ao ler {label}: {exc}")
         return []
 
     if not isinstance(raw_data, list):
-        print("nightmare_tasks.json inválido: esperado array de tasks.")
+        print(f"{label} inválido: esperado array de tasks.")
         return []
 
     normalized_tasks = []
@@ -462,29 +462,28 @@ quests = [
 def seed_tasks():
     db = SessionLocal()
     try:
-        nightmare_tasks = load_versioned_nightmare_tasks()
-        all_tasks = tasks + nightmare_tasks
+        catalog_tasks = load_versioned_tasks_file("tasks_to_add.json", "tasks_to_add.json")
+        nightmare_tasks = load_versioned_tasks_file("nightmare_tasks.json", "nightmare_tasks.json")
+        all_tasks = tasks + catalog_tasks + nightmare_tasks
+
+        if catalog_tasks:
+            print(f"tasks_to_add.json carregado: {len(catalog_tasks)} tasks")
 
         if nightmare_tasks:
             print(f"nightmare_tasks.json carregado: {len(nightmare_tasks)} tasks")
 
+        existing_keys = set(db.query(TaskTemplate.name, TaskTemplate.continent).all())
         added = 0
         skipped = 0
         for task in all_tasks:
-            existing = (
-                db.query(TaskTemplate)
-                .filter(
-                    TaskTemplate.name == task["name"],
-                    TaskTemplate.continent == task["continent"],
-                )
-                .first()
-            )
+            key = (task["name"], task["continent"])
 
-            if existing:
+            if key in existing_keys:
                 skipped += 1
                 continue
 
             db.add(TaskTemplate(**task))
+            existing_keys.add(key)
             added += 1
 
         db.commit()
