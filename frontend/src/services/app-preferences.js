@@ -31,6 +31,26 @@ const ACCENT_MAP = {
     strong: "#d97706",
     ring: "rgba(245, 158, 11, 0.24)",
   },
+  rose: {
+    primary: "#f43f5e",
+    strong: "#e11d48",
+    ring: "rgba(244, 63, 94, 0.24)",
+  },
+  cyan: {
+    primary: "#06b6d4",
+    strong: "#0891b2",
+    ring: "rgba(6, 182, 212, 0.24)",
+  },
+  indigo: {
+    primary: "#6366f1",
+    strong: "#4f46e5",
+    ring: "rgba(99, 102, 241, 0.24)",
+  },
+  lime: {
+    primary: "#84cc16",
+    strong: "#65a30d",
+    ring: "rgba(132, 204, 22, 0.24)",
+  },
 };
 
 const DENSITY_MAP = {

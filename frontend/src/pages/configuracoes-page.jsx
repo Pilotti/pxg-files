@@ -25,11 +25,10 @@ const accentOptions = [
   { value: "blue", label: "Azul", hint: "Mais técnico" },
   { value: "emerald", label: "Esmeralda", hint: "Mais limpo" },
   { value: "amber", label: "Âmbar", hint: "Mais quente" },
-]
-
-const densityOptions = [
-  { value: "comfortable", label: "Confortável", description: "Mais respiro entre blocos e leitura mais leve." },
-  { value: "compact", label: "Compacta", description: "Mais informação visível por tela." },
+  { value: "rose", label: "Rosa", hint: "Mais vibrante" },
+  { value: "cyan", label: "Ciano", hint: "Mais futurista" },
+  { value: "indigo", label: "Índigo", hint: "Mais profundo" },
+  { value: "lime", label: "Lima", hint: "Mais energético" },
 ]
 
 const startupOptions = [
@@ -209,9 +208,9 @@ export default function ConfiguracoesPage() {
                 <header className="settings-panel__header">
                   <div>
                     <span className="settings-panel__eyebrow">Aparência</span>
-                    <h2 className="settings-panel__title">Visual e densidade</h2>
+                    <h2 className="settings-panel__title">Paleta de cores</h2>
                     <p className="settings-panel__description">
-                      Defina o tom principal da interface, densidade dos blocos e comportamento das animações.
+                      Escolha o tom principal da interface.
                     </p>
                   </div>
                 </header>
@@ -230,32 +229,6 @@ export default function ConfiguracoesPage() {
                     </button>
                   ))}
                 </div>
-
-                <div className="settings-density-grid">
-                  {densityOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={preferences.density === option.value ? "settings-density-card settings-density-card--active" : "settings-density-card"}
-                      onClick={() => updatePreference("density", option.value)}
-                    >
-                      <strong>{option.label}</strong>
-                      <p>{option.description}</p>
-                    </button>
-                  ))}
-                </div>
-
-                <label className="settings-toggle-card">
-                  <div>
-                    <strong>Reduzir animações</strong>
-                    <p>Desacelera transições e reduz movimento visual no app inteiro.</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={preferences.reducedMotion}
-                    onChange={(event) => updatePreference("reducedMotion", event.target.checked)}
-                  />
-                </label>
               </section>
             </div>
           )}
