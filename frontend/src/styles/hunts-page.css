@@ -72,9 +72,9 @@
 }
 
 .hunts-page__ghost-button {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
+  color: var(--theme-menu-text);
 }
 
 .hunts-page__primary-button:disabled,
@@ -85,10 +85,15 @@
   box-shadow: none;
 }
 
+.hunts-page__ghost-button:hover:not(:disabled) {
+  background: var(--theme-field-surface-hover);
+  border-color: var(--theme-primary-soft-border);
+}
+
 .hunts-page__stat-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-field-border);
   border-radius: 22px;
-  background: rgba(9, 16, 31, 0.72);
+  background: linear-gradient(180deg, var(--theme-panel-surface), var(--theme-panel-surface-strong));
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
   min-height: 280px;
   padding: 24px;
@@ -183,9 +188,9 @@
 }
 
 .hunts-page__history-panel {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-primary-soft-border);
   border-radius: 24px;
-  background: rgba(9, 16, 31, 0.74);
+  background: linear-gradient(180deg, var(--theme-panel-surface), var(--theme-panel-surface-strong));
   backdrop-filter: blur(10px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
   padding: 18px;
@@ -213,14 +218,14 @@
 
 .hunts-page__history-placeholder {
   min-height: 260px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--theme-field-border);
   border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--theme-field-surface) 84%, transparent);
   padding: 20px;
   text-align: center;
 }
@@ -232,9 +237,9 @@
 
 .hunts-page__upload-box {
   min-height: 260px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--theme-field-border);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.02);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--theme-panel-surface) 76%, transparent), color-mix(in srgb, var(--theme-panel-surface-strong) 84%, transparent));
   padding: 20px;
   display: grid;
   gap: 12px;
@@ -256,11 +261,11 @@
 }
 
 .hunts-page__dropzone {
-  border: 1px dashed rgba(128, 164, 255, 0.34);
+  border: 1px dashed var(--theme-primary-soft-border);
   border-radius: 18px;
   background:
-    radial-gradient(circle at top, rgba(56, 94, 199, 0.14), transparent 58%),
-    rgba(12, 20, 40, 0.76);
+    radial-gradient(circle at top, color-mix(in srgb, var(--theme-primary-soft-bg) 92%, transparent), transparent 58%),
+    color-mix(in srgb, var(--theme-panel-surface-strong) 84%, transparent);
   padding: 20px;
   display: grid;
   justify-items: center;
@@ -271,9 +276,9 @@
 }
 
 .hunts-page__dropzone:hover {
-  border-color: rgba(128, 164, 255, 0.52);
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--theme-primary-soft-border));
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(17, 27, 58, 0.32);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-primary-shadow) 88%, rgba(0, 0, 0, 0.18));
 }
 
 .hunts-page__dropzone-icon {
@@ -283,9 +288,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: rgba(255, 255, 255, 0.05);
-  color: #d9e5ff;
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
+  color: var(--theme-primary-soft-text);
 }
 
 .hunts-page__dropzone-title {
@@ -302,9 +307,9 @@
   min-height: 36px;
   padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.05);
-  color: #e7efff;
+  border: 1px solid var(--theme-primary-soft-border);
+  background: var(--theme-primary-soft-bg);
+  color: var(--theme-primary-soft-text);
   display: inline-flex;
   align-items: center;
   font-weight: 700;
@@ -360,10 +365,10 @@
 }
 
 .hunts-page__file-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-field-border);
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--theme-field-surface) 82%, transparent);
 }
 
 .hunts-page__file-preview {
@@ -423,8 +428,8 @@
 .hunts-page__preview-modal {
   width: min(980px, 100%);
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(8, 14, 28, 0.98);
+  border: 1px solid var(--theme-primary-soft-border);
+  background: linear-gradient(180deg, var(--theme-panel-surface), var(--theme-panel-surface-strong));
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   overflow: hidden;
 }
@@ -435,7 +440,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--theme-field-border);
 }
 
 .hunts-page__preview-title {
@@ -455,7 +460,7 @@
   width: 100%;
   max-height: calc(100vh - 140px);
   object-fit: contain;
-  background: #060b14;
+  background: color-mix(in srgb, var(--theme-panel-surface-strong) 88%, #050913);
   display: block;
 }
 
@@ -484,9 +489,9 @@
 }
 
 .hunts-page__ocr-summary {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-field-border);
   border-radius: 16px;
-  background: rgba(9, 16, 31, 0.66);
+  background: color-mix(in srgb, var(--theme-panel-surface) 84%, transparent);
   padding: 14px;
   display: grid;
   gap: 10px;
@@ -513,9 +518,9 @@
 
 .hunts-page__drops-table-wrap {
   overflow-x: auto;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-field-border);
   border-radius: 16px;
-  background: rgba(9, 16, 31, 0.6);
+  background: color-mix(in srgb, var(--theme-panel-surface-strong) 82%, transparent);
 }
 
 .hunts-page__drops-table {
@@ -539,17 +544,30 @@
 }
 
 .hunts-page__drops-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-field-surface);
 }
 
 .hunts-page__table-input {
   width: 100%;
   min-height: 42px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
   color: var(--text);
   padding: 0 12px;
+}
+
+.hunts-page__table-input:hover,
+.hunts-page__hunt-notes-input:hover {
+  background: var(--theme-field-surface-hover);
+}
+
+.hunts-page__table-input:focus,
+.hunts-page__hunt-notes-input:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+  border-color: var(--theme-primary-soft-border);
+  background: var(--theme-field-surface-hover);
 }
 
 .hunts-page__table-input--qty {
@@ -679,15 +697,15 @@
 }
 
 .hunts-page__session-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-field-border);
   border-radius: 18px;
-  background: rgba(9, 16, 31, 0.6);
+  background: color-mix(in srgb, var(--theme-panel-surface) 82%, transparent);
   overflow: hidden;
   transition: border-color 0.18s ease;
 }
 
 .hunts-page__session-card:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: var(--theme-primary-soft-border);
 }
 
 .hunts-page__session-row {
@@ -723,8 +741,8 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: rgba(226, 232, 255, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
   white-space: nowrap;
 }
 
@@ -801,7 +819,7 @@
 
 .hunts-page__session-detail {
   padding: 14px 16px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--theme-field-border);
   display: grid;
   gap: 14px;
 }
@@ -811,8 +829,8 @@
   line-height: 1.6;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
 }
 
 .hunts-page__session-detail-block {
@@ -841,8 +859,8 @@
   border-radius: 999px;
   font-size: 0.82rem;
   color: #d9e5ff;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
 }
 
 /* ── Nova hunt: save section ─────────────────────────────────── */
@@ -850,9 +868,9 @@
 .hunts-page__hunt-save-section {
   display: grid;
   gap: 18px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--theme-primary-soft-border);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.02);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--theme-panel-surface) 80%, transparent), color-mix(in srgb, var(--theme-panel-surface-strong) 86%, transparent));
   padding: 20px;
 }
 
@@ -870,8 +888,8 @@
 .hunts-page__hunt-notes-input {
   width: 100%;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--theme-field-border);
+  background: var(--theme-field-surface);
   color: var(--text);
   padding: 10px 12px;
   resize: vertical;
@@ -880,14 +898,8 @@
   line-height: 1.5;
 }
 
-.hunts-page__hunt-notes-input:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.95);
-  outline-offset: 0;
-  border-color: rgba(255, 255, 255, 0.95);
-}
-
 .hunts-page__hunt-notes-input:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.95);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 0;
 }
 
@@ -918,9 +930,9 @@
   list-style: none;
   margin: 0;
   padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--theme-primary-soft-border);
   border-radius: 14px;
-  background: rgba(10, 18, 36, 0.98);
+  background: linear-gradient(180deg, var(--theme-panel-surface), var(--theme-panel-surface-strong));
   backdrop-filter: blur(8px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.36);
   max-height: 260px;
@@ -942,7 +954,7 @@
 }
 
 .hunts-page__enemy-suggestion-btn:hover {
-  background: rgba(128, 164, 255, 0.14);
+  background: var(--theme-primary-soft-bg);
 }
 
 .hunts-page__enemy-list {
@@ -958,9 +970,9 @@
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--theme-field-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-field-surface);
 }
 
 .hunts-page__enemy-name {
@@ -1054,8 +1066,8 @@
 }
 
 .hunts-page__chart-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--theme-panel-surface) 80%, transparent);
+  border: 1px solid var(--theme-field-border);
   border-radius: 18px;
   padding: 20px 16px 16px;
   display: flex;

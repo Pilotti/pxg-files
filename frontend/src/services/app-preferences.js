@@ -19,11 +19,11 @@ const ACCENT_MAP = {
     surface: "rgba(80, 22, 24, 0.38)",
   },
   raibolt: {
-    primary: "#facc15",
-    strong: "#ca8a04",
-    ring: "rgba(250, 204, 21, 0.28)",
-    tint: "rgba(250, 204, 21, 0.2)",
-    surface: "rgba(76, 58, 14, 0.36)",
+    primary: "#d4a411",
+    strong: "#976b00",
+    ring: "rgba(212, 164, 17, 0.28)",
+    tint: "rgba(212, 164, 17, 0.18)",
+    surface: "rgba(64, 45, 8, 0.44)",
   },
   orebound: {
     primary: "#111827",
@@ -54,11 +54,11 @@ const ACCENT_MAP = {
     surface: "rgba(46, 54, 66, 0.38)",
   },
   wingeon: {
-    primary: "#e5e7eb",
-    strong: "#cbd5e1",
-    ring: "rgba(229, 231, 235, 0.3)",
-    tint: "rgba(229, 231, 235, 0.16)",
-    surface: "rgba(90, 101, 121, 0.34)",
+    primary: "#b8c2d1",
+    strong: "#8290a7",
+    ring: "rgba(184, 194, 209, 0.28)",
+    tint: "rgba(184, 194, 209, 0.12)",
+    surface: "rgba(49, 59, 79, 0.48)",
   },
   psycraft: {
     primary: "#ec4899",
@@ -156,19 +156,26 @@ function buildThemeTokens(accent) {
     return {
       onPrimary: "#0f172a",
       primarySoftText: "#0f172a",
-      primarySoftBackground: `color-mix(in srgb, ${accent.primary} 18%, rgba(255, 255, 255, 0.88))`,
-      primarySoftBackgroundAlt: `color-mix(in srgb, ${accent.primary} 10%, rgba(248, 250, 252, 0.76))`,
-      primarySoftBorder: `color-mix(in srgb, ${accent.primary} 36%, rgba(15, 23, 42, 0.14))`,
+      primarySoftBackground: `color-mix(in srgb, ${accent.primary} 20%, rgba(194, 203, 218, 0.34))`,
+      primarySoftBackgroundAlt: `color-mix(in srgb, ${accent.primary} 10%, rgba(148, 163, 184, 0.18))`,
+      primarySoftBorder: `color-mix(in srgb, ${accent.primary} 34%, rgba(15, 23, 42, 0.2))`,
       primaryShadow: `color-mix(in srgb, ${accent.primary} 22%, transparent)`,
+      appBgTop: `color-mix(in srgb, ${accent.primary} 14%, rgba(10, 15, 28, 0.96))`,
+      appBgBottom: `color-mix(in srgb, ${accent.strong} 18%, rgba(7, 11, 21, 0.98))`,
+      panelSurface: `color-mix(in srgb, ${accent.primary} 14%, rgba(13, 19, 34, 0.84))`,
+      panelSurfaceStrong: `color-mix(in srgb, ${accent.strong} 18%, rgba(8, 13, 24, 0.94))`,
+      fieldSurface: `color-mix(in srgb, ${accent.primary} 11%, rgba(15, 23, 42, 0.64))`,
+      fieldSurfaceHover: `color-mix(in srgb, ${accent.primary} 16%, rgba(15, 23, 42, 0.74))`,
+      fieldBorder: `color-mix(in srgb, ${accent.primary} 30%, rgba(148, 163, 184, 0.24))`,
       menuText: "#0f172a",
       menuTextSoft: "rgba(15, 23, 42, 0.72)",
-      menuSurface: `color-mix(in srgb, ${accent.primary} 18%, rgba(248, 250, 252, 0.9))`,
-      menuSurfaceStrong: `color-mix(in srgb, ${accent.primary} 24%, rgba(255, 255, 255, 0.96))`,
-      menuBorder: `color-mix(in srgb, ${accent.primary} 40%, rgba(15, 23, 42, 0.16))`,
-      menuHover: `color-mix(in srgb, ${accent.primary} 14%, rgba(15, 23, 42, 0.08))`,
-      menuActive: `color-mix(in srgb, ${accent.primary} 30%, rgba(255, 255, 255, 0.62))`,
-      brandSurface: `linear-gradient(135deg, color-mix(in srgb, ${accent.primary} 28%, rgba(255, 255, 255, 0.94)), color-mix(in srgb, ${accent.strong} 12%, rgba(248, 250, 252, 0.9)))`,
-      brandBorder: `color-mix(in srgb, ${accent.primary} 50%, rgba(15, 23, 42, 0.18))`,
+      menuSurface: `color-mix(in srgb, ${accent.primary} 16%, rgba(19, 28, 48, 0.88))`,
+      menuSurfaceStrong: `color-mix(in srgb, ${accent.primary} 22%, rgba(12, 18, 33, 0.96))`,
+      menuBorder: `color-mix(in srgb, ${accent.primary} 32%, rgba(148, 163, 184, 0.18))`,
+      menuHover: `color-mix(in srgb, ${accent.primary} 16%, rgba(255, 255, 255, 0.06))`,
+      menuActive: `color-mix(in srgb, ${accent.primary} 24%, rgba(255, 255, 255, 0.12))`,
+      brandSurface: `linear-gradient(135deg, color-mix(in srgb, ${accent.primary} 20%, rgba(20, 30, 51, 0.92)), color-mix(in srgb, ${accent.strong} 16%, rgba(13, 19, 34, 0.94)))`,
+      brandBorder: `color-mix(in srgb, ${accent.primary} 38%, rgba(148, 163, 184, 0.18))`,
     };
   }
 
@@ -179,6 +186,13 @@ function buildThemeTokens(accent) {
     primarySoftBackgroundAlt: `color-mix(in srgb, ${accent.primary} 6%, rgba(8, 18, 38, 0.12))`,
     primarySoftBorder: `color-mix(in srgb, ${accent.primary} 30%, rgba(255, 255, 255, 0.12))`,
     primaryShadow: `color-mix(in srgb, ${accent.primary} 30%, transparent)`,
+    appBgTop: `color-mix(in srgb, ${accent.primary} 16%, rgba(8, 13, 25, 0.98))`,
+    appBgBottom: `color-mix(in srgb, ${accent.strong} 22%, rgba(4, 7, 15, 0.99))`,
+    panelSurface: `color-mix(in srgb, ${accent.primary} 12%, rgba(9, 16, 31, 0.78))`,
+    panelSurfaceStrong: `color-mix(in srgb, ${accent.strong} 18%, rgba(7, 14, 27, 0.92))`,
+    fieldSurface: `color-mix(in srgb, ${accent.primary} 10%, rgba(255, 255, 255, 0.04))`,
+    fieldSurfaceHover: `color-mix(in srgb, ${accent.primary} 14%, rgba(255, 255, 255, 0.06))`,
+    fieldBorder: `color-mix(in srgb, ${accent.primary} 28%, rgba(255, 255, 255, 0.12))`,
     menuText: "#eef4ff",
     menuTextSoft: "rgba(216, 226, 255, 0.74)",
     menuSurface: `color-mix(in srgb, ${accent.primary} 14%, rgba(8, 18, 38, 0.95))`,
@@ -250,6 +264,13 @@ export function applyAppPreferences(prefs = {}) {
   root.style.setProperty("--theme-primary-soft-bg-alt", themeTokens.primarySoftBackgroundAlt);
   root.style.setProperty("--theme-primary-soft-border", themeTokens.primarySoftBorder);
   root.style.setProperty("--theme-primary-shadow", themeTokens.primaryShadow);
+  root.style.setProperty("--theme-app-bg-top", themeTokens.appBgTop);
+  root.style.setProperty("--theme-app-bg-bottom", themeTokens.appBgBottom);
+  root.style.setProperty("--theme-panel-surface", themeTokens.panelSurface);
+  root.style.setProperty("--theme-panel-surface-strong", themeTokens.panelSurfaceStrong);
+  root.style.setProperty("--theme-field-surface", themeTokens.fieldSurface);
+  root.style.setProperty("--theme-field-surface-hover", themeTokens.fieldSurfaceHover);
+  root.style.setProperty("--theme-field-border", themeTokens.fieldBorder);
   root.style.setProperty("--theme-menu-text", themeTokens.menuText);
   root.style.setProperty("--theme-menu-text-soft", themeTokens.menuTextSoft);
   root.style.setProperty("--theme-menu-surface", themeTokens.menuSurface);

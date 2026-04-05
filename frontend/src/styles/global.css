@@ -23,6 +23,13 @@
   --theme-primary-soft-bg-alt: rgba(79, 140, 255, 0.05);
   --theme-primary-soft-border: rgba(79, 140, 255, 0.28);
   --theme-primary-shadow: rgba(37, 99, 235, 0.26);
+  --theme-app-bg-top: rgba(16, 22, 40, 0.98);
+  --theme-app-bg-bottom: rgba(6, 9, 17, 0.99);
+  --theme-panel-surface: rgba(9, 16, 31, 0.78);
+  --theme-panel-surface-strong: rgba(7, 14, 27, 0.92);
+  --theme-field-surface: rgba(255, 255, 255, 0.04);
+  --theme-field-surface-hover: rgba(255, 255, 255, 0.06);
+  --theme-field-border: rgba(255, 255, 255, 0.12);
   --theme-menu-text: #eef4ff;
   --theme-menu-text-soft: rgba(216, 226, 255, 0.74);
   --theme-menu-surface: rgba(18, 27, 45, 0.82);
@@ -57,7 +64,7 @@ body {
     radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--theme-tint) 92%, transparent), transparent 30%),
     radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--theme-surface) 92%, transparent), transparent 36%),
     radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 40%),
-    linear-gradient(180deg, color-mix(in srgb, var(--theme-surface) 36%, #09111f) 0%, #0b1220 56%, #0d1528 100%);
+    linear-gradient(180deg, var(--theme-app-bg-top) 0%, color-mix(in srgb, var(--theme-surface) 32%, var(--theme-app-bg-bottom)) 56%, var(--theme-app-bg-bottom) 100%);
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
@@ -138,6 +145,9 @@ svg {
 .page {
   width: 100%;
   min-height: 100vh;
+  background:
+    radial-gradient(circle at 14% 12%, color-mix(in srgb, var(--theme-tint) 64%, transparent), transparent 26%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--theme-surface) 78%, transparent), transparent 34%);
 }
 
 .page__inner {
