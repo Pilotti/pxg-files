@@ -149,7 +149,7 @@ export default function AdminPage() {
   const [taskFilters, setTaskFilters] = useState({
     search: "",
     task_type: "",
-    continent: "kanto",
+    continent: "",
     nw_level: "",
     city: "",
     min_level: "",
@@ -158,7 +158,7 @@ export default function AdminPage() {
   })
   const [questFilters, setQuestFilters] = useState({
     search: "",
-    continent: "kanto",
+    continent: "",
     nw_level: "",
     min_level: "",
     max_level: "",
@@ -275,20 +275,6 @@ export default function AdminPage() {
   }, [activeTab, debouncedTaskFilters])
 
   useEffect(() => {
-    if (activeTab !== "quests") return
-    if (questFilters.continent) return
-
-    setQuestFilters((prev) => ({ ...prev, continent: "kanto" }))
-  }, [activeTab, questFilters.continent])
-
-  useEffect(() => {
-    if (activeTab !== "tasks") return
-    if (taskFilters.continent) return
-
-    setTaskFilters((prev) => ({ ...prev, continent: "kanto" }))
-  }, [activeTab, taskFilters.continent])
-
-  useEffect(() => {
     if (activeTab !== "tasks") return
 
     setTaskFilters((prev) => {
@@ -296,10 +282,6 @@ export default function AdminPage() {
 
       if (prev.city && hasSelectedCity) {
         return prev
-      }
-
-      if (taskCityOptions.length) {
-        return { ...prev, city: taskCityOptions[0].value }
       }
 
       if (prev.city) {
