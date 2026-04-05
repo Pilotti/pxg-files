@@ -2,9 +2,6 @@
 from app.models.tasks import TaskTemplate, QuestTemplate
 
 
-db = SessionLocal()
-
-
 def normalize_task_type(task_type_str):
     """Normalize task type string to lowercase and handle aliases"""
     normalized = str(task_type_str).lower().strip()
@@ -384,29 +381,37 @@ quests = [
 
 
 def seed_tasks():
-    existing = db.query(TaskTemplate).first()
-    if existing:
-        print("Tasks já existem. Abortando seed.")
-        return
+    db = SessionLocal()
+    try:
+        existing = db.query(TaskTemplate).first()
+        if existing:
+            print("Tasks já existem. Abortando seed.")
+            return
 
-    for task in tasks:
-        db.add(TaskTemplate(**task))
+        for task in tasks:
+            db.add(TaskTemplate(**task))
 
-    db.commit()
-    print(f"Tasks inseridas com sucesso: {len(tasks)} tasks adicionadas.")
+        db.commit()
+        print(f"Tasks inseridas com sucesso: {len(tasks)} tasks adicionadas.")
+    finally:
+        db.close()
 
 
 def seed_quests():
-    existing = db.query(QuestTemplate).first()
-    if existing:
-        print("Quests já existem. Abortando seed.")
-        return
+    db = SessionLocal()
+    try:
+        existing = db.query(QuestTemplate).first()
+        if existing:
+            print("Quests já existem. Abortando seed.")
+            return
 
-    for quest in quests:
-        db.add(QuestTemplate(**quest))
+        for quest in quests:
+            db.add(QuestTemplate(**quest))
 
-    db.commit()
-    print("Quests inseridas com sucesso.")
+        db.commit()
+        print("Quests inseridas com sucesso.")
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

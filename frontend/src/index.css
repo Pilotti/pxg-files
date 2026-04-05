@@ -54,6 +54,12 @@ body {
   margin: 0;
 }
 
+select option,
+select optgroup {
+  color: #0f172a;
+  background-color: #f8fafc;
+}
+
 #root {
   width: 1126px;
   max-width: 100%;

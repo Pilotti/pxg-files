@@ -70,6 +70,16 @@ def init_db() -> None:
         except Exception:
             conn.rollback()
 
+    # Seed base catalog when a fresh database starts in production.
+    try:
+        from app.db.seed_tasks import seed_tasks, seed_quests
+
+        seed_tasks()
+        seed_quests()
+    except Exception:
+        # Keep startup resilient even if seed data has inconsistencies.
+        pass
+
 
 if __name__ == "__main__":
     init_db()
