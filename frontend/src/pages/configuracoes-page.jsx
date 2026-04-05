@@ -150,19 +150,23 @@ export default function ConfiguracoesPage() {
       <Topbar />
 
       <section className="settings-page">
-        <div className="settings-page__tabs" role="tablist" aria-label="Abas das configurações">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              className={activeTab === tab.key ? "settings-page__tab settings-page__tab--active" : "settings-page__tab"}
-              onClick={() => handleTabChange(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="settings-page__header">
+          <h2 className="settings-page__title">Configurações</h2>
+
+          <div className="settings-page__header-actions settings-page__tabs" role="tablist" aria-label="Abas das configurações">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                className={activeTab === tab.key ? "settings-page__tab settings-page__tab--active" : "settings-page__tab"}
+                onClick={() => handleTabChange(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="settings-page__content">
