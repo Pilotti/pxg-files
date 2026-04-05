@@ -176,60 +176,6 @@ export default function ConfiguracoesPage() {
           {activeTab === "personagens" && (
             <div className="settings-pane">
               <AccountCharactersSection />
-
-              <section className="settings-panel">
-                <header className="settings-panel__header settings-panel__header--split">
-                  <div>
-                    <span className="settings-panel__eyebrow">Sessão</span>
-                    <h2 className="settings-panel__title">Persistência e segurança</h2>
-                    <p className="settings-panel__description">
-                      Faça backup das preferências locais, restaure o padrão e encerre a sessão atual.
-                    </p>
-                  </div>
-                </header>
-
-                <div className="settings-session-grid">
-                  <article className="settings-session-card">
-                    <span className="settings-session-card__label">Conta ativa</span>
-                    <strong>{user?.email || "—"}</strong>
-                    <p>Seus tokens e preferências locais ficam vinculados a este navegador.</p>
-                  </article>
-                  <article className="settings-session-card">
-                    <span className="settings-session-card__label">Personagem em foco</span>
-                    <strong>{activeCharacter?.nome || activeCharacter?.name || "Nenhum"}</strong>
-                    <p>O último personagem escolhido fica salvo localmente para restauração automática.</p>
-                  </article>
-                  <article className="settings-session-card">
-                    <span className="settings-session-card__label">Preferências</span>
-                    <strong>Locais</strong>
-                    <p>As preferências desta página ficam salvas neste dispositivo.</p>
-                  </article>
-                </div>
-
-                <div className="settings-actions-row">
-                  <button type="button" className="settings-action-button" onClick={handleExportPreferences}>
-                    Exportar preferências
-                  </button>
-
-                  <label className="settings-action-button settings-action-button--file">
-                    Importar preferências
-                    <input type="file" accept="application/json" onChange={handleImportPreferences} hidden />
-                  </label>
-
-                  <button type="button" className="settings-action-button" onClick={handleResetPreferences}>
-                    Restaurar padrão
-                  </button>
-
-                  <button
-                    type="button"
-                    className="settings-action-button settings-action-button--danger"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                  >
-                    {isLoggingOut ? "Encerrando..." : "Encerrar sessão"}
-                  </button>
-                </div>
-              </section>
             </div>
           )}
 
@@ -355,6 +301,60 @@ export default function ConfiguracoesPage() {
                       onChange={(event) => updatePreference("openHomeAfterCharacterSwitch", event.target.checked)}
                     />
                   </label>
+                </div>
+              </section>
+
+              <section className="settings-panel">
+                <header className="settings-panel__header settings-panel__header--split">
+                  <div>
+                    <span className="settings-panel__eyebrow">Sessão</span>
+                    <h2 className="settings-panel__title">Persistência e segurança</h2>
+                    <p className="settings-panel__description">
+                      Faça backup das preferências locais, restaure o padrão e encerre a sessão atual.
+                    </p>
+                  </div>
+                </header>
+
+                <div className="settings-session-grid">
+                  <article className="settings-session-card">
+                    <span className="settings-session-card__label">Conta ativa</span>
+                    <strong>{user?.email || "—"}</strong>
+                    <p>Seus tokens e preferências locais ficam vinculados a este navegador.</p>
+                  </article>
+                  <article className="settings-session-card">
+                    <span className="settings-session-card__label">Personagem em foco</span>
+                    <strong>{activeCharacter?.nome || activeCharacter?.name || "Nenhum"}</strong>
+                    <p>O último personagem escolhido fica salvo localmente para restauração automática.</p>
+                  </article>
+                  <article className="settings-session-card">
+                    <span className="settings-session-card__label">Preferências</span>
+                    <strong>Locais</strong>
+                    <p>As preferências desta página ficam salvas neste dispositivo.</p>
+                  </article>
+                </div>
+
+                <div className="settings-actions-row">
+                  <button type="button" className="settings-action-button" onClick={handleExportPreferences}>
+                    Exportar preferências
+                  </button>
+
+                  <label className="settings-action-button settings-action-button--file">
+                    Importar preferências
+                    <input type="file" accept="application/json" onChange={handleImportPreferences} hidden />
+                  </label>
+
+                  <button type="button" className="settings-action-button" onClick={handleResetPreferences}>
+                    Restaurar padrão
+                  </button>
+
+                  <button
+                    type="button"
+                    className="settings-action-button settings-action-button--danger"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? "Encerrando..." : "Encerrar sessão"}
+                  </button>
                 </div>
               </section>
             </div>
