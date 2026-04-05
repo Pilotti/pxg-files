@@ -125,8 +125,8 @@
 .quests-page__primary-button {
   border: 1px solid transparent;
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-  color: #fff;
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.26);
+  color: var(--theme-on-primary);
+  box-shadow: 0 14px 30px var(--theme-primary-shadow);
 }
 
 .quests-page__ghost-button {
@@ -184,7 +184,7 @@
 
 .quests-page__card:hover {
   transform: translateY(-3px);
-  border-color: rgba(79, 140, 255, 0.18);
+  border-color: var(--theme-primary-soft-border);
   box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
 }
 
@@ -264,9 +264,9 @@
 }
 
 .quests-page__status--pending {
-  background: rgba(79, 140, 255, 0.14);
-  color: #cfe0ff;
-  border: 1px solid rgba(79, 140, 255, 0.2);
+  background: var(--theme-primary-soft-bg);
+  color: var(--theme-primary-soft-text);
+  border: 1px solid var(--theme-primary-soft-border);
 }
 
 .quests-page__status--completed {

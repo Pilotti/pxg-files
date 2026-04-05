@@ -15,9 +15,9 @@
 .topbar__content {
   width: 100%;
   min-height: 64px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--theme-menu-border);
   border-radius: 18px;
-  background: rgba(13, 23, 43, 0.88);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--theme-menu-surface) 88%, transparent), var(--theme-menu-surface-strong));
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow);
   padding: 12px 18px;
@@ -41,14 +41,14 @@
   flex-shrink: 0;
   padding: 8px 12px;
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(74, 104, 214, 0.15), rgba(108, 136, 255, 0.1));
-  border: 1px solid rgba(108, 136, 255, 0.25);
+  background: var(--theme-brand-surface);
+  border: 1px solid var(--theme-brand-border);
   transition: all 0.24s ease;
 }
 
 .topbar__brand:hover {
-  background: linear-gradient(135deg, rgba(74, 104, 214, 0.22), rgba(108, 136, 255, 0.18));
-  border-color: rgba(108, 136, 255, 0.4);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-surface) 82%, var(--primary)), color-mix(in srgb, var(--theme-brand-surface) 88%, var(--primary-strong)));
+  border-color: color-mix(in srgb, var(--theme-brand-border) 72%, var(--primary));
 }
 
 .topbar__brand-icon {
@@ -58,6 +58,7 @@
   align-items: center;
   justify-content: center;
   min-width: 24px;
+  color: var(--theme-menu-text);
   animation: spin-slow 8s linear infinite;
 }
 
@@ -65,7 +66,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #738ecc, #6c88ff);
+  background: linear-gradient(135deg, var(--theme-menu-text), color-mix(in srgb, var(--primary) 65%, var(--theme-menu-text)));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -94,9 +95,9 @@
   min-width: 44px;
   height: 44px;
   border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--text);
+  border: 1px solid var(--theme-menu-border);
+  background: color-mix(in srgb, var(--theme-menu-surface) 86%, transparent);
+  color: var(--theme-menu-text);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -104,7 +105,7 @@
 }
 
 .topbar__icon-button:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--theme-menu-hover);
   transform: translateY(-1px);
 }
 
@@ -124,13 +125,13 @@
 }
 
 .topbar__button--ghost {
-  border-color: var(--border);
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--text);
+  border-color: var(--theme-menu-border);
+  background: color-mix(in srgb, var(--theme-menu-surface) 84%, transparent);
+  color: var(--theme-menu-text);
 }
 
 .topbar__button--ghost:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--theme-menu-hover);
 }
 
 @media (max-width: 900px) {

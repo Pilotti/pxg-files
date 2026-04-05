@@ -14,7 +14,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background:
-    linear-gradient(135deg, rgba(79, 140, 255, 0.14), rgba(79, 140, 255, 0.02)),
+    linear-gradient(135deg, var(--theme-primary-soft-bg), var(--theme-primary-soft-bg-alt)),
     rgba(12, 18, 32, 0.72);
   box-shadow: var(--shadow);
 }
@@ -54,10 +54,10 @@
   min-height: 32px;
   width: fit-content;
   padding: 6px 12px;
-  border: 1px solid rgba(79, 140, 255, 0.28);
+  border: 1px solid var(--theme-primary-soft-border);
   border-radius: 999px;
-  background: rgba(79, 140, 255, 0.12);
-  color: #dbe8ff;
+  background: var(--theme-primary-soft-bg);
+  color: var(--theme-primary-soft-text);
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -149,7 +149,7 @@
 
 .dashboard-page__button--primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-  color: white;
+  color: var(--theme-on-primary);
 }
 
 .dashboard-page__button--ghost {

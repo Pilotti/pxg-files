@@ -114,8 +114,9 @@
 
 .admin-summary-card--primary {
   background:
-    linear-gradient(135deg, rgba(79, 140, 255, 0.12), rgba(9, 16, 31, 0.82)),
+    linear-gradient(135deg, var(--theme-primary-soft-bg), rgba(9, 16, 31, 0.82)),
     rgba(9, 16, 31, 0.82);
+  border-color: var(--theme-primary-soft-border);
 }
 
 .admin-summary-card--success {
@@ -177,7 +178,7 @@
 
 .admin-page__tab--active {
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-  color: #fff;
+  color: var(--theme-on-primary);
 }
 
 .admin-page__ghost-button--success {

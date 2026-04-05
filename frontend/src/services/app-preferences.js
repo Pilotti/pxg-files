@@ -111,6 +111,86 @@ const DENSITY_MAP = {
   },
 };
 
+function hexToRgb(hex) {
+  const value = String(hex || "").trim().replace("#", "");
+  const normalized = value.length === 3
+    ? value.split("").map((chunk) => `${chunk}${chunk}`).join("")
+    : value;
+
+  if (normalized.length !== 6) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 16);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return {
+    r: (parsed >> 16) & 255,
+    g: (parsed >> 8) & 255,
+    b: parsed & 255,
+  };
+}
+
+function getRelativeLuminance(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) {
+    return 0;
+  }
+
+  const channels = [rgb.r, rgb.g, rgb.b].map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.03928
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+
+  return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+}
+
+function buildThemeTokens(accent) {
+  const isLightAccent = getRelativeLuminance(accent.primary) >= 0.58;
+
+  if (isLightAccent) {
+    return {
+      onPrimary: "#0f172a",
+      primarySoftText: "#0f172a",
+      primarySoftBackground: `color-mix(in srgb, ${accent.primary} 18%, rgba(255, 255, 255, 0.88))`,
+      primarySoftBackgroundAlt: `color-mix(in srgb, ${accent.primary} 10%, rgba(248, 250, 252, 0.76))`,
+      primarySoftBorder: `color-mix(in srgb, ${accent.primary} 36%, rgba(15, 23, 42, 0.14))`,
+      primaryShadow: `color-mix(in srgb, ${accent.primary} 22%, transparent)`,
+      menuText: "#0f172a",
+      menuTextSoft: "rgba(15, 23, 42, 0.72)",
+      menuSurface: `color-mix(in srgb, ${accent.primary} 18%, rgba(248, 250, 252, 0.9))`,
+      menuSurfaceStrong: `color-mix(in srgb, ${accent.primary} 24%, rgba(255, 255, 255, 0.96))`,
+      menuBorder: `color-mix(in srgb, ${accent.primary} 40%, rgba(15, 23, 42, 0.16))`,
+      menuHover: `color-mix(in srgb, ${accent.primary} 14%, rgba(15, 23, 42, 0.08))`,
+      menuActive: `color-mix(in srgb, ${accent.primary} 30%, rgba(255, 255, 255, 0.62))`,
+      brandSurface: `linear-gradient(135deg, color-mix(in srgb, ${accent.primary} 28%, rgba(255, 255, 255, 0.94)), color-mix(in srgb, ${accent.strong} 12%, rgba(248, 250, 252, 0.9)))`,
+      brandBorder: `color-mix(in srgb, ${accent.primary} 50%, rgba(15, 23, 42, 0.18))`,
+    };
+  }
+
+  return {
+    onPrimary: "#f8fafc",
+    primarySoftText: "#dbe8ff",
+    primarySoftBackground: `color-mix(in srgb, ${accent.primary} 16%, rgba(8, 18, 38, 0.56))`,
+    primarySoftBackgroundAlt: `color-mix(in srgb, ${accent.primary} 6%, rgba(8, 18, 38, 0.12))`,
+    primarySoftBorder: `color-mix(in srgb, ${accent.primary} 30%, rgba(255, 255, 255, 0.12))`,
+    primaryShadow: `color-mix(in srgb, ${accent.primary} 30%, transparent)`,
+    menuText: "#eef4ff",
+    menuTextSoft: "rgba(216, 226, 255, 0.74)",
+    menuSurface: `color-mix(in srgb, ${accent.primary} 14%, rgba(8, 18, 38, 0.95))`,
+    menuSurfaceStrong: `color-mix(in srgb, ${accent.strong} 18%, rgba(7, 16, 33, 0.98))`,
+    menuBorder: `color-mix(in srgb, ${accent.primary} 34%, rgba(255, 255, 255, 0.08))`,
+    menuHover: `color-mix(in srgb, ${accent.primary} 18%, rgba(255, 255, 255, 0.06))`,
+    menuActive: `color-mix(in srgb, ${accent.primary} 26%, rgba(255, 255, 255, 0.1))`,
+    brandSurface: `linear-gradient(135deg, color-mix(in srgb, ${accent.primary} 18%, rgba(13, 23, 43, 0.92)), color-mix(in srgb, ${accent.strong} 18%, rgba(8, 18, 38, 0.94)))`,
+    brandBorder: `color-mix(in srgb, ${accent.primary} 36%, rgba(255, 255, 255, 0.14))`,
+  };
+}
+
 function isBrowser() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
@@ -157,12 +237,28 @@ export function applyAppPreferences(prefs = {}) {
   const root = document.documentElement;
   const accent = ACCENT_MAP[safePrefs.accent] || ACCENT_MAP.malefic;
   const density = DENSITY_MAP[safePrefs.density] || DENSITY_MAP.comfortable;
+  const themeTokens = buildThemeTokens(accent);
 
   root.style.setProperty("--primary", accent.primary);
   root.style.setProperty("--primary-strong", accent.strong);
   root.style.setProperty("--focus-ring", accent.ring);
   root.style.setProperty("--theme-tint", accent.tint);
   root.style.setProperty("--theme-surface", accent.surface);
+  root.style.setProperty("--theme-on-primary", themeTokens.onPrimary);
+  root.style.setProperty("--theme-primary-soft-text", themeTokens.primarySoftText);
+  root.style.setProperty("--theme-primary-soft-bg", themeTokens.primarySoftBackground);
+  root.style.setProperty("--theme-primary-soft-bg-alt", themeTokens.primarySoftBackgroundAlt);
+  root.style.setProperty("--theme-primary-soft-border", themeTokens.primarySoftBorder);
+  root.style.setProperty("--theme-primary-shadow", themeTokens.primaryShadow);
+  root.style.setProperty("--theme-menu-text", themeTokens.menuText);
+  root.style.setProperty("--theme-menu-text-soft", themeTokens.menuTextSoft);
+  root.style.setProperty("--theme-menu-surface", themeTokens.menuSurface);
+  root.style.setProperty("--theme-menu-surface-strong", themeTokens.menuSurfaceStrong);
+  root.style.setProperty("--theme-menu-border", themeTokens.menuBorder);
+  root.style.setProperty("--theme-menu-hover", themeTokens.menuHover);
+  root.style.setProperty("--theme-menu-active", themeTokens.menuActive);
+  root.style.setProperty("--theme-brand-surface", themeTokens.brandSurface);
+  root.style.setProperty("--theme-brand-border", themeTokens.brandBorder);
   root.style.setProperty("--ui-control-height", density.control);
   root.style.setProperty("--ui-gap", density.contentGap);
   root.style.setProperty("--ui-card-padding", density.cardPadding);

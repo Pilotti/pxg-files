@@ -22,9 +22,9 @@
   min-height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(79, 140, 255, 0.18);
-  background: rgba(79, 140, 255, 0.08);
-  color: #dbe8ff;
+  border: 1px solid var(--theme-primary-soft-border);
+  background: var(--theme-primary-soft-bg);
+  color: var(--theme-primary-soft-text);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -112,8 +112,8 @@
 }
 
 .account-stat-card--primary {
-  background: linear-gradient(135deg, rgba(79, 140, 255, 0.16), rgba(79, 140, 255, 0.06));
-  border-color: rgba(79, 140, 255, 0.24);
+  background: linear-gradient(135deg, var(--theme-primary-soft-bg), var(--theme-primary-soft-bg-alt));
+  border-color: var(--theme-primary-soft-border);
 }
 
 .account-stat-card--favorite {
@@ -142,9 +142,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(79, 140, 255, 0.12);
-  border: 1px solid rgba(79, 140, 255, 0.18);
-  color: #dbe8ff;
+  background: var(--theme-primary-soft-bg);
+  border: 1px solid var(--theme-primary-soft-border);
+  color: var(--theme-primary-soft-text);
   font-size: 1.3rem;
 }
 
@@ -181,13 +181,13 @@
 
 .account-character-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(79, 140, 255, 0.22);
+  border-color: var(--theme-primary-soft-border);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
 }
 
 .account-character-card--active {
-  border-color: rgba(79, 140, 255, 0.28);
-  background: linear-gradient(135deg, rgba(79, 140, 255, 0.16), rgba(79, 140, 255, 0.05));
+  border-color: var(--theme-primary-soft-border);
+  background: linear-gradient(135deg, var(--theme-primary-soft-bg), var(--theme-primary-soft-bg-alt));
 }
 
 .account-character-card__select {
@@ -227,8 +227,8 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: #67a1ff;
-  box-shadow: 0 0 0 6px rgba(103, 161, 255, 0.14);
+  background: var(--primary);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .account-character-card__meta {
@@ -251,9 +251,9 @@
   min-height: 30px;
   padding: 5px 11px;
   border-radius: 999px;
-  background: rgba(79, 140, 255, 0.16);
-  border: 1px solid rgba(79, 140, 255, 0.22);
-  color: #dbe8ff;
+  background: var(--theme-primary-soft-bg);
+  border: 1px solid var(--theme-primary-soft-border);
+  color: var(--theme-primary-soft-text);
   font-size: 0.8rem;
   font-weight: 800;
 }

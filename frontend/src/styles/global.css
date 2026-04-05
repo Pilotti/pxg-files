@@ -15,6 +15,23 @@
   --text-soft: #a8b3c7;
   --primary: #4f8cff;
   --primary-strong: #2563eb;
+  --theme-tint: rgba(139, 92, 246, 0.2);
+  --theme-surface: rgba(55, 34, 94, 0.38);
+  --theme-on-primary: #f8fafc;
+  --theme-primary-soft-text: #dbe8ff;
+  --theme-primary-soft-bg: rgba(79, 140, 255, 0.14);
+  --theme-primary-soft-bg-alt: rgba(79, 140, 255, 0.05);
+  --theme-primary-soft-border: rgba(79, 140, 255, 0.28);
+  --theme-primary-shadow: rgba(37, 99, 235, 0.26);
+  --theme-menu-text: #eef4ff;
+  --theme-menu-text-soft: rgba(216, 226, 255, 0.74);
+  --theme-menu-surface: rgba(18, 27, 45, 0.82);
+  --theme-menu-surface-strong: rgba(14, 22, 38, 0.94);
+  --theme-menu-border: rgba(255, 255, 255, 0.08);
+  --theme-menu-hover: rgba(255, 255, 255, 0.06);
+  --theme-menu-active: rgba(79, 140, 255, 0.16);
+  --theme-brand-surface: linear-gradient(135deg, rgba(74, 104, 214, 0.15), rgba(108, 136, 255, 0.1));
+  --theme-brand-border: rgba(108, 136, 255, 0.25);
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   --radius-xl: 28px;
   --radius-lg: 22px;
@@ -37,8 +54,10 @@ html {
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at top, rgba(79, 140, 255, 0.18), transparent 32%),
-    linear-gradient(180deg, #0a1020 0%, #0d1528 100%);
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--theme-tint) 92%, transparent), transparent 30%),
+    radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--theme-surface) 92%, transparent), transparent 36%),
+    radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-surface) 36%, #09111f) 0%, #0b1220 56%, #0d1528 100%);
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
@@ -90,13 +109,30 @@ svg {
 }
 
 .app-shell::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(108, 136, 255, 0.72), rgba(74, 104, 214, 0.78));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 82%, #dbeafe), color-mix(in srgb, var(--primary-strong) 84%, #1e293b));
   border-radius: 999px;
   border: 2px solid rgba(10, 16, 32, 0.92);
 }
 
 .app-shell::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(130, 156, 255, 0.86), rgba(89, 118, 228, 0.9));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 88%, #f8fafc), color-mix(in srgb, var(--primary-strong) 88%, #0f172a));
+}
+
+:is(
+  .account-characters__add-button,
+  .account-characters__empty-action,
+  .admin-login-page__submit,
+  .admin-page__tab--active,
+  .auth-form__submit,
+  .character-modal__button--primary,
+  .character-select__add-button,
+  .dashboard-page__button--primary,
+  .hunts-page__primary-button,
+  .quests-page__primary-button,
+  .settings-page__tab--active,
+  .tasks-page__primary-button
+) {
+  color: var(--theme-on-primary);
 }
 
 .page {

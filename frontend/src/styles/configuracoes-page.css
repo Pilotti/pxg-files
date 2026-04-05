@@ -148,8 +148,8 @@
 .settings-page__tab--active {
   border: 1px solid transparent;
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-  color: #fff;
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.26);
+  color: var(--theme-on-primary);
+  box-shadow: 0 14px 30px var(--theme-primary-shadow);
 }
 
 .settings-page__content {
