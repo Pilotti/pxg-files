@@ -27,14 +27,6 @@ function formatHoursAndMinutes(totalMinutes) {
   return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m`
 }
 
-function formatPtBrNumber(value) {
-  const numeric = Number(value || 0)
-  return new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits: Number.isInteger(numeric) ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(numeric)
-}
-
 function parseDecimalInput(raw) {
   const normalized = String(raw ?? "")
     .trim()
@@ -556,6 +548,21 @@ export default function HuntsPage() {
     })
     setPreviewFile(null)
     setDropsWarnings([])
+  }
+
+  function handleResetDropsWorkspace() {
+    setSelectedFiles((current) => {
+      for (const entry of current) {
+        URL.revokeObjectURL(entry.previewUrl)
+      }
+      return []
+    })
+    setPreviewFile(null)
+    setDropsResult(null)
+    setDropsRows([])
+    setDropsWarnings([])
+    setDropsError("")
+    setSavingPriceMap({})
   }
 
   function normalizeRows(rows = []) {
@@ -1094,14 +1101,25 @@ export default function HuntsPage() {
                   </>
                 ) : null}
 
-                <button
-                  type="button"
-                  className="hunts-page__primary-button hunts-page__process-button"
-                  disabled={!selectedFiles.length || isUploadingDrops}
-                  onClick={handleProcessDrops}
-                >
-                  {isUploadingDrops ? "Processando..." : "Processar drops"}
-                </button>
+                <div className="hunts-page__ocr-actions">
+                  <button
+                    type="button"
+                    className="hunts-page__primary-button hunts-page__process-button"
+                    disabled={!selectedFiles.length || isUploadingDrops}
+                    onClick={handleProcessDrops}
+                  >
+                    {isUploadingDrops ? "Processando..." : "Processar drops"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="hunts-page__ghost-button hunts-page__process-button"
+                    disabled={isUploadingDrops || (!selectedFiles.length && !dropsResult && !dropsRows.length && !dropsWarnings.length && !dropsError)}
+                    onClick={handleResetDropsWorkspace}
+                  >
+                    Limpar
+                  </button>
+                </div>
 
                 {dropsError ? (
                   <p className="hunts-page__upload-error" role="alert">

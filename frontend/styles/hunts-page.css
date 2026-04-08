@@ -487,6 +487,13 @@
   width: fit-content;
 }
 
+.hunts-page__ocr-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .hunts-page__upload-error {
   color: #ffb3b3;
   border: 1px solid rgba(255, 104, 104, 0.2);
