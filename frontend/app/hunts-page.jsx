@@ -109,6 +109,7 @@ export default function HuntsPage() {
   const [consumableSearch, setConsumableSearch] = useState("")
   const [consumableList, setConsumableList] = useState([])
   const [showConsumableSuggestions, setShowConsumableSuggestions] = useState(false)
+  const [isConsumableModalOpen, setIsConsumableModalOpen] = useState(false)
 
   // Save / history
   const [isSavingHunt, setIsSavingHunt] = useState(false)
@@ -127,12 +128,18 @@ export default function HuntsPage() {
     const totalPlayerValue = huntSessions.reduce((acc, s) => acc + (s.total_player_value || 0), 0)
     const averageNpcPerHour = totalMinutes > 0 ? Math.round((totalNpcValue / totalMinutes) * 60) : 0
     const averagePlayerPerHour = totalMinutes > 0 ? Math.round((totalPlayerValue / totalMinutes) * 60) : 0
-    const expectedProfit = huntSessions.reduce((acc, s) => {
-      const sessionProfit = (s.total_player_value || 0) - (s.total_npc_value || 0)
+    const expectedNpcProfit = huntSessions.reduce((acc, s) => {
       const consumableCost = (s.consumables_json || []).reduce((cAcc, c) => cAcc + ((c.preco_npc || 0) * (c.quantity || 0)), 0)
-      return acc + (sessionProfit - consumableCost)
+      return acc + (s.total_npc_value || 0) - consumableCost
     }, 0)
-    return { totalHunts, totalMinutes, averageNpcPerHour, averagePlayerPerHour, expectedProfit }
+    const expectedPlayerProfit = huntSessions.reduce((acc, s) => {
+      const playerValue = s.total_player_value || 0
+      const npcValue = s.total_npc_value || 0
+      const effectiveValue = playerValue > 0 ? playerValue : npcValue
+      const consumableCost = (s.consumables_json || []).reduce((cAcc, c) => cAcc + ((c.preco_npc || 0) * (c.quantity || 0)), 0)
+      return acc + Math.max(0, effectiveValue - consumableCost)
+    }, 0)
+    return { totalHunts, totalMinutes, averageNpcPerHour, averagePlayerPerHour, expectedNpcProfit, expectedPlayerProfit }
   }, [huntSessions])
 
   const chartData = useMemo(() => {
@@ -172,15 +179,25 @@ export default function HuntsPage() {
     },
     {
       label: "Lucro esperado",
-      value: formatCompactDlValue(summary.expectedProfit),
-      helper: "Player menos npc e consumíveis.",
+      value: (
+        <div className="hunts-page__stat-split-value">
+          <span className="hunts-page__stat-split-line">npc: {formatCompactDlValue(summary.expectedNpcProfit)}</span>
+          <span className="hunts-page__stat-split-line hunts-page__stat-split-line--player">player: {formatCompactDlValue(summary.expectedPlayerProfit)}</span>
+        </div>
+      ),
+      helper: "Lucro NPC e player (descontado supply).",
+      valueClassName: "hunts-page__stat-value--split",
     },
   ]
 
   const currentExpectedProfit = useMemo(() => {
-    const dropProfit = dropsRows.reduce((acc, row) => acc + (Number(row.playerTotalPrice || 0) - Number(row.npcTotalPrice || 0)), 0)
     const consumableCost = consumableList.reduce((acc, c) => acc + ((c.preco_npc || 0) * (c.quantity || 0)), 0)
-    return dropProfit - consumableCost
+    const npcProfit = dropsRows.reduce((acc, row) => acc + Number(row.npcTotalPrice || 0), 0) - consumableCost
+    const playerProfit = Math.max(0, dropsRows.reduce((acc, row) => {
+      const effective = Number(row.playerUnitPrice || 0) > 0 ? Number(row.playerTotalPrice || 0) : Number(row.npcTotalPrice || 0)
+      return acc + effective
+    }, 0) - consumableCost)
+    return { npc: npcProfit, player: playerProfit }
   }, [dropsRows, consumableList])
 
   function getConsumableName(item) {
@@ -328,15 +345,18 @@ export default function HuntsPage() {
         character_id: activeCharacter?.id || null,
         duration_minutes: huntDuration ? parseInt(huntDuration, 10) : null,
         notes: huntNotes || null,
-        drops: dropsRows.map((row) => ({
-          name: row.name,
-          nameNormalized: row.nameNormalized,
-          quantity: row.quantity,
-          npcUnitPrice: row.npcUnitPrice,
-          npcTotalPrice: row.npcTotalPrice,
-          playerUnitPrice: row.playerUnitPrice,
-          playerTotalPrice: row.playerTotalPrice,
-        })),
+        drops: dropsRows.map((row) => {
+          const effectivePlayerUnit = Number(row.playerUnitPrice || 0) > 0 ? row.playerUnitPrice : row.npcUnitPrice
+          return {
+            name: row.name,
+            nameNormalized: row.nameNormalized,
+            quantity: row.quantity,
+            npcUnitPrice: row.npcUnitPrice,
+            npcTotalPrice: row.npcTotalPrice,
+            playerUnitPrice: effectivePlayerUnit,
+            playerTotalPrice: effectivePlayerUnit * row.quantity,
+          }
+        }),
         enemies: enemyList.map((e) => ({ name: e.name, quantity: e.quantity })),
         consumables: consumableList.map((c) => ({ name: c.name, quantity: c.quantity, preco_npc: c.preco_npc })),
       }
@@ -1155,11 +1175,12 @@ export default function HuntsPage() {
                         {dropsRows.map((row, index) => {
                           const savingKey = `${row.nameNormalized}-${index}`
                           const isSaving = Boolean(savingPriceMap[savingKey])
-                          const profitDelta = Number(row.playerTotalPrice || 0) - Number(row.npcTotalPrice || 0)
+                          const effectivePlayerTotal = Number(row.playerUnitPrice || 0) > 0
+                            ? Number(row.playerTotalPrice || 0)
+                            : Number(row.npcTotalPrice || 0)
+                          const profitDelta = Math.max(0, effectivePlayerTotal - Number(row.npcTotalPrice || 0))
                           const hasNpcReference = Number(row.npcUnitPrice || 0) > 0
-                          const profitClassName = profitDelta >= 0
-                            ? "hunts-page__delta-pill hunts-page__delta-pill--positive"
-                            : "hunts-page__delta-pill hunts-page__delta-pill--negative"
+                          const profitClassName = "hunts-page__delta-pill hunts-page__delta-pill--positive"
 
                           return (
                             <tr key={`${row.nameNormalized}-${index}`}>
@@ -1199,11 +1220,10 @@ export default function HuntsPage() {
                               <td>{row.npcTotalPrice ? formatCompactDlValue(row.npcTotalPrice) : <span className="hunts-page__no-price">—</span>}</td>
                               <td>
                                 <div className="hunts-page__total-sale-cell">
-                                  <span>{formatCompactDlValue(row.playerTotalPrice)}</span>
+                                  <span>{formatCompactDlValue(effectivePlayerTotal)}</span>
                                   {hasNpcReference ? (
                                     <span className={profitClassName}>
-                                      {profitDelta >= 0 ? "+" : "-"}
-                                      {formatCompactDlValue(Math.abs(profitDelta))}
+                                      +{formatCompactDlValue(profitDelta)}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1211,8 +1231,7 @@ export default function HuntsPage() {
                               <td>
                                 {hasNpcReference ? (
                                   <span className={profitClassName}>
-                                    {profitDelta >= 0 ? "+" : "-"}
-                                    {formatCompactDlValue(Math.abs(profitDelta))}
+                                    +{formatCompactDlValue(profitDelta)}
                                   </span>
                                 ) : <span className="hunts-page__no-price">—</span>}
                               </td>
@@ -1321,105 +1340,43 @@ export default function HuntsPage() {
 
 
                 <div className="hunts-page__enemies-section">
-                  <strong className="hunts-page__upload-label">Consumíveis utilizados</strong>
-                  <div className="hunts-page__enemy-search-wrap">
-                    <input
-                      className="hunts-page__table-input"
-                      type="text"
-                      placeholder="Buscar item consumível..."
-                      value={consumableSearch}
-                      onChange={(e) => {
-                        setConsumableSearch(e.target.value)
-                        setShowConsumableSuggestions(true)
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault()
-                          addConsumableFromInput()
-                        }
-                      }}
-                      onFocus={() => setShowConsumableSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowConsumableSuggestions(false), 150)}
-                    />
+                  <div className="hunts-page__consumable-header">
                     <button
                       type="button"
-                      className="hunts-page__ghost-button hunts-page__consumable-add-btn"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        addConsumableFromInput()
-                      }}
-                      disabled={!filteredConsumables.length}
+                      className="hunts-page__ghost-button"
+                      onClick={() => setIsConsumableModalOpen(true)}
                     >
-                      Adicionar
+                      Consumíveis
+                      {consumableList.length > 0 ? (
+                        <span className="hunts-page__consumable-badge"> ({consumableList.length})</span>
+                      ) : null}
                     </button>
-                    {showConsumableSuggestions && filteredConsumables.length > 0 ? (
-                      <ul className="hunts-page__enemy-suggestions">
-                        {filteredConsumables.map((item) => {
-                          const consumableName = getConsumableName(item)
-                          return (
-                            <li key={consumableName}>
-                              <button
-                                type="button"
-                                className="hunts-page__enemy-suggestion-btn"
-                                onMouseDown={() => addConsumable(item)}
-                              >
-                                <span>{consumableName}</span>
-                                {item.preco_npc > 0 ? (
-                                  <span className="hunts-page__consumable-price">{formatCompactDlValue(item.preco_npc)} / un</span>
-                                ) : null}
-                              </button>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    ) : null}
+                    {consumableList.length > 0 ? (() => {
+                      const totalCost = consumableList.reduce((acc, c) => acc + c.preco_npc * c.quantity, 0)
+                      return totalCost > 0 ? (
+                        <span className="hunts-page__consumable-summary-inline">
+                          Supply: <strong>{formatCompactDlValue(totalCost)}</strong>
+                        </span>
+                      ) : null
+                    })() : null}
                   </div>
-                  {consumableList.length > 0 ? (
-                    <ul className="hunts-page__enemy-list">
-                      {consumableList.map((item, index) => {
-                        const totalCost = item.preco_npc * item.quantity
-                        return (
-                          <li key={index} className="hunts-page__enemy-row">
-                            <span className="hunts-page__enemy-name">{item.name}</span>
-                            <input
-                              className="hunts-page__table-input hunts-page__table-input--qty"
-                              type="number"
-                              min="1"
-                              step="1"
-                              value={item.quantity}
-                              onChange={(e) => updateConsumableQty(index, e.target.value)}
-                            />
-                            {item.preco_npc > 0 ? (
-                              <span className="hunts-page__consumable-total">={formatCompactDlValue(totalCost)}</span>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="hunts-page__session-delete-btn"
-                              onClick={() => removeConsumable(index)}
-                              title="Remover"
-                            >
-                              ×
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="hunts-page__enemy-empty">Nenhum consumível adicionado ainda.</p>
-                  )}
-                  {consumableList.length > 0 ? (() => {
-                    const totalCost = consumableList.reduce((acc, c) => acc + c.preco_npc * c.quantity, 0)
-                    return totalCost > 0 ? (
-                      <p className="hunts-page__consumable-summary">
-                        Total gasto: <strong>{formatCompactDlValue(totalCost)}</strong>
-                      </p>
-                    ) : null
-                  })() : null}
 
                   {dropsRows.length > 0 ? (
-                    <p className="hunts-page__consumable-summary">
-                      Lucro esperado: <strong className={currentExpectedProfit >= 0 ? "hunts-page__profit-value hunts-page__profit-value--positive" : "hunts-page__profit-value hunts-page__profit-value--negative"}>{currentExpectedProfit >= 0 ? "+" : "-"}{formatCompactDlValue(Math.abs(currentExpectedProfit))}</strong>
-                    </p>
+                    <div className="hunts-page__profit-row">
+                      <span className="hunts-page__upload-label">Lucro esperado:</span>
+                      <span>
+                        <span className="hunts-page__profit-label">npc</span>
+                        <strong className={currentExpectedProfit.npc >= 0 ? "hunts-page__profit-value hunts-page__profit-value--positive" : "hunts-page__profit-value hunts-page__profit-value--negative"}>
+                          {currentExpectedProfit.npc >= 0 ? "+" : "-"}{formatCompactDlValue(Math.abs(currentExpectedProfit.npc))}
+                        </strong>
+                      </span>
+                      <span>
+                        <span className="hunts-page__profit-label">player</span>
+                        <strong className="hunts-page__profit-value hunts-page__profit-value--positive">
+                          +{formatCompactDlValue(currentExpectedProfit.player)}
+                        </strong>
+                      </span>
+                    </div>
                   ) : null}
                 </div>
                 {huntSaveError ? (
@@ -1442,6 +1399,110 @@ export default function HuntsPage() {
           ) : null}
         </div>
       </section>
+
+      {isConsumableModalOpen ? (
+        <div className="hunts-page__preview-backdrop" role="dialog" aria-modal="true" onClick={() => setIsConsumableModalOpen(false)}>
+          <div className="hunts-page__preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="hunts-page__preview-header">
+              <strong className="hunts-page__preview-title">Consumíveis utilizados</strong>
+              <button
+                type="button"
+                className="hunts-page__ghost-button hunts-page__preview-close"
+                onClick={() => setIsConsumableModalOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="hunts-page__enemy-search-wrap">
+              <input
+                className="hunts-page__table-input"
+                type="text"
+                placeholder="Buscar item consumível..."
+                value={consumableSearch}
+                onChange={(e) => {
+                  setConsumableSearch(e.target.value)
+                  setShowConsumableSuggestions(true)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    addConsumableFromInput()
+                  }
+                }}
+                onFocus={() => setShowConsumableSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowConsumableSuggestions(false), 150)}
+              />
+              <button
+                type="button"
+                className="hunts-page__ghost-button hunts-page__consumable-add-btn"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  addConsumableFromInput()
+                }}
+                disabled={!filteredConsumables.length}
+              >
+                Adicionar
+              </button>
+              {showConsumableSuggestions && filteredConsumables.length > 0 ? (
+                <ul className="hunts-page__enemy-suggestions">
+                  {filteredConsumables.map((item) => {
+                    const consumableName = getConsumableName(item)
+                    return (
+                      <li key={consumableName}>
+                        <button
+                          type="button"
+                          className="hunts-page__enemy-suggestion-btn"
+                          onMouseDown={() => addConsumable(item)}
+                        >
+                          <span>{consumableName}</span>
+                          {item.preco_npc > 0 ? (
+                            <span className="hunts-page__consumable-price">{formatCompactDlValue(item.preco_npc)} / un</span>
+                          ) : null}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : null}
+            </div>
+
+            {consumableList.length > 0 ? (
+              <ul className="hunts-page__enemy-list">
+                {consumableList.map((item, index) => {
+                  const totalCost = item.preco_npc * item.quantity
+                  return (
+                    <li key={index} className="hunts-page__enemy-row">
+                      <span className="hunts-page__enemy-name">{item.name}</span>
+                      <input
+                        className="hunts-page__table-input hunts-page__table-input--qty"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.quantity}
+                        onChange={(e) => updateConsumableQty(index, e.target.value)}
+                      />
+                      {item.preco_npc > 0 ? (
+                        <span className="hunts-page__consumable-total">={formatCompactDlValue(totalCost)}</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="hunts-page__session-delete-btn"
+                        onClick={() => removeConsumable(index)}
+                        title="Remover"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="hunts-page__enemy-empty">Nenhum consumível adicionado ainda.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {previewFile ? (
         <div

@@ -51,11 +51,18 @@ const npcPriceInitialForm = {
   previous_name: "",
   name: "",
   unit_price: "0",
+
+const consumableInitialForm = {
+  previous_nome: "",
+  nome: "",
+  preco_npc: "0",
+}
 }
 
 const TASK_PAGE_SIZE = 30
 const NPC_PRICE_PAGE_SIZE = 30
 const POKEMON_PAGE_SIZE = 30
+const CONSUMABLE_PAGE_SIZE = 50
 
 function formatTaskType(value) {
   const map = {
@@ -239,6 +246,15 @@ export default function AdminPage() {
   const [npcPriceFilters, setNpcPriceFilters] = useState({
     search: "",
   })
+  const [consumables, setConsumables] = useState([])
+  const [consumablePage, setConsumablePage] = useState(1)
+  const [consumableTotal, setConsumableTotal] = useState(0)
+  const [consumableTotalPages, setConsumableTotalPages] = useState(1)
+  const [consumableFilters, setConsumableFilters] = useState({ search: "" })
+  const [consumableModal, setConsumableModal] = useState(null)
+  const [consumableForm, setConsumableForm] = useState(consumableInitialForm)
+  const [isLoadingConsumables, setIsLoadingConsumables] = useState(true)
+  const [isSubmittingConsumable, setIsSubmittingConsumable] = useState(false)
   const [userFilters, setUserFilters] = useState({
     search: "",
   })
@@ -261,6 +277,7 @@ export default function AdminPage() {
   const debouncedNpcPriceFilters = useDebouncedValue(npcPriceFilters, 250)
   const debouncedUserFilters = useDebouncedValue(userFilters, 250)
   const debouncedPokemonFilters = useDebouncedValue(pokemonFilters, 250)
+    const debouncedConsumableFilters = useDebouncedValue(consumableFilters, 250)
   const [taskModal, setTaskModal] = useState(null)
   const [questModal, setQuestModal] = useState(null)
   const [npcPriceModal, setNpcPriceModal] = useState(null)
@@ -418,6 +435,11 @@ export default function AdminPage() {
   useEffect(() => {
     if (!getAdminToken() || activeTab !== "sidebar") return
     loadSidebarMenus()
+
+    useEffect(() => {
+      if (!getAdminToken() || activeTab !== "consumables") return
+      loadConsumables(debouncedConsumableFilters, consumablePage)
+    }, [activeTab, debouncedConsumableFilters, consumablePage])
   }, [activeTab])
 
   useEffect(() => {
@@ -920,6 +942,91 @@ export default function AdminPage() {
   function updateNpcPriceFilters(updater) {
     setNpcPricePage(1)
     setNpcPriceFilters((prev) => {
+
+        function updateConsumableFilters(updater) {
+          setConsumablePage(1)
+          setConsumableFilters((prev) => {
+            if (typeof updater === "function") return updater(prev)
+            return { ...prev, ...updater }
+          })
+        }
+
+        async function loadConsumables(nextFilters = consumableFilters, nextPage = consumablePage) {
+          setIsLoadingConsumables(true)
+          try {
+            const response = await adminRequest(
+              `/admin/consumables${buildQuery({ ...nextFilters, page: nextPage, page_size: CONSUMABLE_PAGE_SIZE })}`,
+            )
+            const items = Array.isArray(response?.items) ? response.items : []
+            const total = Number(response?.total ?? items.length)
+            const totalPages = Math.max(1, Number(response?.total_pages ?? 1))
+            setConsumables(items)
+            setConsumableTotal(total)
+            setConsumableTotalPages(totalPages)
+            if (nextPage > totalPages) setConsumablePage(totalPages)
+          } catch (err) {
+            showError(err.message || "Erro ao carregar consumíveis")
+          } finally {
+            setIsLoadingConsumables(false)
+          }
+        }
+
+        function openCreateConsumable() {
+          setConsumableForm(consumableInitialForm)
+          setConsumableModal({ type: "create" })
+        }
+
+        function openEditConsumable(item) {
+          setConsumableForm({
+            previous_nome: item.nome,
+            nome: item.nome,
+            preco_npc: String(item.preco_npc ?? 0),
+          })
+          setConsumableModal({ type: "edit", item })
+        }
+
+        async function handleSubmitConsumable(event) {
+          event.preventDefault()
+          setIsSubmittingConsumable(true)
+          try {
+            if (consumableModal?.type === "create") {
+              await adminRequest("/admin/consumables", {
+                method: "POST",
+                body: JSON.stringify({
+                  nome: consumableForm.nome,
+                  preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
+                }),
+              })
+              showSuccess("Consumível criado com sucesso.")
+            } else {
+              await adminRequest("/admin/consumables", {
+                method: "PUT",
+                body: JSON.stringify({
+                  previous_nome: consumableForm.previous_nome,
+                  nome: consumableForm.nome,
+                  preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
+                }),
+              })
+              showSuccess("Consumível atualizado com sucesso.")
+            }
+            setConsumableModal(null)
+            await loadConsumables(debouncedConsumableFilters)
+          } catch (err) {
+            showError(err.message || "Erro ao salvar consumível")
+          } finally {
+            setIsSubmittingConsumable(false)
+          }
+        }
+
+        async function handleDeleteConsumable(nome) {
+          try {
+            await adminRequest(`/admin/consumables/${encodeURIComponent(nome)}`, { method: "DELETE" })
+            showSuccess("Consumível removido com sucesso.")
+            await loadConsumables(debouncedConsumableFilters)
+          } catch (err) {
+            showError(err.message || "Erro ao remover consumível")
+          }
+        }
       if (typeof updater === "function") {
         return updater(prev)
       }
@@ -1432,6 +1539,7 @@ export default function AdminPage() {
 
         <div className="admin-page__tabs">
           {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "Preços NPC"], ["users", "Usuários"], ["pokemon", "Pokémon"], ["sidebar", "Sidebar"], ["ocr-debug", "Logs OCR"] ].map(([value, label]) => (
+                      {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "Preços NPC"], ["consumables", "Consumíveis"], ["users", "Usuários"], ["pokemon", "Pokémon"], ["sidebar", "Sidebar"], ["ocr-debug", "Logs OCR"] ].map(([value, label]) => (
             <button key={value} type="button" className={activeTab === value ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"} onClick={() => setActiveTab(value)}>
               {label}
             </button>
@@ -1765,6 +1873,73 @@ export default function AdminPage() {
               <div>
                 <h2 className="admin-page__section-title">Usuários cadastrados</h2>
                 <p className="admin-page__section-subtitle">Visualize ID e usuário sem expor dados sensíveis.</p>
+                      ) : activeTab === "consumables" ? (
+                        <section className="admin-page__panel">
+                          <div className="admin-page__section-header">
+                            <div>
+                              <h2 className="admin-page__section-title">Consumíveis</h2>
+                              <p className="admin-page__section-subtitle">Gerencie os itens consumíveis e seus preços NPC usados no cálculo de custo de supply das hunts.</p>
+                            </div>
+                            <button type="button" className="admin-page__primary-button" onClick={openCreateConsumable}>Novo consumível</button>
+                          </div>
+
+                          <div className="admin-page__filters-card">
+                            <div className="admin-page__filters-grid admin-page__filters-grid--npc-prices">
+                              <input
+                                className="admin-page__input"
+                                placeholder="Buscar consumível por nome"
+                                value={consumableFilters.search}
+                                onChange={(event) => updateConsumableFilters({ search: event.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="admin-page__stats-row">
+                            <span className="admin-page__stat">Total: {consumableTotal}</span>
+                            <span className="admin-page__stat">Página: {consumablePage} / {consumableTotalPages}</span>
+                          </div>
+
+                          <div className="admin-page__pagination">
+                            <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.max(1, prev - 1))} disabled={isLoadingConsumables || consumablePage <= 1}>Anterior</button>
+                            <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.min(consumableTotalPages, prev + 1))} disabled={isLoadingConsumables || consumablePage >= consumableTotalPages}>Próxima</button>
+                          </div>
+
+                          {isLoadingConsumables ? (
+                            <div className="admin-page__empty admin-page__empty--full">Carregando consumíveis...</div>
+                          ) : !consumables.length ? (
+                            <div className="admin-page__empty admin-page__empty--full">Nenhum consumível encontrado.</div>
+                          ) : (
+                            <div className="admin-page__users-table-wrap">
+                              <div className="admin-page__users-table">
+                                <div className="admin-page__npc-row admin-page__npc-row--head">
+                                  <span>Nome</span>
+                                  <span>Preço NPC</span>
+                                  <span>Ações</span>
+                                </div>
+                                {consumables.map((item) => (
+                                  <div key={item.nome} className="admin-page__npc-row">
+                                    <span>{item.nome}</span>
+                                    <span>{item.preco_npc}</span>
+                                    <span className="admin-page__npc-actions">
+                                      <button type="button" className="admin-page__ghost-button admin-page__ghost-button--sm" onClick={() => openEditConsumable(item)}>
+                                        Editar
+                                      </button>
+                                      <button type="button" className="admin-page__danger-button admin-page__danger-button--sm" onClick={() => handleDeleteConsumable(item.nome)}>
+                                        Remover
+                                      </button>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </section>
+                      ) : activeTab === "users" ? (
+                        <section className="admin-page__panel">
+                          <div className="admin-page__section-header">
+                            <div>
+                              <h2 className="admin-page__section-title">Usuários cadastrados</h2>
+                              <p className="admin-page__section-subtitle">Visualize ID e usuário sem expor dados sensíveis.</p>
               </div>
               <button type="button" className="admin-page__ghost-button" onClick={() => loadUsers(debouncedUserFilters)}>
                 Atualizar
@@ -2183,6 +2358,19 @@ export default function AdminPage() {
               <div className="character-modal__field"><label>Nome do item</label><input className="character-modal__input" value={npcPriceForm.name} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Preço unitário NPC</label><input className="character-modal__input" type="number" min="0" step="0.01" value={npcPriceForm.unit_price} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, unit_price: event.target.value }))} /></div>
               <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setNpcPriceModal(null)} disabled={isSubmittingNpcPrice}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingNpcPrice}>{isSubmittingNpcPrice ? "Salvando..." : "Salvar"}</button></div>
+
+                  {consumableModal ? (
+                    <div className="character-modal-backdrop">
+                      <div className="character-modal">
+                        <h2 className="character-modal__title">{consumableModal.type === "create" ? "Novo consumível" : "Editar consumível"}</h2>
+                        <form onSubmit={handleSubmitConsumable}>
+                          <div className="character-modal__field"><label>Nome</label><input className="character-modal__input" value={consumableForm.nome} onChange={(event) => setConsumableForm((prev) => ({ ...prev, nome: event.target.value }))} /></div>
+                          <div className="character-modal__field"><label>Preço NPC</label><input className="character-modal__input" type="number" min="0" step="0.01" value={consumableForm.preco_npc} onChange={(event) => setConsumableForm((prev) => ({ ...prev, preco_npc: event.target.value }))} /></div>
+                          <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setConsumableModal(null)} disabled={isSubmittingConsumable}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingConsumable}>{isSubmittingConsumable ? "Salvando..." : "Salvar"}</button></div>
+                        </form>
+                      </div>
+                    </div>
+                  ) : null}
             </form>
           </div>
         </div>

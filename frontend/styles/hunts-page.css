@@ -1047,6 +1047,42 @@
   color: rgba(255, 200, 110, 0.9);
 }
 
+.hunts-page__consumable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hunts-page__consumable-badge {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+}
+
+.hunts-page__consumable-summary-inline {
+  color: rgba(226, 232, 255, 0.72);
+  font-size: 0.86rem;
+}
+
+.hunts-page__consumable-summary-inline strong {
+  color: rgba(255, 200, 110, 0.9);
+}
+
+.hunts-page__profit-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.hunts-page__profit-label {
+  color: rgba(226, 232, 255, 0.58);
+  font-size: 0.78rem;
+  margin-right: 6px;
+  text-transform: uppercase;
+}
+
 .hunts-page__profit-value--positive {
   color: #8ef0ae;
 }

@@ -64,6 +64,19 @@ from app.services.hunt_item_aliases import (
     upsert_manual_alias,
     update_hunt_item_alias,
 )
+from app.schemas.admin import (
+    AdminConsumableResponse,
+    AdminConsumableListResponse,
+    AdminConsumableCreateRequest,
+    AdminConsumableUpdateRequest,
+)
+from app.services.consumables import (
+    create_consumable,
+    delete_consumable,
+    has_consumable,
+    list_consumables as list_consumables_service,
+    update_consumable,
+)
 from app.services.hunt_npc_prices import has_npc_price_item, list_npc_prices, update_npc_price
 from app.services.hunts_ocr import extract_drop_lines_from_image, refresh_approved_aliases_cache
 from app.services.ocr_debug_logs import (
@@ -980,6 +993,62 @@ def admin_create_hunt_npc_price(
         **created,
         related_aliases=[],
     )
+
+
+@router.get("/sidebar-menus", response_model=list[AdminSidebarMenuSettingResponse])
+@router.get("/consumables", response_model=AdminConsumableListResponse)
+def admin_list_consumables(
+    search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    _: dict = Depends(get_current_admin),
+):
+    items = list_consumables_service(search=search)
+    total = len(items)
+    offset = (page - 1) * page_size
+    paged = items[offset: offset + page_size]
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    return AdminConsumableListResponse(
+        items=[AdminConsumableResponse(**item) for item in paged],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+
+
+@router.post("/consumables", response_model=AdminConsumableResponse, status_code=201)
+def admin_create_consumable(
+    payload: AdminConsumableCreateRequest,
+    _: dict = Depends(get_current_admin),
+):
+    if has_consumable(payload.nome):
+        raise HTTPException(status_code=409, detail=f"Consumível '{payload.nome}' já existe.")
+    created = create_consumable(payload.nome, payload.preco_npc)
+    return AdminConsumableResponse(**created)
+
+
+@router.put("/consumables", response_model=AdminConsumableResponse)
+def admin_update_consumable(
+    payload: AdminConsumableUpdateRequest,
+    _: dict = Depends(get_current_admin),
+):
+    try:
+        updated = update_consumable(payload.previous_nome, payload.nome, payload.preco_npc)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return AdminConsumableResponse(**updated)
+
+
+@router.delete("/consumables/{nome}", status_code=204)
+def admin_delete_consumable(
+    nome: str,
+    _: dict = Depends(get_current_admin),
+):
+    try:
+        delete_consumable(nome)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/sidebar-menus", response_model=list[AdminSidebarMenuSettingResponse])

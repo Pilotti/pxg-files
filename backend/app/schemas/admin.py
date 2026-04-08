@@ -183,6 +183,30 @@ class AdminNpcPriceUpdateRequest(BaseModel):
 
 
 class AdminNpcPriceCreateRequest(BaseModel):
+
+
+    class AdminConsumableResponse(BaseModel):
+        nome: str
+        preco_npc: float
+
+
+    class AdminConsumableListResponse(BaseModel):
+        items: list[AdminConsumableResponse]
+        total: int
+        page: int
+        page_size: int
+        total_pages: int
+
+
+    class AdminConsumableCreateRequest(BaseModel):
+        nome: str = Field(min_length=1)
+        preco_npc: float = Field(ge=0)
+
+
+    class AdminConsumableUpdateRequest(BaseModel):
+        previous_nome: str = Field(min_length=1)
+        nome: str = Field(min_length=1)
+        preco_npc: float = Field(ge=0)
     name: str = Field(min_length=1)
     unit_price: float = Field(ge=0)
 
