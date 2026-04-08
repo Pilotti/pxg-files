@@ -110,6 +110,7 @@ export default function HuntsPage() {
   const [consumableList, setConsumableList] = useState([])
   const [showConsumableSuggestions, setShowConsumableSuggestions] = useState(false)
   const [isConsumableModalOpen, setIsConsumableModalOpen] = useState(false)
+  const [selectedConsumableCategory, setSelectedConsumableCategory] = useState("")
 
   // Save / history
   const [isSavingHunt, setIsSavingHunt] = useState(false)
@@ -204,13 +205,26 @@ export default function HuntsPage() {
     return String(item?.nome ?? item?.name ?? "").trim()
   }
 
+  function getConsumableCategory(item) {
+    return String(item?.categoria ?? item?.category ?? "").trim()
+  }
+
+  const consumableCategories = useMemo(() => {
+    const values = Array.from(new Set(allConsumables.map((item) => getConsumableCategory(item)).filter(Boolean)))
+    return values.sort((left, right) => left.localeCompare(right, "pt-BR"))
+  }, [allConsumables])
+
   const filteredConsumables = useMemo(() => {
     const query = consumableSearch.trim().toLowerCase()
-    if (!query) return allConsumables.slice(0, 10)
-    return allConsumables
+    const categoryFiltered = selectedConsumableCategory
+      ? allConsumables.filter((item) => getConsumableCategory(item) === selectedConsumableCategory)
+      : allConsumables
+
+    if (!query) return categoryFiltered.slice(0, 10)
+    return categoryFiltered
       .filter((item) => getConsumableName(item).toLowerCase().includes(query))
       .slice(0, 10)
-  }, [allConsumables, consumableSearch])
+  }, [allConsumables, consumableSearch, selectedConsumableCategory])
 
   const isHistoryOpen = viewMode === "history"
   const isNewHuntOpen = viewMode === "new-hunt"
@@ -310,7 +324,15 @@ export default function HuntsPage() {
         next[existing] = { ...next[existing], quantity: next[existing].quantity + 1 }
         return next
       }
-      return [...prev, { name: consumableName, quantity: 1, preco_npc: Number(item?.preco_npc ?? 0) }]
+      return [
+        ...prev,
+        {
+          name: consumableName,
+          quantity: 1,
+          preco_npc: Number(item?.preco_npc ?? 0),
+          categoria: getConsumableCategory(item),
+        },
+      ]
     })
     setConsumableSearch("")
     setShowConsumableSuggestions(false)
@@ -358,7 +380,12 @@ export default function HuntsPage() {
           }
         }),
         enemies: enemyList.map((e) => ({ name: e.name, quantity: e.quantity })),
-        consumables: consumableList.map((c) => ({ name: c.name, quantity: c.quantity, preco_npc: c.preco_npc })),
+        consumables: consumableList.map((c) => ({
+          name: c.name,
+          quantity: c.quantity,
+          preco_npc: c.preco_npc,
+          categoria: c.categoria || null,
+        })),
       }
       await apiRequest("/hunts/sessions", { method: "POST", body: JSON.stringify(body) })
       setHuntSaved(true)
@@ -1414,6 +1441,28 @@ export default function HuntsPage() {
               </button>
             </div>
 
+            <div className="hunts-page__consumables-toolbar">
+              <select
+                className="hunts-page__table-input hunts-page__consumables-select"
+                value={selectedConsumableCategory}
+                onChange={(event) => setSelectedConsumableCategory(event.target.value)}
+              >
+                <option value="">Todas as categorias</option>
+                {consumableCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              {selectedConsumableCategory ? (
+                <button
+                  type="button"
+                  className="hunts-page__ghost-button"
+                  onClick={() => setSelectedConsumableCategory("")}
+                >
+                  Limpar filtro
+                </button>
+              ) : null}
+            </div>
+
             <div className="hunts-page__enemy-search-wrap">
               <input
                 className="hunts-page__table-input"
@@ -1455,10 +1504,13 @@ export default function HuntsPage() {
                           className="hunts-page__enemy-suggestion-btn"
                           onMouseDown={() => addConsumable(item)}
                         >
-                          <span>{consumableName}</span>
-                          {item.preco_npc > 0 ? (
-                            <span className="hunts-page__consumable-price">{formatCompactDlValue(item.preco_npc)} / un</span>
-                          ) : null}
+                          <span className="hunts-page__consumable-suggestion-main">
+                            <span>{consumableName}</span>
+                            {getConsumableCategory(item) ? (
+                              <span className="hunts-page__consumable-chip">{getConsumableCategory(item)}</span>
+                            ) : null}
+                          </span>
+                          {item.preco_npc > 0 ? <span className="hunts-page__consumable-price">{formatCompactDlValue(item.preco_npc)} / un</span> : null}
                         </button>
                       </li>
                     )
@@ -1473,7 +1525,10 @@ export default function HuntsPage() {
                   const totalCost = item.preco_npc * item.quantity
                   return (
                     <li key={index} className="hunts-page__enemy-row">
-                      <span className="hunts-page__enemy-name">{item.name}</span>
+                      <span className="hunts-page__enemy-name">
+                        {item.name}
+                        {item.categoria ? <span className="hunts-page__consumable-inline-category">{item.categoria}</span> : null}
+                      </span>
                       <input
                         className="hunts-page__table-input hunts-page__table-input--qty"
                         type="number"

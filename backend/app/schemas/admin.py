@@ -190,10 +190,12 @@ class AdminNpcPriceCreateRequest(BaseModel):
 class AdminConsumableResponse(BaseModel):
     nome: str
     preco_npc: float
+    categoria: str = ""
 
 
 class AdminConsumableListResponse(BaseModel):
     items: list[AdminConsumableResponse]
+    available_categories: list[str] = []
     total: int
     page: int
     page_size: int
@@ -203,12 +205,14 @@ class AdminConsumableListResponse(BaseModel):
 class AdminConsumableCreateRequest(BaseModel):
     nome: str = Field(min_length=1)
     preco_npc: float = Field(ge=0)
+    categoria: str = ""
 
 
 class AdminConsumableUpdateRequest(BaseModel):
     previous_nome: str = Field(min_length=1)
     nome: str = Field(min_length=1)
     preco_npc: float = Field(ge=0)
+    categoria: str = ""
 
 
 class AdminOcrDebugSettingsResponse(BaseModel):

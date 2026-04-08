@@ -57,6 +57,7 @@ const consumableInitialForm = {
   previous_nome: "",
   nome: "",
   preco_npc: "0",
+  categoria: "",
 }
 
 const TASK_PAGE_SIZE = 30
@@ -250,7 +251,8 @@ export default function AdminPage() {
   const [consumablePage, setConsumablePage] = useState(1)
   const [consumableTotal, setConsumableTotal] = useState(0)
   const [consumableTotalPages, setConsumableTotalPages] = useState(1)
-  const [consumableFilters, setConsumableFilters] = useState({ search: "" })
+  const [consumableFilters, setConsumableFilters] = useState({ search: "", category: "" })
+  const [consumableCategories, setConsumableCategories] = useState([])
   const [consumableModal, setConsumableModal] = useState(null)
   const [consumableForm, setConsumableForm] = useState(consumableInitialForm)
   const [isLoadingConsumables, setIsLoadingConsumables] = useState(true)
@@ -277,7 +279,7 @@ export default function AdminPage() {
   const debouncedNpcPriceFilters = useDebouncedValue(npcPriceFilters, 250)
   const debouncedUserFilters = useDebouncedValue(userFilters, 250)
   const debouncedPokemonFilters = useDebouncedValue(pokemonFilters, 250)
-    const debouncedConsumableFilters = useDebouncedValue(consumableFilters, 250)
+  const debouncedConsumableFilters = useDebouncedValue(consumableFilters, 250)
   const [taskModal, setTaskModal] = useState(null)
   const [questModal, setQuestModal] = useState(null)
   const [npcPriceModal, setNpcPriceModal] = useState(null)
@@ -964,9 +966,11 @@ export default function AdminPage() {
         `/admin/consumables${buildQuery({ ...nextFilters, page: nextPage, page_size: CONSUMABLE_PAGE_SIZE })}`,
       )
       const items = Array.isArray(response?.items) ? response.items : []
+      const categories = Array.isArray(response?.available_categories) ? response.available_categories : []
       const total = Number(response?.total ?? items.length)
       const totalPages = Math.max(1, Number(response?.total_pages ?? 1))
       setConsumables(items)
+      setConsumableCategories(categories)
       setConsumableTotal(total)
       setConsumableTotalPages(totalPages)
       if (nextPage > totalPages) setConsumablePage(totalPages)
@@ -987,6 +991,7 @@ export default function AdminPage() {
       previous_nome: item.nome,
       nome: item.nome,
       preco_npc: String(item.preco_npc ?? 0),
+      categoria: item.categoria ?? "",
     })
     setConsumableModal({ type: "edit", item })
   }
@@ -1001,6 +1006,7 @@ export default function AdminPage() {
           body: JSON.stringify({
             nome: consumableForm.nome,
             preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
+            categoria: consumableForm.categoria,
           }),
         })
         showSuccess("Consumível criado com sucesso.")
@@ -1011,6 +1017,7 @@ export default function AdminPage() {
             previous_nome: consumableForm.previous_nome,
             nome: consumableForm.nome,
             preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
+            categoria: consumableForm.categoria,
           }),
         })
         showSuccess("Consumível atualizado com sucesso.")
@@ -1871,25 +1878,37 @@ export default function AdminPage() {
             <div className="admin-page__section-header">
               <div>
                 <h2 className="admin-page__section-title">Consumíveis</h2>
-                <p className="admin-page__section-subtitle">Gerencie os itens consumíveis e seus preços NPC usados no cálculo de custo de supply das hunts.</p>
+                <p className="admin-page__section-subtitle">Monte um catálogo organizado por categoria para o jogador filtrar supplies com mais rapidez na tela de hunts.</p>
               </div>
               <button type="button" className="admin-page__primary-button" onClick={openCreateConsumable}>Novo consumível</button>
             </div>
 
             <div className="admin-page__filters-card">
-              <div className="admin-page__filters-grid admin-page__filters-grid--npc-prices">
+              <div className="admin-page__filters-grid admin-page__filters-grid--aliases">
                 <input
                   className="admin-page__input"
                   placeholder="Buscar consumível por nome"
                   value={consumableFilters.search}
                   onChange={(event) => updateConsumableFilters({ search: event.target.value })}
                 />
+                <select
+                  className="admin-page__input"
+                  value={consumableFilters.category}
+                  onChange={(event) => updateConsumableFilters({ category: event.target.value })}
+                >
+                  <option value="">Todas as categorias</option>
+                  {consumableCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="admin-page__stats-row">
               <span className="admin-page__stat">Total: {consumableTotal}</span>
               <span className="admin-page__stat">Página: {consumablePage} / {consumableTotalPages}</span>
+              <span className="admin-page__stat">Categorias: {consumableCategories.length}</span>
+              {consumableFilters.category ? <span className="admin-page__stat admin-page__stat--location">Filtro: {consumableFilters.category}</span> : null}
             </div>
 
             <div className="admin-page__pagination">
@@ -1904,14 +1923,20 @@ export default function AdminPage() {
             ) : (
               <div className="admin-page__users-table-wrap">
                 <div className="admin-page__users-table">
-                  <div className="admin-page__npc-row admin-page__npc-row--head">
+                  <div className="admin-page__npc-row admin-page__npc-row admin-page__npc-row--consumable admin-page__npc-row--head">
                     <span>Nome</span>
+                    <span>Categoria</span>
                     <span>Preço NPC</span>
                     <span>Ações</span>
                   </div>
                   {consumables.map((item) => (
-                    <div key={item.nome} className="admin-page__npc-row">
+                    <div key={item.nome} className="admin-page__npc-row admin-page__npc-row--consumable">
                       <span>{item.nome}</span>
+                      <span>
+                        <span className={item.categoria ? "admin-page__chip admin-page__chip--consumable" : "admin-page__chip admin-page__chip--muted"}>
+                          {item.categoria || "Sem categoria"}
+                        </span>
+                      </span>
                       <span>{item.preco_npc}</span>
                       <span className="admin-page__npc-actions">
                         <button type="button" className="admin-page__ghost-button admin-page__ghost-button--sm" onClick={() => openEditConsumable(item)}>
@@ -2351,19 +2376,37 @@ export default function AdminPage() {
               <div className="character-modal__field"><label>Nome do item</label><input className="character-modal__input" value={npcPriceForm.name} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Preço unitário NPC</label><input className="character-modal__input" type="number" min="0" step="0.01" value={npcPriceForm.unit_price} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, unit_price: event.target.value }))} /></div>
               <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setNpcPriceModal(null)} disabled={isSubmittingNpcPrice}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingNpcPrice}>{isSubmittingNpcPrice ? "Salvando..." : "Salvar"}</button></div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
-                  {consumableModal ? (
-                    <div className="character-modal-backdrop">
-                      <div className="character-modal">
-                        <h2 className="character-modal__title">{consumableModal.type === "create" ? "Novo consumível" : "Editar consumível"}</h2>
-                        <form onSubmit={handleSubmitConsumable}>
-                          <div className="character-modal__field"><label>Nome</label><input className="character-modal__input" value={consumableForm.nome} onChange={(event) => setConsumableForm((prev) => ({ ...prev, nome: event.target.value }))} /></div>
-                          <div className="character-modal__field"><label>Preço NPC</label><input className="character-modal__input" type="number" min="0" step="0.01" value={consumableForm.preco_npc} onChange={(event) => setConsumableForm((prev) => ({ ...prev, preco_npc: event.target.value }))} /></div>
-                          <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setConsumableModal(null)} disabled={isSubmittingConsumable}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingConsumable}>{isSubmittingConsumable ? "Salvando..." : "Salvar"}</button></div>
-                        </form>
-                      </div>
-                    </div>
-                  ) : null}
+      {consumableModal ? (
+        <div className="character-modal-backdrop">
+          <div className="character-modal character-modal--consumable">
+            <div className="character-modal__header">
+              <div>
+                <span className="character-modal__eyebrow">Catálogo de supply</span>
+                <h2 className="character-modal__title">{consumableModal.type === "create" ? "Novo consumível" : "Editar consumível"}</h2>
+                <p className="character-modal__description">Defina nome, categoria e preço NPC. A categoria vira filtro para o jogador na tela de hunts.</p>
+              </div>
+            </div>
+            <form onSubmit={handleSubmitConsumable} className="character-modal__form">
+              <div className="character-modal__field-grid">
+                <div className="character-modal__field character-modal__field--full">
+                  <label>Nome</label>
+                  <input className="character-modal__input" value={consumableForm.nome} onChange={(event) => setConsumableForm((prev) => ({ ...prev, nome: event.target.value }))} />
+                </div>
+                <div className="character-modal__field">
+                  <label>Categoria</label>
+                  <input className="character-modal__input" value={consumableForm.categoria} onChange={(event) => setConsumableForm((prev) => ({ ...prev, categoria: event.target.value }))} placeholder="Ex: poções, berries, revive" />
+                </div>
+                <div className="character-modal__field">
+                  <label>Preço NPC</label>
+                  <input className="character-modal__input" type="number" min="0" step="0.01" value={consumableForm.preco_npc} onChange={(event) => setConsumableForm((prev) => ({ ...prev, preco_npc: event.target.value }))} />
+                </div>
+              </div>
+              <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setConsumableModal(null)} disabled={isSubmittingConsumable}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingConsumable}>{isSubmittingConsumable ? "Salvando..." : "Salvar"}</button></div>
             </form>
           </div>
         </div>

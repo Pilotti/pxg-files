@@ -74,6 +74,7 @@ from app.services.consumables import (
     create_consumable,
     delete_consumable,
     has_consumable,
+    list_consumable_categories,
     list_consumables as list_consumables_service,
     update_consumable,
 )
@@ -998,17 +999,19 @@ def admin_create_hunt_npc_price(
 @router.get("/consumables", response_model=AdminConsumableListResponse)
 def admin_list_consumables(
     search: str | None = Query(None),
+    category: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     _: dict = Depends(get_current_admin),
 ):
-    items = list_consumables_service(search=search)
+    items = list_consumables_service(search=search, category=category)
     total = len(items)
     offset = (page - 1) * page_size
     paged = items[offset: offset + page_size]
     total_pages = max(1, (total + page_size - 1) // page_size)
     return AdminConsumableListResponse(
         items=[AdminConsumableResponse(**item) for item in paged],
+        available_categories=list_consumable_categories(),
         total=total,
         page=page,
         page_size=page_size,
@@ -1023,7 +1026,7 @@ def admin_create_consumable(
 ):
     if has_consumable(payload.nome):
         raise HTTPException(status_code=409, detail=f"Consumível '{payload.nome}' já existe.")
-    created = create_consumable(payload.nome, payload.preco_npc)
+    created = create_consumable(payload.nome, payload.preco_npc, payload.categoria)
     return AdminConsumableResponse(**created)
 
 
@@ -1033,7 +1036,7 @@ def admin_update_consumable(
     _: dict = Depends(get_current_admin),
 ):
     try:
-        updated = update_consumable(payload.previous_nome, payload.nome, payload.preco_npc)
+        updated = update_consumable(payload.previous_nome, payload.nome, payload.preco_npc, payload.categoria)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return AdminConsumableResponse(**updated)

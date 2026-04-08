@@ -55,6 +55,7 @@ class HuntConsumableEntry(BaseModel):
     name: str
     quantity: int
     preco_npc: float = 0.0
+    categoria: str | None = None
 
 
 class HuntSessionListItem(BaseModel):

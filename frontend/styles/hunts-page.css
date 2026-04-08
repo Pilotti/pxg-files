@@ -921,6 +921,17 @@
   position: relative;
 }
 
+.hunts-page__consumables-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hunts-page__consumables-select {
+  max-width: 260px;
+}
+
 .hunts-page__consumable-add-btn {
   margin-top: 8px;
   min-height: 34px;
@@ -964,6 +975,26 @@
   background: var(--theme-primary-soft-bg);
 }
 
+.hunts-page__consumable-suggestion-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hunts-page__consumable-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(83, 132, 255, 0.12);
+  border: 1px solid rgba(83, 132, 255, 0.2);
+  color: #d9e7ff;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
 .hunts-page__enemy-list {
   list-style: none;
   margin: 0;
@@ -991,6 +1022,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hunts-page__consumable-inline-category {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: #d2e4ff;
+  background: rgba(83, 132, 255, 0.12);
+  border: 1px solid rgba(83, 132, 255, 0.16);
 }
 
 .hunts-page__enemy-empty {

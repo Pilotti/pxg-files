@@ -15,6 +15,7 @@ from app.api.deps import get_current_user, require_enabled_menu
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
+from app.services.consumables import list_consumables as list_consumables_service
 from app.models.hunt_session import HuntSession
 from app.schemas.hunts import (
     HuntDropRow,
@@ -439,8 +440,4 @@ async def list_enemies(
 async def list_consumables(
     _current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    import json
-    path = Path(__file__).resolve().parents[1] / "data" / "itens_consumivel.json"
-    if not path.exists():
-        return []
-    return json.loads(path.read_text(encoding="utf-8"))
+    return list_consumables_service()
