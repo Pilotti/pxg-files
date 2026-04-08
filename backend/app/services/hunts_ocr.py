@@ -134,7 +134,6 @@ def _fuzzy_correct_item_name(name: str) -> tuple[str, float | None]:
     Returns (corrected_name, score) or (original_name, None) if no correction made.
     """
     is_truncated = (name or "").rstrip().endswith("...")
-    # Strip trailing ellipsis before normalizing
     clean = re.sub(r"\.{2,}\s*$", "", (name or "")).strip()
     # Strip leading digits/symbols that may bleed from the count column (e.g. "12 ghost es")
     clean = re.sub(r"^\d+\s+", "", clean).strip()
@@ -436,11 +435,8 @@ def _detect_close_button_visual(image: Image.Image) -> tuple[int, int] | None:
     if not red_points:
         return None
     
-    # Find the rightmost red cluster (close button is typically right-aligned)
     avg_x = sum(p[0] for p in red_points) / len(red_points)
     avg_y = sum(p[1] for p in red_points) / len(red_points)
-    
-    # Return position slightly right and below to account for button size
     return (int(avg_x + 15), int(avg_y - 5))
 
 
@@ -499,11 +495,8 @@ def _detect_redefinir_button_visual(image: Image.Image) -> tuple[int, int] | Non
     if not red_points:
         return None
     
-    # Find the centroid of red cluster
     avg_x = sum(p[0] for p in red_points) / len(red_points)
     avg_y = sum(p[1] for p in red_points) / len(red_points)
-    
-    # Return position slightly right and below to account for button size
     return (int(avg_x + 20), int(avg_y + 10))
 
 
@@ -517,7 +510,6 @@ def _detect_party_window_region_visual(image: Image.Image) -> Image.Image | None
     blue_bar_y = _detect_blue_header_bar_visual(image)
     redefinir_button = _detect_redefinir_button_visual(image)
     
-    # All three anchors should be present for reliable detection
     if close_button is None or blue_bar_y is None or redefinir_button is None:
         return None
     
@@ -525,7 +517,6 @@ def _detect_party_window_region_visual(image: Image.Image) -> Image.Image | None
     close_x, close_y = close_button
     redefinir_x, redefinir_y = redefinir_button
     
-    # Calculate window boundaries from anchors
     # Top: use blue_bar_y with margin
     top = max(0, blue_bar_y - max(5, int(height * 0.01)))
     
@@ -540,7 +531,6 @@ def _detect_party_window_region_visual(image: Image.Image) -> Image.Image | None
     estimated_width = max(360, int(close_x * 0.9))
     left = max(0, right - estimated_width)
     
-    # Validate crop dimensions
     crop_width = right - left
     crop_height = bottom - top
     
