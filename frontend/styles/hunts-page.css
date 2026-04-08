@@ -434,6 +434,13 @@
   overflow: hidden;
 }
 
+.hunts-page__consumables-modal {
+  width: min(78vw, 900px);
+  height: min(78vw, 900px);
+  max-height: 86vh;
+  overflow: auto;
+}
+
 .hunts-page__preview-header {
   display: flex;
   align-items: center;
@@ -1006,6 +1013,11 @@
 @media (max-width: 640px) {
   .hunts-page__hunt-meta {
     grid-template-columns: 1fr;
+  }
+
+  .hunts-page__consumables-modal {
+    width: 94vw;
+    height: 76vh;
   }
 
   .hunts-page__session-row {

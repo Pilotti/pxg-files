@@ -1402,7 +1402,7 @@ export default function HuntsPage() {
 
       {isConsumableModalOpen ? (
         <div className="hunts-page__preview-backdrop" role="dialog" aria-modal="true" onClick={() => setIsConsumableModalOpen(false)}>
-          <div className="hunts-page__preview-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="hunts-page__preview-modal hunts-page__consumables-modal" onClick={(event) => event.stopPropagation()}>
             <div className="hunts-page__preview-header">
               <strong className="hunts-page__preview-title">Consumíveis utilizados</strong>
               <button
