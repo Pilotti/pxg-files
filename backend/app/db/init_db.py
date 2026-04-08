@@ -80,6 +80,41 @@ def init_db() -> None:
                 "SET continent = 'nightmare_world' "
                 "WHERE continent = 'nightmare'"
             ))
+
+            # Ensure sidebar table and columns exist on legacy databases.
+            conn.execute(text(
+                "CREATE TABLE IF NOT EXISTS sidebar_menu_settings ("
+                "id SERIAL PRIMARY KEY, "
+                "menu_key VARCHAR(40) NOT NULL UNIQUE, "
+                "label VARCHAR(80) NOT NULL, "
+                "path VARCHAR(120) NOT NULL, "
+                "sort_order INTEGER NOT NULL DEFAULT 0, "
+                "is_enabled BOOLEAN NOT NULL DEFAULT TRUE, "
+                "is_beta BOOLEAN NOT NULL DEFAULT FALSE, "
+                "created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
+                "updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+                ")"
+            ))
+            conn.execute(text(
+                "ALTER TABLE sidebar_menu_settings "
+                "ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0"
+            ))
+            conn.execute(text(
+                "ALTER TABLE sidebar_menu_settings "
+                "ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN NOT NULL DEFAULT TRUE"
+            ))
+            conn.execute(text(
+                "ALTER TABLE sidebar_menu_settings "
+                "ADD COLUMN IF NOT EXISTS is_beta BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+            conn.execute(text(
+                "ALTER TABLE sidebar_menu_settings "
+                "ADD COLUMN IF NOT EXISTS label VARCHAR(80)"
+            ))
+            conn.execute(text(
+                "ALTER TABLE sidebar_menu_settings "
+                "ADD COLUMN IF NOT EXISTS path VARCHAR(120)"
+            ))
             conn.execute(text(
                 "INSERT INTO sidebar_menu_settings (menu_key, label, path, sort_order, is_enabled, is_beta) "
                 "VALUES "
