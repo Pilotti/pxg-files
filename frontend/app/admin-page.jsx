@@ -435,12 +435,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (!getAdminToken() || activeTab !== "sidebar") return
     loadSidebarMenus()
-
-    useEffect(() => {
-      if (!getAdminToken() || activeTab !== "consumables") return
-      loadConsumables(debouncedConsumableFilters, consumablePage)
-    }, [activeTab, debouncedConsumableFilters, consumablePage])
   }, [activeTab])
+
+  useEffect(() => {
+    if (!getAdminToken() || activeTab !== "consumables") return
+    loadConsumables(debouncedConsumableFilters, consumablePage)
+  }, [activeTab, debouncedConsumableFilters, consumablePage])
 
   useEffect(() => {
     if (!toast) return
