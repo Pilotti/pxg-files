@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
 
@@ -12,6 +14,9 @@ from app.models.hunt_session import HuntSession
 from app.models.sidebar_menu import SidebarMenuSetting
 from app.services.task_json_storage import ensure_task_json_files, import_task_templates_from_json_files
 from app.services.quest_json_storage import ensure_quest_json_files, import_quest_templates_from_json_files
+
+
+logger = logging.getLogger(__name__)
 
 
 def init_db() -> None:
@@ -128,6 +133,8 @@ def init_db() -> None:
             conn.commit()
         except Exception:
             conn.rollback()
+            logger.exception("Falha critica durante migracoes de banco.")
+            raise
 
     # Task/quest seed is intentionally disabled.
     # Catalog data will now be managed manually from admin.

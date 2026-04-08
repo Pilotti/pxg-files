@@ -215,39 +215,6 @@ class AdminConsumableUpdateRequest(BaseModel):
     categoria: str = ""
 
 
-class AdminOcrDebugSettingsResponse(BaseModel):
-    debug_ocr_enabled: bool
-
-
-class AdminOcrDebugSettingsUpdateRequest(BaseModel):
-    debug_ocr_enabled: bool
-
-
-class AdminOcrDebugSessionResponse(BaseModel):
-    session_id: str
-    created_at: datetime
-    file_count: int
-
-
-class AdminOcrDebugFileResponse(BaseModel):
-    name: str
-    kind: str
-    size_bytes: int
-    modified_at: datetime
-
-
-class AdminOcrDebugTextPreviewResponse(BaseModel):
-    file_name: str
-    content: str
-
-
-class AdminOcrManualUploadResponse(BaseModel):
-    session_id: str
-    processed_images: int
-    recognized_lines: int
-    warnings: list[str] = []
-
-
 class AdminPokemonEntry(BaseModel):
     dex_id: str
     name: str
@@ -285,4 +252,3 @@ class AdminSidebarMenuSettingResponse(BaseModel):
 class AdminSidebarMenuSettingUpdateRequest(BaseModel):
     is_enabled: bool
     is_beta: bool
-

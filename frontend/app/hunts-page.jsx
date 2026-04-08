@@ -90,9 +90,6 @@ export default function HuntsPage() {
   const [dropsWarnings, setDropsWarnings] = useState([])
   const [savingPriceMap, setSavingPriceMap] = useState({})
   const [dropsError, setDropsError] = useState("")
-  const [isSendingManualReview, setIsSendingManualReview] = useState(false)
-  const [manualReviewSent, setManualReviewSent] = useState(false)
-  const [manualReviewSessionId, setManualReviewSessionId] = useState("")
 
   // Hunt metadata
   const [huntDuration, setHuntDuration] = useState("")
@@ -628,8 +625,6 @@ export default function HuntsPage() {
     setDropsError("")
     setDropsWarnings([])
     setDropsResult(null)
-    setManualReviewSent(false)
-    setManualReviewSessionId("")
 
     try {
       const formData = new FormData()
@@ -658,53 +653,11 @@ export default function HuntsPage() {
       setDropsResult(payload)
       setDropsRows(normalizeRows(payload?.rows || []))
       setDropsWarnings(Array.isArray(payload?.warnings) ? payload.warnings : [])
-
-      const nextSessionId = String(payload?.session_id || "")
-      setManualReviewSessionId(nextSessionId)
-
-      const rowsCount = Array.isArray(payload?.rows) ? payload.rows.length : 0
-      const warningsCount = Array.isArray(payload?.warnings) ? payload.warnings.length : 0
-      const shouldOfferManualReview = Boolean(nextSessionId) && (rowsCount === 0 || warningsCount > 0)
-
-      if (shouldOfferManualReview) {
-        const wantsManualReview = window.confirm(
-          "O OCR pode não ter ficado ideal. Deseja enviar estas imagens para revisão manual e melhoria do OCR?",
-        )
-        if (wantsManualReview) {
-          const note = window.prompt("Observação opcional para revisão manual:", "") || ""
-          await submitManualReview(nextSessionId, note)
-        }
-      }
     } catch (error) {
       setDropsError(error.message || "Erro ao enviar imagens para OCR.")
       setDropsWarnings([])
     } finally {
       setIsUploadingDrops(false)
-    }
-  }
-
-  async function submitManualReview(sessionId, note = "") {
-    const safeSessionId = String(sessionId || "").trim()
-    if (!safeSessionId || isSendingManualReview || manualReviewSent) return
-
-    setIsSendingManualReview(true)
-    try {
-      await apiRequest("/hunts/ocr/manual-review", {
-        method: "POST",
-        body: JSON.stringify({
-          session_id: safeSessionId,
-          note: String(note || "").trim(),
-        }),
-      })
-      setManualReviewSent(true)
-      setDropsWarnings((prev) => [
-        ...prev,
-        "Revisão manual enviada com sucesso. Obrigado por ajudar a melhorar o OCR.",
-      ])
-    } catch (error) {
-      setDropsError(error.message || "Não foi possível enviar para revisão manual.")
-    } finally {
-      setIsSendingManualReview(false)
     }
   }
 
@@ -1172,17 +1125,6 @@ export default function HuntsPage() {
                   <p className="hunts-page__upload-error" role="status">
                     {dropsWarnings.join(" | ")}
                   </p>
-                ) : null}
-
-                {manualReviewSessionId && !manualReviewSent ? (
-                  <button
-                    type="button"
-                    className="hunts-page__ghost-button hunts-page__process-button"
-                    onClick={() => submitManualReview(manualReviewSessionId)}
-                    disabled={isSendingManualReview}
-                  >
-                    {isSendingManualReview ? "Enviando para revisão..." : "Enviar imagens para revisão manual"}
-                  </button>
                 ) : null}
 
                 {dropsRows.length ? (

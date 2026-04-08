@@ -1,151 +1,145 @@
-# PXG Files - Migração Next.js + FastAPI + EasyOCR
+# PXG Files
 
-Projeto migrado de Vite para Next.js com OCR no backend usando EasyOCR.
+Aplicacao com:
 
-## Estrutura do Projeto
+- frontend Next.js em [frontend](./frontend)
+- API principal FastAPI em [backend](./backend)
+- servico OCR separado em [backend-ocr](./backend-ocr)
 
-```
+## Arquitetura Atual
+
+### Frontend
+- roda em `http://localhost:3000`
+- usa `NEXT_PUBLIC_API_URL` para a API principal
+- usa `NEXT_PUBLIC_OCR_API_URL` para a pagina OCR isolada em `/ocr`
+
+### Backend principal
+- roda em `http://localhost:8000`
+- expõe autenticacao, personagens, tasks, quests, hunts, admin e UI
+- inicializa banco e migracoes basicas no startup
+- documentacao em `http://localhost:8000/docs`
+
+### Backend OCR separado
+- roda em `http://localhost:8001`
+- expõe `/health`, `/ocr` e `/ocr/detailed`
+- e usado pela pagina isolada `/ocr` do frontend
+- documentacao em `http://localhost:8001/docs`
+
+## Fluxos Principais
+
+- App principal: `frontend -> backend:8000`
+- Pagina OCR isolada `/ocr`: `frontend -> backend-ocr:8001`
+- OCR de hunts: processado pela API principal em `backend/app/api/hunts.py`
+
+## Estrutura
+
+```text
 pxg-files-next/
-├─ frontend/          # Next.js + React
-│  ├─ app/           # App Router
-│  ├─ context/       # React Contexts
-│  ├─ components/    # React Components
-│  ├─ services/      # API Services
-│  ├─ styles/        # CSS
-│  └─ package.json
-├─ backend-ocr/      # FastAPI + EasyOCR
-│  ├─ main.py
-│  ├─ requirements.txt
-│  └─ Dockerfile
-└─ docker-compose.yml
+|-- frontend/
+|-- backend/
+|-- backend-ocr/
+|-- docker-compose.yml
+|-- start.ps1
+|-- start.sh
 ```
 
 ## Setup Local
 
-### Pré-requisitos
+### Requisitos
 - Node.js 18+
 - Python 3.10+
-- Docker (opcional)
+- PowerShell no Windows
 
-### Sem Docker
+### Opcao 1: subir tudo com script no Windows
 
-**1. Backend:**
-```bash
-cd backend-ocr
-python -m venv venv
+Na raiz do projeto:
 
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-python main.py
-# Roda em http://localhost:8000
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-**2. Frontend (novo terminal):**
-```bash
+Servicos esperados:
+
+- frontend: `http://localhost:3000`
+- API principal: `http://localhost:8000`
+- OCR separado: `http://localhost:8001`
+
+### Opcao 2: subir manualmente
+
+API principal:
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+OCR separado:
+
+```powershell
+cd backend-ocr
+.\venv\Scripts\python.exe main.py
+```
+
+Frontend:
+
+```powershell
 cd frontend
 npm install
 npm run dev
-# Roda em http://localhost:3000
 ```
 
-### Com Docker
+## Docker Compose
+
+O arquivo [docker-compose.yml](./docker-compose.yml) sobe:
+
+- `backend-main` em `8000`
+- `backend-ocr` em `8001`
+- `frontend` em `3000`
 
 ```bash
-docker-compose up
-# Frontend: http://localhost:3000
-# Backend: http://localhost:8000
-# Docs: http://localhost:8000/docs
+docker-compose up --build
 ```
 
-## Usando OCR
+## Variaveis de Ambiente
 
-1. Acesse http://localhost:3000/ocr
-2. Selecione uma imagem
-3. Clique em "Extrair Texto"
-4. O backend processará com EasyOCR e retornará o texto
+### Frontend
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_OCR_API_URL`
 
-## Endpoints da API
+### Backend principal
+Use [backend/.env.example](./backend/.env.example) como base.
 
-### POST /ocr
-Extrai texto simples de uma imagem
-```bash
-curl -X POST -F "file=@image.jpg" http://localhost:8000/ocr
+### Backend OCR separado
+- usa `PORT`
+- hoje a configuracao de CORS esta hardcoded no proprio servico
+
+## Comandos Uteis
+
+Frontend:
+
+```powershell
+cd frontend
+npm run dev
+npm run build
+npm run lint
 ```
 
-Resposta:
-```json
-{
-  "success": true,
-  "text": "Texto extraído...",
-  "detections": 5
-}
+Backend principal:
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### POST /ocr/detailed
-Retorna texto com confidence scores
-```bash
-curl -X POST -F "file=@image.jpg" http://localhost:8000/ocr/detailed
+OCR separado:
+
+```powershell
+cd backend-ocr
+.\venv\Scripts\python.exe main.py
 ```
 
-### GET /health
-Health check
-```bash
-curl http://localhost:8000/health
-```
+## Observacoes
 
-### Documentação Interativa
-```bash
-http://localhost:8000/docs
-```
-
-## Próximas Etapas
-
-- [ ] Integrar componentes React antigos
-- [ ] Adicionar autenticação
-- [ ] Melhorar UI da página OCR
-- [ ] Cache de modelos EasyOCR
-- [ ] Deploy em Railway
-
-## Deploy no Railway
-
-1. Integrar repositório no Railway
-2. Configurar variáveis de ambiente:
-   - `NEXT_PUBLIC_API_URL` = URL do backend
-3. Railway detectará automaticamente:
-   - Frontend: `package.json` com Next.js
-   - Backend: `requirements.txt` com Python
-
-## Scripts
-
-```bash
-# Frontend
-npm run dev      # Dev mode
-npm run build    # Build production
-npm start        # Start production
-
-# Backend
-python main.py   # Run server
-```
-
-## Performance
-
-- **Tesseract.js** (clientside): 2-5s por imagem
-- **EasyOCR** (backend): 0.5-2s por imagem ⭐
-
-## Troubleshooting
-
-**"Connection refused" ao chamar /ocr?**
-- Verificar se backend está rodando em 8000
-- Verificar `.env.local` do frontend
-
-**EasyOCR carregando lentamente?**
-- Primeira vez leva ~30s para baixar os modelos
-- Cache automático na sequência
-
-**Problema com CORS?**
-- Backend tem `allow_origins=["*"]` por padrão
-- Mudar para domínio específico em produção
+- O arquivo [test_e2e.py](./test_e2e.py) foi aposentado porque testava a arquitetura antiga.
+- O frontend atual nao e um projeto Vite; ele usa Next.js App Router.
+- O backend OCR separado continua existindo e nao foi unificado com a API principal.

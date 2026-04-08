@@ -1,7 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 import difflib
 import io
 import json
@@ -9,7 +8,6 @@ from pathlib import Path
 import re
 import statistics
 import unicodedata
-from uuid import uuid4
 
 import pytesseract
 from PIL import Image, ImageFilter, ImageOps
@@ -39,10 +37,10 @@ class OcrWord:
 # Known-item dictionary for post-OCR fuzzy name correction
 # ---------------------------------------------------------------------------
 
-_KNOWN_ITEMS_CACHE: dict[str, str] | None = None  # normalized → display
+_KNOWN_ITEMS_CACHE: dict[str, str] | None = None  # normalized â†’ display
 _KNOWN_ITEMS_MTIME: float = 0.0
 
-# Approved aliases from DB: observed_normalized → canonical_name
+# Approved aliases from DB: observed_normalized â†’ canonical_name
 # Populated externally via refresh_approved_aliases_cache().
 _APPROVED_ALIASES_CACHE: dict[str, str] = {}
 
@@ -127,7 +125,7 @@ def _fuzzy_correct_item_name(name: str) -> tuple[str, float | None]:
     - Exact match: always correct (score 1.0).
     - Prefix match: if the name appears to be a truncated prefix of a known item
       (either ending with '...', or unique prefix), use that known item.
-      This handles cases like 'compressed ghos...' → 'compressed ghost essence'.
+      This handles cases like 'compressed ghos...' â†’ 'compressed ghost essence'.
     - High-confidence fuzzy (>= 0.85): correct for unambiguous substitutions.
     - Otherwise: leave unchanged to avoid false positives.
 
@@ -177,17 +175,12 @@ def _fuzzy_correct_item_name(name: str) -> tuple[str, float | None]:
 
 def _apply_fuzzy_name_correction(
     lines: list["ParsedDropLine"],
-    debug_notes: list[str] | None = None,
 ) -> list["ParsedDropLine"]:
     """Apply fuzzy name correction to a list of parsed drop lines."""
     corrected: list[ParsedDropLine] = []
     for line in lines:
-        new_name, score = _fuzzy_correct_item_name(line.name_display)
-        if new_name != line.name_display:
-            if debug_notes is not None:
-                debug_notes.append(
-                    f"DEBUG fuzzy correction: '{line.name_display}' → '{new_name}' (score={score:.2f})"
-                )
+        new_name, _ = _fuzzy_correct_item_name(line.name_display)
+        if new_name != line.name_display:
             new_normalized = re.sub(r"[^a-z0-9 ]+", " ", new_name.lower())
             new_normalized = " ".join(new_normalized.split())
             qty = line.quantity
@@ -258,30 +251,6 @@ def _ocr_multiline(
 ) -> str:
     config = _build_tesseract_config(psm=6, oem=oem, whitelist=whitelist)
     return pytesseract.image_to_string(image, lang=lang, config=config).strip()
-
-
-def _save_debug_image(debug_dir: Path | None, name: str, image: Image.Image) -> str | None:
-    if debug_dir is None:
-        return None
-
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", name).strip("_") or "stage"
-    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{safe_name}_{uuid4().hex[:6]}.png"
-    target = debug_dir / filename
-    image.save(target)
-    return str(target)
-
-
-def _save_debug_text(debug_dir: Path | None, name: str, content: str) -> str | None:
-    if debug_dir is None:
-        return None
-
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", name).strip("_") or "text"
-    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{safe_name}_{uuid4().hex[:6]}.txt"
-    target = debug_dir / filename
-    target.write_text(content or "", encoding="utf-8")
-    return str(target)
 
 
 def _extract_words(image: Image.Image, *, lang: str = "eng", oem: int = 1) -> list[OcrWord]:
@@ -420,7 +389,7 @@ def _detect_close_button_visual(image: Image.Image) -> tuple[int, int] | None:
     pixels = image.load()
     width, height = image.size
     
-    # Search in top-right quadrant (right 30% × top 15%)
+    # Search in top-right quadrant (right 30% Ã— top 15%)
     search_x_start = int(width * 0.70)
     search_y_end = int(height * 0.15)
     
@@ -480,7 +449,7 @@ def _detect_redefinir_button_visual(image: Image.Image) -> tuple[int, int] | Non
     pixels = image.load()
     width, height = image.size
     
-    # Search in bottom-right quadrant (right 40% × bottom 15%)
+    # Search in bottom-right quadrant (right 40% Ã— bottom 15%)
     search_x_start = int(width * 0.60)
     search_y_start = int(height * 0.85)
     
@@ -553,7 +522,7 @@ def _detect_table_region_and_strategy(
     if party_region is not None:
         return party_region, "visual-anchor"
     
-    # Fall back to text-based anchor detection (Pokémon Party + X)
+    # Fall back to text-based anchor detection (PokÃ©mon Party + X)
     words = _extract_words(image, lang=lang, oem=oem)
     party_region = _detect_party_window_region(image, words)
     crop_strategy = "text-anchor" if party_region is not None else "full-image"
@@ -916,8 +885,6 @@ def _extract_drop_lines_by_columns(
     table: Image.Image,
     words: list[OcrWord],
     header: dict[str, OcrWord],
-    debug_dir: Path | None = None,
-    debug_notes: list[str] | None = None,
     *,
     lang: str = "eng",
     oem: int = 1,
@@ -958,33 +925,11 @@ def _extract_drop_lines_by_columns(
 
     item_crop = table.crop((item_left, row_start_y, item_right, footer_start_y))
     count_crop = table.crop((count_left, row_start_y, count_right, footer_start_y))
-    value_crop = table.crop((value_left, row_start_y, value_right, footer_start_y))
-
-    item_crop_path = _save_debug_image(debug_dir, "item_column", item_crop)
-    count_crop_path = _save_debug_image(debug_dir, "count_column", count_crop)
-    value_crop_path = _save_debug_image(debug_dir, "value_column", value_crop)
-    if debug_notes is not None:
-        if item_crop_path:
-            debug_notes.append(f"DEBUG item column: {item_crop_path}")
-        if count_crop_path:
-            debug_notes.append(f"DEBUG count column: {count_crop_path}")
-        if value_crop_path:
-            debug_notes.append(f"DEBUG value column: {value_crop_path}")
+    value_crop = table.crop((value_left, row_start_y, value_right, footer_start_y))
 
     item_candidates, item_text = _extract_column_candidates(item_crop, "item", lang=lang, oem=oem)
     count_candidates, count_text = _extract_column_candidates(count_crop, "count", lang=lang, oem=oem)
-    value_candidates, value_text = _extract_column_candidates(value_crop, "value", lang=lang, oem=oem)
-
-    item_txt_path = _save_debug_text(debug_dir, "item_column_text", item_text)
-    count_txt_path = _save_debug_text(debug_dir, "count_column_text", count_text)
-    value_txt_path = _save_debug_text(debug_dir, "value_column_text", value_text)
-    if debug_notes is not None:
-        if item_txt_path:
-            debug_notes.append(f"DEBUG item text: {item_txt_path}")
-        if count_txt_path:
-            debug_notes.append(f"DEBUG count text: {count_txt_path}")
-        if value_txt_path:
-            debug_notes.append(f"DEBUG value text: {value_txt_path}")
+    value_candidates, value_text = _extract_column_candidates(value_crop, "value", lang=lang, oem=oem)
 
     aligned_lines_by_y = _align_column_triplets(item_candidates, count_candidates, value_candidates)
 
@@ -1019,9 +964,6 @@ def _extract_drop_lines_by_columns(
     )
     aligned_dump += "\n---\n"
     aligned_dump += f"strategy={strategy} rows_y={len(aligned_lines_by_y)} rows_index={len(aligned_lines_by_index)}"
-    aligned_txt_path = _save_debug_text(debug_dir, "column_candidates_by_y", aligned_dump)
-    if aligned_txt_path and debug_notes is not None:
-        debug_notes.append(f"DEBUG column candidates by y: {aligned_txt_path}")
 
     return aligned_lines
 
@@ -1029,11 +971,8 @@ def _extract_drop_lines_by_columns(
 def _extract_drop_lines_from_table(
     table: Image.Image,
     *,
-    debug_dir: Path | None = None,
-    debug_notes: list[str] | None = None,
     ocr_lang: str = "eng",
     ocr_oem: int = 1,
-    variant_label: str = "table",
 ) -> list[ParsedDropLine]:
     words = _extract_words(table, lang=ocr_lang, oem=ocr_oem)
 
@@ -1051,32 +990,18 @@ def _extract_drop_lines_from_table(
         elif header["value"] is None and normalized_text in value_keywords:
             header["value"] = word
 
-    if not all(header.values()):
-        if debug_notes is not None:
-            debug_notes.append(f"DEBUG {variant_label}: missing headers, using raw text fallback")
+    if not all(header.values()):
         raw_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
-        raw_txt_path = _save_debug_text(debug_dir, f"{variant_label}_fallback_raw_text", raw_text)
-        if raw_txt_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG {variant_label} raw OCR text: {raw_txt_path}")
         return parse_drop_lines(raw_text)
 
     column_lines = _extract_drop_lines_by_columns(
         table,
         words,
         header,
-        debug_dir=debug_dir,
-        debug_notes=debug_notes,
         lang=ocr_lang,
         oem=ocr_oem,
     )
     if column_lines:
-        parsed_dump = "\n".join(
-            f"{line.name_display} | qtd={line.quantity:.0f} | valor={line.npc_total_price:.2f}"
-            for line in column_lines
-        )
-        parsed_path = _save_debug_text(debug_dir, f"{variant_label}_parsed_lines_column_mode", parsed_dump)
-        if parsed_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG {variant_label} parsed lines (column mode): {parsed_path}")
         return column_lines
 
     table_width, table_height = table.size
@@ -1092,9 +1017,6 @@ def _extract_drop_lines_from_table(
 
     if not usable_words:
         raw_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
-        raw_txt_path = _save_debug_text(debug_dir, f"{variant_label}_fallback_raw_text_no_words", raw_text)
-        if raw_txt_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG {variant_label} fallback raw OCR text: {raw_txt_path}")
         return parse_drop_lines(raw_text)
 
     avg_height = sum(word.h for word in usable_words) / len(usable_words)
@@ -1199,68 +1121,41 @@ def _extract_drop_lines_from_table(
         )
 
     if parsed_lines:
-        parsed_dump = "\n".join(
-            f"{line.name_display} | qtd={line.quantity:.0f} | valor={line.npc_total_price:.2f}"
-            for line in parsed_lines
-        )
-        parsed_path = _save_debug_text(debug_dir, f"{variant_label}_parsed_lines_row_mode", parsed_dump)
-        if parsed_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG {variant_label} parsed lines (row mode): {parsed_path}")
         return parsed_lines
 
     raw_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
-    raw_txt_path = _save_debug_text(debug_dir, f"{variant_label}_fallback_raw_text_final", raw_text)
-    if raw_txt_path and debug_notes is not None:
-        debug_notes.append(f"DEBUG {variant_label} fallback raw OCR text: {raw_txt_path}")
     return parse_drop_lines(raw_text)
 
 
 def extract_drop_lines_from_image(
     image_bytes: bytes,
-    debug_dir: Path | None = None,
-    debug_notes: list[str] | None = None,
     ocr_lang: str = "eng",
     ocr_oem: int = 1,
 ) -> list[ParsedDropLine]:
     original_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    _save_debug_image(debug_dir, "original", original_image)
 
     # Detect and crop the table on the original RGB image so UI color anchors remain intact.
-    detected_table_raw, detect_strategy = _detect_table_region_and_strategy(
+    detected_table_raw, _ = _detect_table_region_and_strategy(
         original_image,
         lang=ocr_lang,
         oem=ocr_oem,
         visual_image=original_image,
-    )
-    if debug_notes is not None:
-        debug_notes.append(f"DEBUG table detection strategy: {detect_strategy}")
+    )
 
     detected_table = ImageOps.autocontrast(detected_table_raw)
-    detected_table_path = _save_debug_image(debug_dir, "detected_table_color", detected_table)
-    if detected_table_path and debug_notes is not None:
-        debug_notes.append(f"DEBUG detected table (color): {detected_table_path}")
 
     # Only after cropping the table do we preprocess/grayscale for text OCR.
     preprocessed_table = preprocess(detected_table)
-    table_path = _save_debug_image(debug_dir, "detected_table", preprocessed_table)
-    if table_path and debug_notes is not None:
-        debug_notes.append(f"DEBUG detected table (preprocessed): {table_path}")
 
     color_lines = _extract_drop_lines_from_table(
         detected_table,
-        debug_dir=debug_dir,
-        debug_notes=debug_notes,
         ocr_lang=ocr_lang,
         ocr_oem=ocr_oem,
-        variant_label="color_table",
     )
     preprocessed_lines = _extract_drop_lines_from_table(
         preprocessed_table,
-        debug_dir=debug_dir,
-        debug_notes=debug_notes,
         ocr_lang=ocr_lang,
         ocr_oem=ocr_oem,
-        variant_label="preprocessed_table",
     )
 
     def _score_lines(lines: list[ParsedDropLine]) -> tuple[int, int, float]:
@@ -1272,43 +1167,12 @@ def extract_drop_lines_from_image(
     color_score = _score_lines(color_lines)
     preprocessed_score = _score_lines(preprocessed_lines)
 
-    best_label = "color_table"
     best_lines = color_lines
     if preprocessed_score > color_score:
-        best_label = "preprocessed_table"
         best_lines = preprocessed_lines
 
-    if debug_notes is not None:
-        debug_notes.append(
-            f"DEBUG table OCR variant scores: color={color_score} preprocessed={preprocessed_score} winner={best_label}"
-        )
-
-    best_lines = _apply_fuzzy_name_correction(best_lines, debug_notes=debug_notes)
+    best_lines = _apply_fuzzy_name_correction(best_lines)
     return best_lines
-
-
-def extract_text_from_image(image_bytes: bytes, *, ocr_lang: str = "eng", ocr_oem: int = 1) -> str:
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    image = preprocess(image)
-
-    table = detect_table(image, lang=ocr_lang, oem=ocr_oem)
-    table = ImageOps.autocontrast(table)
-
-    table_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
-    full_text = _ocr_multiline(image, lang=ocr_lang, oem=ocr_oem)
-
-    def _score_ocr_text(raw_text: str) -> int:
-        score = 0
-        for raw_line in raw_text.splitlines():
-            line = " ".join(raw_line.split())
-            if re.match(r"^.+?\s+\d+\s+[\doOkK.,]+$", line):
-                score += 1
-        return score
-
-    if _score_ocr_text(full_text) > _score_ocr_text(table_text):
-        return full_text
-
-    return table_text
 
 
 def parse_drop_lines(raw_text: str) -> list[ParsedDropLine]:
@@ -1357,3 +1221,5 @@ def deduplicate_drop_lines(lines: list[ParsedDropLine]) -> tuple[list[ParsedDrop
         unique_lines.append(line)
 
     return unique_lines, duplicates_ignored
+
+

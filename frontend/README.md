@@ -1,16 +1,57 @@
-# React + Vite
+# Frontend PXG Files
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend em Next.js com App Router.
 
-Currently, two official plugins are available:
+## Responsabilidades
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- autenticacao e fluxo de sessao do usuario
+- selecao e troca de personagem
+- telas de tasks, quests, hunts, configuracoes e admin
+- pagina OCR isolada em `/ocr`
 
-## React Compiler
+## Estrutura Principal
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `app/`: rotas do App Router
+- `components/`: componentes reutilizaveis
+- `context/`: estado global de auth, personagem e UI
+- `services/`: integracao com API principal e OCR separado
+- `styles/`: folhas CSS por pagina/componente
 
-## Expanding the ESLint configuration
+## Variaveis de Ambiente
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+O frontend usa:
+
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_OCR_API_URL`
+
+Exemplo local comum:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_OCR_API_URL=http://localhost:8001
+```
+
+## Comandos
+
+```powershell
+npm install
+npm run dev
+npm run build
+npm run lint
+```
+
+## Endpoints Consumidos
+
+### API principal
+- auth, characters, tasks, quests, hunts, admin e UI
+- normalmente em `http://localhost:8000`
+
+### OCR separado
+- usado pela pagina `/ocr`
+- normalmente em `http://localhost:8001`
+
+## Observacoes
+
+- este frontend nao usa Vite
+- o script de lint atual usa ESLint CLI
+- warnings de lint existentes no codigo foram mantidos; eles nao impedem build

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+﻿import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "@/lib/react-router-compat"
 import { adminRequest, clearAdminToken, getAdminToken } from "../services/admin-api.js"
 import { API_URL } from "../services/session-manager.js"
@@ -116,7 +116,7 @@ function normalizeCoordinateInput(rawCoordinate) {
   const numbers = parts.map((part) => Number(part))
   const invalid = numbers.some((num) => !Number.isInteger(num))
   if (invalid) {
-    throw new Error("Cada valor da coordenada deve ser inteiro válido")
+    throw new Error("Cada valor da coordenada deve ser inteiro vÃ¡lido")
   }
 
   const outOfRange = numbers.some((num) => num < -1000000 || num > 1000000)
@@ -197,7 +197,7 @@ function Toast({ toast, onClose }) {
       </div>
 
       <button type="button" className="admin-toast__close" onClick={onClose} aria-label="Fechar aviso">
-        ✕
+        âœ•
       </button>
     </div>
   )
@@ -387,7 +387,6 @@ export default function AdminPage() {
     }
 
     loadAdminMe()
-    loadOcrDebugSettings()
   }, [])
 
   useEffect(() => {
@@ -423,11 +422,6 @@ export default function AdminPage() {
     if (!getAdminToken() || activeTab !== "users") return
     loadUsers(debouncedUserFilters)
   }, [activeTab, debouncedUserFilters])
-
-  useEffect(() => {
-    if (!getAdminToken() || activeTab !== "ocr-debug") return
-    loadOcrDebugSessions()
-  }, [activeTab])
 
   useEffect(() => {
     if (!getAdminToken() || activeTab !== "pokemon") return
@@ -483,7 +477,7 @@ export default function AdminPage() {
       const data = await adminRequest("/admin/ocr-debug")
       setOcrDebugEnabled(Boolean(data?.debug_ocr_enabled))
     } catch (err) {
-      showError(err.message || "Erro ao carregar configuração do OCR")
+      showError(err.message || "Erro ao carregar configuraÃ§Ã£o do OCR")
     } finally {
       setIsLoadingOcrDebug(false)
     }
@@ -522,7 +516,7 @@ export default function AdminPage() {
         setOcrDebugPreviewTitle("")
       }
     } catch (err) {
-      showError(err.message || "Erro ao carregar sessões de debug OCR")
+      showError(err.message || "Erro ao carregar sessÃµes de debug OCR")
     } finally {
       setIsLoadingOcrDebugSessions(false)
     }
@@ -583,7 +577,7 @@ export default function AdminPage() {
 
     const token = getAdminToken()
     if (!token) {
-      showError("Sessão admin expirada.")
+      showError("SessÃ£o admin expirada.")
       return
     }
 
@@ -598,7 +592,7 @@ export default function AdminPage() {
       )
 
       if (!response.ok) {
-        throw new Error("Não foi possível abrir o arquivo de debug.")
+        throw new Error("NÃ£o foi possÃ­vel abrir o arquivo de debug.")
       }
 
       const blob = await response.blob()
@@ -615,7 +609,7 @@ export default function AdminPage() {
 
     const token = getAdminToken()
     if (!token) {
-      showError("Sessão admin expirada.")
+      showError("SessÃ£o admin expirada.")
       return
     }
 
@@ -630,7 +624,7 @@ export default function AdminPage() {
       )
 
       if (!response.ok) {
-        throw new Error("Não foi possível abrir a imagem de debug.")
+        throw new Error("NÃ£o foi possÃ­vel abrir a imagem de debug.")
       }
 
       const blob = await response.blob()
@@ -653,7 +647,7 @@ export default function AdminPage() {
     const canonicalName = String(row.canonical || "").trim()
 
     if (!observedName || !canonicalName) {
-      showError("Preencha leitura OCR e nome canônico para salvar o treino.")
+      showError("Preencha leitura OCR e nome canÃ´nico para salvar o treino.")
       return
     }
 
@@ -748,7 +742,7 @@ export default function AdminPage() {
   async function handleDeleteOcrDebugSession(sessionId) {
     if (!sessionId || deletingOcrDebugSessionId) return
 
-    const confirmed = window.confirm(`Excluir toda a sessão ${sessionId}?`)
+    const confirmed = window.confirm(`Excluir toda a sessÃ£o ${sessionId}?`)
     if (!confirmed) return
 
     setDeletingOcrDebugSessionId(sessionId)
@@ -756,7 +750,7 @@ export default function AdminPage() {
       await adminRequest(`/admin/ocr-debug/sessions/${encodeURIComponent(sessionId)}`, {
         method: "DELETE",
       })
-      showSuccess("Sessão de debug removida.")
+      showSuccess("SessÃ£o de debug removida.")
 
       if (selectedOcrDebugSession === sessionId) {
         setSelectedOcrDebugSession("")
@@ -773,7 +767,7 @@ export default function AdminPage() {
 
       await loadOcrDebugSessions()
     } catch (err) {
-      showError(err.message || "Erro ao remover sessão de debug")
+      showError(err.message || "Erro ao remover sessÃ£o de debug")
     } finally {
       setDeletingOcrDebugSessionId("")
     }
@@ -782,13 +776,13 @@ export default function AdminPage() {
   async function handleClearAllOcrDebugSessions() {
     if (isClearingOcrDebug) return
 
-    const confirmed = window.confirm("Excluir todas as sessões de debug OCR?")
+    const confirmed = window.confirm("Excluir todas as sessÃµes de debug OCR?")
     if (!confirmed) return
 
     setIsClearingOcrDebug(true)
     try {
       await adminRequest("/admin/ocr-debug/sessions", { method: "DELETE" })
-      showSuccess("Sessões de debug removidas.")
+      showSuccess("SessÃµes de debug removidas.")
       setSelectedOcrDebugSession("")
       setOcrDebugFiles([])
       setOcrDebugPreviewTitle("")
@@ -801,7 +795,7 @@ export default function AdminPage() {
       setOcrDebugImagePreviewUrl("")
       await loadOcrDebugSessions()
     } catch (err) {
-      showError(err.message || "Erro ao limpar sessões de debug")
+      showError(err.message || "Erro ao limpar sessÃµes de debug")
     } finally {
       setIsClearingOcrDebug(false)
     }
@@ -817,7 +811,7 @@ export default function AdminPage() {
 
     const token = getAdminToken()
     if (!token) {
-      showError("Sessão admin expirada.")
+      showError("SessÃ£o admin expirada.")
       return
     }
 
@@ -838,7 +832,7 @@ export default function AdminPage() {
 
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        throw new Error(payload?.detail || "Não foi possível enviar imagens para treino manual OCR.")
+        throw new Error(payload?.detail || "NÃ£o foi possÃ­vel enviar imagens para treino manual OCR.")
       }
 
       showSuccess("Imagens enviadas para treino OCR manual.")
@@ -975,7 +969,7 @@ export default function AdminPage() {
       setConsumableTotalPages(totalPages)
       if (nextPage > totalPages) setConsumablePage(totalPages)
     } catch (err) {
-      showError(err.message || "Erro ao carregar consumíveis")
+      showError(err.message || "Erro ao carregar consumÃ­veis")
     } finally {
       setIsLoadingConsumables(false)
     }
@@ -1009,7 +1003,7 @@ export default function AdminPage() {
             categoria: consumableForm.categoria,
           }),
         })
-        showSuccess("Consumível criado com sucesso.")
+        showSuccess("ConsumÃ­vel criado com sucesso.")
       } else {
         await adminRequest("/admin/consumables", {
           method: "PUT",
@@ -1020,12 +1014,12 @@ export default function AdminPage() {
             categoria: consumableForm.categoria,
           }),
         })
-        showSuccess("Consumível atualizado com sucesso.")
+        showSuccess("ConsumÃ­vel atualizado com sucesso.")
       }
       setConsumableModal(null)
       await loadConsumables(debouncedConsumableFilters)
     } catch (err) {
-      showError(err.message || "Erro ao salvar consumível")
+      showError(err.message || "Erro ao salvar consumÃ­vel")
     } finally {
       setIsSubmittingConsumable(false)
     }
@@ -1034,10 +1028,10 @@ export default function AdminPage() {
   async function handleDeleteConsumable(nome) {
     try {
       await adminRequest(`/admin/consumables/${encodeURIComponent(nome)}`, { method: "DELETE" })
-      showSuccess("Consumível removido com sucesso.")
+      showSuccess("ConsumÃ­vel removido com sucesso.")
       await loadConsumables(debouncedConsumableFilters)
     } catch (err) {
-      showError(err.message || "Erro ao remover consumível")
+      showError(err.message || "Erro ao remover consumÃ­vel")
     }
   }
 
@@ -1059,7 +1053,7 @@ export default function AdminPage() {
         setNpcPricePage(totalPages)
       }
     } catch (err) {
-      showError(err.message || "Erro ao carregar preços NPC")
+      showError(err.message || "Erro ao carregar preÃ§os NPC")
     } finally {
       setIsLoadingNpcPrices(false)
     }
@@ -1070,7 +1064,7 @@ export default function AdminPage() {
     try {
       setUsers(await adminRequest(`/admin/users${buildQuery(nextFilters)}`))
     } catch (err) {
-      showError(err.message || "Erro ao carregar usuários")
+      showError(err.message || "Erro ao carregar usuÃ¡rios")
     } finally {
       setIsLoadingUsers(false)
     }
@@ -1088,11 +1082,11 @@ export default function AdminPage() {
     setDeletingUserId(userId)
     try {
       await adminRequest(`/admin/users/${userId}`, { method: "DELETE" })
-      showSuccess("Usuário removido com sucesso.")
+      showSuccess("UsuÃ¡rio removido com sucesso.")
       setUserDeleteModal(null)
       await loadUsers(debouncedUserFilters)
     } catch (err) {
-      showError(err.message || "Erro ao remover usuário")
+      showError(err.message || "Erro ao remover usuÃ¡rio")
     } finally {
       setDeletingUserId(null)
     }
@@ -1103,7 +1097,7 @@ export default function AdminPage() {
     try {
       setSidebarMenus(await adminRequest("/admin/sidebar-menus"))
     } catch (err) {
-      showError(err.message || "Erro ao carregar configuração da sidebar")
+      showError(err.message || "Erro ao carregar configuraÃ§Ã£o da sidebar")
     } finally {
       setIsLoadingSidebarMenus(false)
     }
@@ -1128,7 +1122,7 @@ export default function AdminPage() {
       })
 
       setSidebarMenus((prev) => prev.map((menu) => (menu.menu_key === menuKey ? updated : menu)))
-      showSuccess("Configuração do menu atualizada.")
+      showSuccess("ConfiguraÃ§Ã£o do menu atualizada.")
     } catch (err) {
       showError(err.message || "Erro ao atualizar menu da sidebar")
     } finally {
@@ -1168,7 +1162,7 @@ export default function AdminPage() {
           setPokemonPage(totalPages)
         }
       } catch (err) {
-        showError(err.message || "Erro ao carregar Pokémon")
+        showError(err.message || "Erro ao carregar PokÃ©mon")
       } finally {
         setIsLoadingPokemon(false)
       }
@@ -1193,7 +1187,7 @@ export default function AdminPage() {
             method: "POST",
             body: JSON.stringify({ dex_id: pokemonForm.dex_id.trim(), name: pokemonForm.name.trim() }),
           })
-          showSuccess("Pokémon adicionado com sucesso.")
+          showSuccess("PokÃ©mon adicionado com sucesso.")
         } else {
           await adminRequest("/admin/pokemon", {
             method: "PUT",
@@ -1203,12 +1197,12 @@ export default function AdminPage() {
               name: pokemonForm.name.trim(),
             }),
           })
-          showSuccess("Pokémon atualizado com sucesso.")
+          showSuccess("PokÃ©mon atualizado com sucesso.")
         }
         setPokemonModal(null)
         await loadPokemon(debouncedPokemonFilters)
       } catch (err) {
-        showError(err.message || "Erro ao salvar Pokémon")
+        showError(err.message || "Erro ao salvar PokÃ©mon")
       } finally {
         setIsSubmittingPokemon(false)
       }
@@ -1219,10 +1213,10 @@ export default function AdminPage() {
       setIsDeletingPokemon(true)
       try {
         await adminRequest(`/admin/pokemon?full_name=${encodeURIComponent(fullName)}`, { method: "DELETE" })
-        showSuccess("Pokémon removido.")
+        showSuccess("PokÃ©mon removido.")
         await loadPokemon(debouncedPokemonFilters)
       } catch (err) {
-        showError(err.message || "Erro ao remover Pokémon")
+        showError(err.message || "Erro ao remover PokÃ©mon")
       } finally {
         setIsDeletingPokemon(false)
       }
@@ -1233,12 +1227,12 @@ export default function AdminPage() {
     const canonicalName = String(rawCanonical || "").trim()
 
     if (!canonicalName) {
-      showError("Informe um nome canônico antes de salvar o alias.")
+      showError("Informe um nome canÃ´nico antes de salvar o alias.")
       return
     }
 
     if (shouldApprove && npcItemNames.length > 0 && !npcItemNames.includes(canonicalName)) {
-      showError(`"${canonicalName}" não está na lista de itens NPC. Escolha um nome da lista para aprovar.`)
+      showError(`"${canonicalName}" nÃ£o estÃ¡ na lista de itens NPC. Escolha um nome da lista para aprovar.`)
       return
     }
 
@@ -1302,13 +1296,13 @@ export default function AdminPage() {
             unit_price: Number(String(npcPriceForm.unit_price).replace(",", ".") || 0),
           }),
         })
-        showSuccess("Preço NPC atualizado com sucesso.")
+        showSuccess("PreÃ§o NPC atualizado com sucesso.")
       }
       setNpcPriceModal(null)
       await loadNpcPrices(debouncedNpcPriceFilters)
       await loadAliases(debouncedAliasFilters)
     } catch (err) {
-      showError(err.message || "Erro ao atualizar preço NPC")
+      showError(err.message || "Erro ao atualizar preÃ§o NPC")
     } finally {
       setIsSubmittingNpcPrice(false)
     }
@@ -1375,19 +1369,19 @@ export default function AdminPage() {
 
     try {
       if (!String(taskForm.city || "").trim()) {
-        throw new Error("Cidade é obrigatória para salvar a task.")
+        throw new Error("Cidade Ã© obrigatÃ³ria para salvar a task.")
       }
       if (!String(taskForm.description || "").trim()) {
-        throw new Error("Descrição é obrigatória para salvar a task.")
+        throw new Error("DescriÃ§Ã£o Ã© obrigatÃ³ria para salvar a task.")
       }
       if (!taskForm.task_type || taskForm.task_type.length === 0) {
         throw new Error("Selecione ao menos um tipo de task.")
       }
       if (!String(taskForm.reward_text || "").trim()) {
-        throw new Error("Recompensa é obrigatória para salvar a task.")
+        throw new Error("Recompensa Ã© obrigatÃ³ria para salvar a task.")
       }
       if (taskForm.continent === "nightmare_world" && !String(taskForm.nw_level || "").trim()) {
-        throw new Error("NW Level é obrigatório para tasks em Nightmare World.")
+        throw new Error("NW Level Ã© obrigatÃ³rio para tasks em Nightmare World.")
       }
       const normalizedCoordinate = taskForm.coordinate ? normalizeCoordinateInput(taskForm.coordinate) : null
       const payload = {
@@ -1420,10 +1414,10 @@ export default function AdminPage() {
 
     try {
       if (!String(questForm.city || "").trim()) {
-        throw new Error("Cidade é obrigatória para salvar a quest.")
+        throw new Error("Cidade Ã© obrigatÃ³ria para salvar a quest.")
       }
       if (questForm.continent === "nightmare_world" && !String(questForm.nw_level || "").trim()) {
-        throw new Error("NW Level é obrigatório para quests em Nightmare World.")
+        throw new Error("NW Level Ã© obrigatÃ³rio para quests em Nightmare World.")
       }
 
       const payload = {
@@ -1522,21 +1516,6 @@ export default function AdminPage() {
           </div>
 
           <div className="admin-page__topbar-actions">
-            <button
-              type="button"
-              className={ocrDebugEnabled ? "admin-page__ghost-button admin-page__ghost-button--success" : "admin-page__ghost-button admin-page__ghost-button--danger"}
-              onClick={toggleOcrDebug}
-              disabled={isLoadingOcrDebug || isSavingOcrDebug}
-              title="Controla o debug OCR global do processamento de drops"
-            >
-              {isLoadingOcrDebug
-                ? "Carregando OCR..."
-                : isSavingOcrDebug
-                  ? "Salvando OCR..."
-                  : ocrDebugEnabled
-                    ? "Debug OCR: Ligado"
-                    : "Debug OCR: Desligado"}
-            </button>
             <span className="admin-page__admin-badge">{adminName || "admin"}</span>
             <button type="button" className="admin-page__ghost-button" onClick={handleLogout}>
               Sair
@@ -1545,7 +1524,7 @@ export default function AdminPage() {
         </header>
 
         <div className="admin-page__tabs">
-          {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "Preços NPC"], ["consumables", "Consumíveis"], ["users", "Usuários"], ["pokemon", "Pokémon"], ["sidebar", "Sidebar"], ["ocr-debug", "Logs OCR"] ].map(([value, label]) => (
+          {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "PreÃ§os NPC"], ["consumables", "ConsumÃ­veis"], ["users", "UsuÃ¡rios"], ["pokemon", "PokÃ©mon"], ["sidebar", "Sidebar"] ].map(([value, label]) => (
             <button key={value} type="button" className={activeTab === value ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"} onClick={() => setActiveTab(value)}>
               {label}
             </button>
@@ -1578,8 +1557,8 @@ export default function AdminPage() {
                     <option key={city.value} value={city.value}>{city.label}</option>
                   ))}
                 </select>
-                <input className="admin-page__input" type="number" placeholder="Nível mín." value={taskFilters.min_level} onChange={(event) => updateTaskFilters({ min_level: event.target.value })} />
-                <input className="admin-page__input" type="number" placeholder="Nível máx." value={taskFilters.max_level} onChange={(event) => updateTaskFilters({ max_level: event.target.value })} />
+                <input className="admin-page__input" type="number" placeholder="NÃ­vel mÃ­n." value={taskFilters.min_level} onChange={(event) => updateTaskFilters({ min_level: event.target.value })} />
+                <input className="admin-page__input" type="number" placeholder="NÃ­vel mÃ¡x." value={taskFilters.max_level} onChange={(event) => updateTaskFilters({ max_level: event.target.value })} />
                 <select className="admin-page__input" value={taskFilters.is_active} onChange={(event) => updateTaskFilters({ is_active: event.target.value })}>
                   <option value="">Todos os status</option>
                   <option value="true">Ativas</option>
@@ -1590,10 +1569,10 @@ export default function AdminPage() {
 
             <div className="admin-page__stats-row">
               <span className="admin-page__stat">Total filtrado: {taskTotal}</span>
-              <span className="admin-page__stat">Página: {taskPage} / {taskTotalPages}</span>
-              <span className="admin-page__stat">Na página: {tasks.length}</span>
-              <span className="admin-page__stat admin-page__stat--active">Ativas (página): {taskStats.active}</span>
-              <span className="admin-page__stat admin-page__stat--inactive">Inativas (página): {taskStats.inactive}</span>
+              <span className="admin-page__stat">PÃ¡gina: {taskPage} / {taskTotalPages}</span>
+              <span className="admin-page__stat">Na pÃ¡gina: {tasks.length}</span>
+              <span className="admin-page__stat admin-page__stat--active">Ativas (pÃ¡gina): {taskStats.active}</span>
+              <span className="admin-page__stat admin-page__stat--inactive">Inativas (pÃ¡gina): {taskStats.inactive}</span>
               {taskFilters.city && (
                 <span className="admin-page__stat admin-page__stat--location">{formatCity(taskFilters.city)}: {taskStats.city}</span>
               )}
@@ -1604,7 +1583,7 @@ export default function AdminPage() {
 
             <div className="admin-page__pagination">
               <button type="button" className="admin-page__ghost-button" onClick={() => setTaskPage((prev) => Math.max(1, prev - 1))} disabled={isLoadingTasks || taskPage <= 1}>Anterior</button>
-              <button type="button" className="admin-page__ghost-button" onClick={() => setTaskPage((prev) => Math.min(taskTotalPages, prev + 1))} disabled={isLoadingTasks || taskPage >= taskTotalPages}>Próxima</button>
+              <button type="button" className="admin-page__ghost-button" onClick={() => setTaskPage((prev) => Math.min(taskTotalPages, prev + 1))} disabled={isLoadingTasks || taskPage >= taskTotalPages}>PrÃ³xima</button>
             </div>
 
             <div className="admin-page__cards-grid">
@@ -1614,22 +1593,22 @@ export default function AdminPage() {
                     <div className="admin-page__tile-top">
                       <strong className="admin-page__tile-title">{task.name}</strong>
                     </div>
-                    <p className="admin-page__tile-description">{task.description || "Sem descrição cadastrada."}</p>
+                    <p className="admin-page__tile-description">{task.description || "Sem descriÃ§Ã£o cadastrada."}</p>
                     <div className="admin-page__chip-row">
                       <span className="admin-page__chip">Tipo: {formatTaskType(task.task_type)}</span>
                       <span className="admin-page__chip">Continente: {formatContinent(task.continent)}</span>
-                      <span className="admin-page__chip">Cidade: {formatCity(task.city) || "—"}</span>
-                      <span className="admin-page__chip">Nível mín.: {task.min_level}</span>
+                      <span className="admin-page__chip">Cidade: {formatCity(task.city) || "â€”"}</span>
+                      <span className="admin-page__chip">NÃ­vel mÃ­n.: {task.min_level}</span>
                       {task.continent === "nightmare_world" && task.nw_level !== null && task.nw_level !== undefined ? <span className="admin-page__chip">NW Level: {task.nw_level}</span> : null}
                     </div>
-                    <p className="admin-page__tile-reward">Recompensa: {task.reward_text || "—"}</p>
+                    <p className="admin-page__tile-reward">Recompensa: {task.reward_text || "â€”"}</p>
                   </div>
                   <div className="admin-page__tile-right">
                     <span className={task.is_active ? "admin-page__status admin-page__status--active admin-page__status--compact" : "admin-page__status admin-page__status--inactive admin-page__status--compact"}>{task.is_active ? "Ativa" : "Inativa"}</span>
                     <div className="admin-page__task-actions">
-                      <button type="button" className="admin-page__icon-button" onClick={() => openEditTask(task)} title="Editar" aria-label="Editar task">✎</button>
-                      <button type="button" className={task.is_active ? "admin-page__icon-button admin-page__icon-button--warning" : "admin-page__icon-button admin-page__icon-button--success"} onClick={() => toggleTaskActive(task.id)} disabled={isTogglingTaskId === task.id} title={task.is_active ? "Desativar" : "Ativar"} aria-label={task.is_active ? "Desativar task" : "Ativar task"}>{isTogglingTaskId === task.id ? "…" : "⏻"}</button>
-                      <button type="button" className="admin-page__icon-button admin-page__icon-button--danger" onClick={() => openDeleteModal("task", task)} title="Remover" aria-label="Remover task">🗑</button>
+                      <button type="button" className="admin-page__icon-button" onClick={() => openEditTask(task)} title="Editar" aria-label="Editar task">âœŽ</button>
+                      <button type="button" className={task.is_active ? "admin-page__icon-button admin-page__icon-button--warning" : "admin-page__icon-button admin-page__icon-button--success"} onClick={() => toggleTaskActive(task.id)} disabled={isTogglingTaskId === task.id} title={task.is_active ? "Desativar" : "Ativar"} aria-label={task.is_active ? "Desativar task" : "Ativar task"}>{isTogglingTaskId === task.id ? "â€¦" : "â»"}</button>
+                      <button type="button" className="admin-page__icon-button admin-page__icon-button--danger" onClick={() => openDeleteModal("task", task)} title="Remover" aria-label="Remover task">ðŸ—‘</button>
                     </div>
                   </div>
                 </article>
@@ -1659,8 +1638,8 @@ export default function AdminPage() {
                     <option key={city.value} value={city.value}>{city.label}</option>
                   ))}
                 </select>
-                <input className="admin-page__input" type="number" placeholder="Nível mín." value={questFilters.min_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, min_level: event.target.value }))} />
-                <input className="admin-page__input" type="number" placeholder="Nível máx." value={questFilters.max_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, max_level: event.target.value }))} />
+                <input className="admin-page__input" type="number" placeholder="NÃ­vel mÃ­n." value={questFilters.min_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, min_level: event.target.value }))} />
+                <input className="admin-page__input" type="number" placeholder="NÃ­vel mÃ¡x." value={questFilters.max_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, max_level: event.target.value }))} />
                 <select className="admin-page__input" value={questFilters.is_active} onChange={(event) => setQuestFilters((prev) => ({ ...prev, is_active: event.target.value }))}>
                   <option value="">Todos os status</option>
                   <option value="true">Ativas</option>
@@ -1691,21 +1670,21 @@ export default function AdminPage() {
                     <div className="admin-page__tile-top">
                       <strong className="admin-page__tile-title">{quest.name}</strong>
                     </div>
-                    <p className="admin-page__tile-description">{quest.description || "Sem descrição cadastrada."}</p>
+                    <p className="admin-page__tile-description">{quest.description || "Sem descriÃ§Ã£o cadastrada."}</p>
                     <div className="admin-page__chip-row">
                       <span className="admin-page__chip">Continente: {formatContinent(quest.continent)}</span>
-                      <span className="admin-page__chip">Cidade: {formatCity(quest.city) || "—"}</span>
-                      <span className="admin-page__chip">Nível mín.: {quest.min_level}</span>
+                      <span className="admin-page__chip">Cidade: {formatCity(quest.city) || "â€”"}</span>
+                      <span className="admin-page__chip">NÃ­vel mÃ­n.: {quest.min_level}</span>
                       {quest.continent === "nightmare_world" && quest.nw_level !== null && quest.nw_level !== undefined ? <span className="admin-page__chip">NW Level: {quest.nw_level}</span> : null}
                     </div>
-                    <p className="admin-page__tile-reward">Recompensa: {quest.reward_text || "—"}</p>
+                    <p className="admin-page__tile-reward">Recompensa: {quest.reward_text || "â€”"}</p>
                   </div>
                   <div className="admin-page__tile-right">
                     <span className={quest.is_active ? "admin-page__status admin-page__status--active admin-page__status--compact" : "admin-page__status admin-page__status--inactive admin-page__status--compact"}>{quest.is_active ? "Ativa" : "Inativa"}</span>
                     <div className="admin-page__task-actions">
-                      <button type="button" className="admin-page__icon-button" onClick={() => openEditQuest(quest)} title="Editar" aria-label="Editar quest">✎</button>
-                      <button type="button" className={quest.is_active ? "admin-page__icon-button admin-page__icon-button--warning" : "admin-page__icon-button admin-page__icon-button--success"} onClick={() => toggleQuestActive(quest.id)} disabled={isTogglingQuestId === quest.id} title={quest.is_active ? "Desativar" : "Ativar"} aria-label={quest.is_active ? "Desativar quest" : "Ativar quest"}>{isTogglingQuestId === quest.id ? "…" : "⏻"}</button>
-                      <button type="button" className="admin-page__icon-button admin-page__icon-button--danger" onClick={() => openDeleteModal("quest", quest)} title="Remover" aria-label="Remover quest">🗑</button>
+                      <button type="button" className="admin-page__icon-button" onClick={() => openEditQuest(quest)} title="Editar" aria-label="Editar quest">âœŽ</button>
+                      <button type="button" className={quest.is_active ? "admin-page__icon-button admin-page__icon-button--warning" : "admin-page__icon-button admin-page__icon-button--success"} onClick={() => toggleQuestActive(quest.id)} disabled={isTogglingQuestId === quest.id} title={quest.is_active ? "Desativar" : "Ativar"} aria-label={quest.is_active ? "Desativar quest" : "Ativar quest"}>{isTogglingQuestId === quest.id ? "â€¦" : "â»"}</button>
+                      <button type="button" className="admin-page__icon-button admin-page__icon-button--danger" onClick={() => openDeleteModal("quest", quest)} title="Remover" aria-label="Remover quest">ðŸ—‘</button>
                     </div>
                   </div>
                 </article>
@@ -1718,7 +1697,7 @@ export default function AdminPage() {
               <div>
                 <h2 className="admin-page__section-title">Itens OCR</h2>
                 <p className="admin-page__section-subtitle">
-                  Leituras coletadas dos jogadores para mapear nomes incorretos para um nome canônico.
+                  Leituras coletadas dos jogadores para mapear nomes incorretos para um nome canÃ´nico.
                 </p>
               </div>
             </div>
@@ -1727,7 +1706,7 @@ export default function AdminPage() {
               <div className="admin-page__filters-grid admin-page__filters-grid--aliases">
                 <input
                   className="admin-page__input"
-                  placeholder="Buscar leitura ou nome canônico"
+                  placeholder="Buscar leitura ou nome canÃ´nico"
                   value={aliasFilters.search}
                   onChange={(event) => setAliasFilters((prev) => ({ ...prev, search: event.target.value }))}
                 />
@@ -1761,7 +1740,7 @@ export default function AdminPage() {
 
                     <div className="admin-page__chip-row">
                       <span className="admin-page__chip">Normalizado: {alias.observed_name_normalized}</span>
-                      <span className="admin-page__chip">Ocorrências: {alias.occurrences}</span>
+                      <span className="admin-page__chip">OcorrÃªncias: {alias.occurrences}</span>
                     </div>
 
                     <div className="admin-page__alias-input-row">
@@ -1805,9 +1784,9 @@ export default function AdminPage() {
           <section className="admin-page__panel">
             <div className="admin-page__section-header">
               <div>
-                <h2 className="admin-page__section-title">Preços NPC</h2>
+                <h2 className="admin-page__section-title">PreÃ§os NPC</h2>
                 <p className="admin-page__section-subtitle">
-                  Tabela oficial de preço NPC usada para montar os totais no OCR e sincronizar nomes canônicos dos aliases.
+                  Tabela oficial de preÃ§o NPC usada para montar os totais no OCR e sincronizar nomes canÃ´nicos dos aliases.
                 </p>
               </div>
               <button type="button" className="admin-page__primary-button" onClick={openCreateNpcPrice}>Novo item</button>
@@ -1826,27 +1805,27 @@ export default function AdminPage() {
 
             <div className="admin-page__stats-row">
               <span className="admin-page__stat">Total filtrado: {npcPriceTotal}</span>
-              <span className="admin-page__stat">Página: {npcPricePage} / {npcPriceTotalPages}</span>
-              <span className="admin-page__stat">Na página: {npcPrices.length}</span>
+              <span className="admin-page__stat">PÃ¡gina: {npcPricePage} / {npcPriceTotalPages}</span>
+              <span className="admin-page__stat">Na pÃ¡gina: {npcPrices.length}</span>
             </div>
 
             <div className="admin-page__pagination">
               <button type="button" className="admin-page__ghost-button" onClick={() => setNpcPricePage((prev) => Math.max(1, prev - 1))} disabled={isLoadingNpcPrices || npcPricePage <= 1}>Anterior</button>
-              <button type="button" className="admin-page__ghost-button" onClick={() => setNpcPricePage((prev) => Math.min(npcPriceTotalPages, prev + 1))} disabled={isLoadingNpcPrices || npcPricePage >= npcPriceTotalPages}>Próxima</button>
+              <button type="button" className="admin-page__ghost-button" onClick={() => setNpcPricePage((prev) => Math.min(npcPriceTotalPages, prev + 1))} disabled={isLoadingNpcPrices || npcPricePage >= npcPriceTotalPages}>PrÃ³xima</button>
             </div>
 
             {isLoadingNpcPrices ? (
-              <div className="admin-page__empty admin-page__empty--full">Carregando preços NPC...</div>
+              <div className="admin-page__empty admin-page__empty--full">Carregando preÃ§os NPC...</div>
             ) : !npcPrices.length ? (
-              <div className="admin-page__empty admin-page__empty--full">Nenhum preço NPC encontrado.</div>
+              <div className="admin-page__empty admin-page__empty--full">Nenhum preÃ§o NPC encontrado.</div>
             ) : (
               <div className="admin-page__users-table-wrap">
                 <div className="admin-page__users-table">
                   <div className="admin-page__npc-row admin-page__npc-row--head">
                     <span>Nome</span>
-                    <span>Preço NPC</span>
+                    <span>PreÃ§o NPC</span>
                     <span>Aliases</span>
-                    <span>Ações</span>
+                    <span>AÃ§Ãµes</span>
                   </div>
                   {npcPrices.map((item) => (
                     <div key={item.normalized_name} className="admin-page__npc-row">
@@ -1860,7 +1839,7 @@ export default function AdminPage() {
                           >
                             {item.related_aliases.length}
                           </span>
-                        ) : "—"}
+                        ) : "â€”"}
                       </span>
                       <span>
                         <button type="button" className="admin-page__ghost-button admin-page__ghost-button--sm" onClick={() => openEditNpcPrice(item)}>
@@ -1877,17 +1856,17 @@ export default function AdminPage() {
           <section className="admin-page__panel">
             <div className="admin-page__section-header">
               <div>
-                <h2 className="admin-page__section-title">Consumíveis</h2>
-                <p className="admin-page__section-subtitle">Monte um catálogo organizado por categoria para o jogador filtrar supplies com mais rapidez na tela de hunts.</p>
+                <h2 className="admin-page__section-title">ConsumÃ­veis</h2>
+                <p className="admin-page__section-subtitle">Monte um catÃ¡logo organizado por categoria para o jogador filtrar supplies com mais rapidez na tela de hunts.</p>
               </div>
-              <button type="button" className="admin-page__primary-button" onClick={openCreateConsumable}>Novo consumível</button>
+              <button type="button" className="admin-page__primary-button" onClick={openCreateConsumable}>Novo consumÃ­vel</button>
             </div>
 
             <div className="admin-page__filters-card">
               <div className="admin-page__filters-grid admin-page__filters-grid--aliases">
                 <input
                   className="admin-page__input"
-                  placeholder="Buscar consumível por nome"
+                  placeholder="Buscar consumÃ­vel por nome"
                   value={consumableFilters.search}
                   onChange={(event) => updateConsumableFilters({ search: event.target.value })}
                 />
@@ -1906,28 +1885,28 @@ export default function AdminPage() {
 
             <div className="admin-page__stats-row">
               <span className="admin-page__stat">Total: {consumableTotal}</span>
-              <span className="admin-page__stat">Página: {consumablePage} / {consumableTotalPages}</span>
+              <span className="admin-page__stat">PÃ¡gina: {consumablePage} / {consumableTotalPages}</span>
               <span className="admin-page__stat">Categorias: {consumableCategories.length}</span>
               {consumableFilters.category ? <span className="admin-page__stat admin-page__stat--location">Filtro: {consumableFilters.category}</span> : null}
             </div>
 
             <div className="admin-page__pagination">
               <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.max(1, prev - 1))} disabled={isLoadingConsumables || consumablePage <= 1}>Anterior</button>
-              <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.min(consumableTotalPages, prev + 1))} disabled={isLoadingConsumables || consumablePage >= consumableTotalPages}>Próxima</button>
+              <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.min(consumableTotalPages, prev + 1))} disabled={isLoadingConsumables || consumablePage >= consumableTotalPages}>PrÃ³xima</button>
             </div>
 
             {isLoadingConsumables ? (
-              <div className="admin-page__empty admin-page__empty--full">Carregando consumíveis...</div>
+              <div className="admin-page__empty admin-page__empty--full">Carregando consumÃ­veis...</div>
             ) : !consumables.length ? (
-              <div className="admin-page__empty admin-page__empty--full">Nenhum consumível encontrado.</div>
+              <div className="admin-page__empty admin-page__empty--full">Nenhum consumÃ­vel encontrado.</div>
             ) : (
               <div className="admin-page__users-table-wrap">
                 <div className="admin-page__users-table">
                   <div className="admin-page__npc-row admin-page__npc-row admin-page__npc-row--consumable admin-page__npc-row--head">
                     <span>Nome</span>
                     <span>Categoria</span>
-                    <span>Preço NPC</span>
-                    <span>Ações</span>
+                    <span>PreÃ§o NPC</span>
+                    <span>AÃ§Ãµes</span>
                   </div>
                   {consumables.map((item) => (
                     <div key={item.nome} className="admin-page__npc-row admin-page__npc-row--consumable">
@@ -1956,8 +1935,8 @@ export default function AdminPage() {
           <section className="admin-page__panel">
             <div className="admin-page__section-header">
               <div>
-                <h2 className="admin-page__section-title">Usuários cadastrados</h2>
-                <p className="admin-page__section-subtitle">Visualize ID e usuário sem expor dados sensíveis.</p>
+                <h2 className="admin-page__section-title">UsuÃ¡rios cadastrados</h2>
+                <p className="admin-page__section-subtitle">Visualize ID e usuÃ¡rio sem expor dados sensÃ­veis.</p>
               </div>
               <button type="button" className="admin-page__ghost-button" onClick={() => loadUsers(debouncedUserFilters)}>
                 Atualizar
@@ -1968,21 +1947,21 @@ export default function AdminPage() {
               <div className="admin-page__filters-grid admin-page__filters-grid--npc-prices">
                 <input
                   className="admin-page__input"
-                  placeholder="Buscar por usuário ou email"
+                  placeholder="Buscar por usuÃ¡rio ou email"
                   value={userFilters.search}
                   onChange={(event) => setUserFilters((prev) => ({ ...prev, search: event.target.value }))}
                 />
               </div>
             </div>
 
-            {isLoadingUsers ? <div className="admin-page__empty admin-page__empty--full">Carregando usuários...</div> : !users.length ? <div className="admin-page__empty admin-page__empty--full">Nenhum usuário encontrado.</div> : (
+            {isLoadingUsers ? <div className="admin-page__empty admin-page__empty--full">Carregando usuÃ¡rios...</div> : !users.length ? <div className="admin-page__empty admin-page__empty--full">Nenhum usuÃ¡rio encontrado.</div> : (
               <div className="admin-page__users-table-wrap">
                 <div className="admin-page__users-table">
                   <div className="admin-page__users-row admin-page__users-row--head">
                     <span>ID</span>
-                    <span>Usuário</span>
+                    <span>UsuÃ¡rio</span>
                     <span>Email</span>
-                    <span>Ações</span>
+                    <span>AÃ§Ãµes</span>
                   </div>
 
                   {users.map((item) => (
@@ -2010,10 +1989,10 @@ export default function AdminPage() {
           <section className="admin-page__panel">
             <div className="admin-page__section-header">
               <div>
-                <h2 className="admin-page__section-title">Pokémon</h2>
-                <p className="admin-page__section-subtitle">Gerencie a lista de Pokémon disponíveis nas hunts. Busque para filtrar e ajuste ID e nome separadamente.</p>
+                <h2 className="admin-page__section-title">PokÃ©mon</h2>
+                <p className="admin-page__section-subtitle">Gerencie a lista de PokÃ©mon disponÃ­veis nas hunts. Busque para filtrar e ajuste ID e nome separadamente.</p>
               </div>
-              <button type="button" className="admin-page__primary-button" onClick={openCreatePokemon}>Novo Pokémon</button>
+              <button type="button" className="admin-page__primary-button" onClick={openCreatePokemon}>Novo PokÃ©mon</button>
             </div>
 
             <div className="admin-page__filters-card">
@@ -2029,27 +2008,27 @@ export default function AdminPage() {
 
             <div className="admin-page__stats-row">
               <span className="admin-page__stat">Total filtrado: {pokemonTotal}</span>
-              <span className="admin-page__stat">Página: {pokemonPage} / {pokemonTotalPages}</span>
-              <span className="admin-page__stat">Na página: {pokemon.length}</span>
+              <span className="admin-page__stat">PÃ¡gina: {pokemonPage} / {pokemonTotalPages}</span>
+              <span className="admin-page__stat">Na pÃ¡gina: {pokemon.length}</span>
             </div>
 
             <div className="admin-page__pagination">
               <button type="button" className="admin-page__ghost-button" onClick={() => setPokemonPage((prev) => Math.max(1, prev - 1))} disabled={isLoadingPokemon || pokemonPage <= 1}>Anterior</button>
-              <button type="button" className="admin-page__ghost-button" onClick={() => setPokemonPage((prev) => Math.min(pokemonTotalPages, prev + 1))} disabled={isLoadingPokemon || pokemonPage >= pokemonTotalPages}>Próxima</button>
+              <button type="button" className="admin-page__ghost-button" onClick={() => setPokemonPage((prev) => Math.min(pokemonTotalPages, prev + 1))} disabled={isLoadingPokemon || pokemonPage >= pokemonTotalPages}>PrÃ³xima</button>
             </div>
 
             <div className="admin-page__pokemon-grid">
               {isLoadingPokemon ? (
-                <div className="admin-page__empty admin-page__empty--full">Carregando Pokémon...</div>
+                <div className="admin-page__empty admin-page__empty--full">Carregando PokÃ©mon...</div>
               ) : !pokemon.length ? (
-                <div className="admin-page__empty admin-page__empty--full">Nenhum Pokémon encontrado.</div>
+                <div className="admin-page__empty admin-page__empty--full">Nenhum PokÃ©mon encontrado.</div>
               ) : pokemon.map((entry) => (
                 <article key={entry.full_name} className="admin-page__pokemon-card">
                   <span className="admin-page__pokemon-dex">#{entry.dex_id}</span>
                   <span className="admin-page__pokemon-name">{entry.name}</span>
                   <div className="admin-page__pokemon-actions">
                     <button type="button" className="admin-page__ghost-button admin-page__ghost-button--sm" onClick={() => openEditPokemon(entry)}>Editar</button>
-                    <button type="button" className="admin-page__danger-button admin-page__danger-button--sm" onClick={() => handleDeletePokemon(entry.full_name)} disabled={isDeletingPokemon}>✕</button>
+                    <button type="button" className="admin-page__danger-button admin-page__danger-button--sm" onClick={() => handleDeletePokemon(entry.full_name)} disabled={isDeletingPokemon}>âœ•</button>
                   </div>
                 </article>
               ))}
@@ -2061,7 +2040,7 @@ export default function AdminPage() {
               <div>
                 <h2 className="admin-page__section-title">Menus da Sidebar</h2>
                 <p className="admin-page__section-subtitle">
-                  Defina quais menus ficam ativos para os jogadores e marque os que estão em teste com o selo beta.
+                  Defina quais menus ficam ativos para os jogadores e marque os que estÃ£o em teste com o selo beta.
                 </p>
               </div>
               <button type="button" className="admin-page__ghost-button" onClick={loadSidebarMenus}>
@@ -2070,7 +2049,7 @@ export default function AdminPage() {
             </div>
 
             <div className="admin-page__cards-grid admin-page__cards-grid--sidebar">
-              {isLoadingSidebarMenus ? <div className="admin-page__empty admin-page__empty--full">Carregando menus...</div> : !sidebarMenus.length ? <div className="admin-page__empty admin-page__empty--full">Nenhuma configuração de menu encontrada.</div> : sidebarMenus.map((menu) => {
+              {isLoadingSidebarMenus ? <div className="admin-page__empty admin-page__empty--full">Carregando menus...</div> : !sidebarMenus.length ? <div className="admin-page__empty admin-page__empty--full">Nenhuma configuraÃ§Ã£o de menu encontrada.</div> : sidebarMenus.map((menu) => {
                 const isSaving = Boolean(savingSidebarMenuMap[menu.menu_key])
                 return (
                   <article key={menu.menu_key} className="admin-page__tile admin-page__tile--sidebar-menu">
@@ -2118,7 +2097,7 @@ export default function AdminPage() {
               <div>
                 <h2 className="admin-page__section-title">Gerenciamento de Debug OCR</h2>
                 <p className="admin-page__section-subtitle">
-                  Veja sessões, relatórios completos de OCR e, quando ativado, arquivos visuais de debug.
+                  Veja sessÃµes, relatÃ³rios completos de OCR e, quando ativado, arquivos visuais de debug.
                 </p>
               </div>
               <div className="admin-page__tile-actions admin-page__tile-actions--row">
@@ -2142,7 +2121,7 @@ export default function AdminPage() {
                   {isUploadingManualOcr ? "Enviando treino..." : `Treinar com ${manualOcrFiles.length || 0} imagem(ns)`}
                 </button>
                 <button type="button" className="admin-page__ghost-button" onClick={loadOcrDebugSessions}>
-                  Atualizar sessões
+                  Atualizar sessÃµes
                 </button>
                 <button type="button" className="admin-page__ghost-button admin-page__ghost-button--danger" onClick={handleClearAllOcrDebugSessions} disabled={isClearingOcrDebug || !ocrDebugSessions.length}>
                   {isClearingOcrDebug ? "Limpando..." : "Limpar tudo"}
@@ -2154,12 +2133,12 @@ export default function AdminPage() {
               <article className="admin-page__tile admin-page__tile--debug">
                 <div className="admin-page__tile-main">
                   <div className="admin-page__tile-top">
-                    <strong className="admin-page__tile-title">Sessões</strong>
+                    <strong className="admin-page__tile-title">SessÃµes</strong>
                   </div>
                   {isLoadingOcrDebugSessions ? (
-                    <div className="admin-page__empty">Carregando sessões...</div>
+                    <div className="admin-page__empty">Carregando sessÃµes...</div>
                   ) : !ocrDebugSessions.length ? (
-                    <div className="admin-page__empty">Nenhuma sessão de debug encontrada.</div>
+                    <div className="admin-page__empty">Nenhuma sessÃ£o de debug encontrada.</div>
                   ) : (
                     <div className="admin-page__debug-list">
                       {ocrDebugSessions.map((session) => (
@@ -2175,12 +2154,12 @@ export default function AdminPage() {
                           <button
                             type="button"
                             className="admin-page__icon-button admin-page__icon-button--danger"
-                            title="Excluir sessão"
-                            aria-label="Excluir sessão"
+                            title="Excluir sessÃ£o"
+                            aria-label="Excluir sessÃ£o"
                             onClick={() => handleDeleteOcrDebugSession(session.session_id)}
                             disabled={deletingOcrDebugSessionId === session.session_id}
                           >
-                            {deletingOcrDebugSessionId === session.session_id ? "…" : "🗑"}
+                            {deletingOcrDebugSessionId === session.session_id ? "â€¦" : "ðŸ—‘"}
                           </button>
                         </div>
                       ))}
@@ -2197,16 +2176,16 @@ export default function AdminPage() {
                   {isLoadingOcrDebugFiles ? (
                     <div className="admin-page__empty">Carregando arquivos...</div>
                   ) : !selectedOcrDebugSession ? (
-                    <div className="admin-page__empty">Selecione uma sessão para ver os arquivos.</div>
+                    <div className="admin-page__empty">Selecione uma sessÃ£o para ver os arquivos.</div>
                   ) : !ocrDebugFiles.length ? (
-                    <div className="admin-page__empty">Nenhum arquivo encontrado na sessão.</div>
+                    <div className="admin-page__empty">Nenhum arquivo encontrado na sessÃ£o.</div>
                   ) : (
                     <div className="admin-page__debug-list">
                       {ocrDebugFiles.map((file) => (
                         <div key={file.name} className="admin-page__debug-file-row">
                           <div className="admin-page__debug-file-meta">
                             <strong>{file.name}</strong>
-                            <span>{file.kind} · {file.size_bytes} bytes</span>
+                            <span>{file.kind} Â· {file.size_bytes} bytes</span>
                           </div>
                           <div className="admin-page__debug-file-actions">
                             {file.kind === "text" ? (
@@ -2244,7 +2223,7 @@ export default function AdminPage() {
                     <strong className="admin-page__tile-title">Preview de texto</strong>
                     {ocrDebugPreviewTitle ? <span className="admin-page__chip">{ocrDebugPreviewTitle}</span> : null}
                   </div>
-                  <pre className="admin-page__debug-text-preview">{ocrDebugTextPreview || "Abra um arquivo de texto para visualizar o conteúdo."}</pre>
+                  <pre className="admin-page__debug-text-preview">{ocrDebugTextPreview || "Abra um arquivo de texto para visualizar o conteÃºdo."}</pre>
 
                   <div className="admin-page__tile-top admin-page__tile-top--spaced">
                     <strong className="admin-page__tile-title">Preview de imagem</strong>
@@ -2283,7 +2262,7 @@ export default function AdminPage() {
                                 const value = event.target.value
                                 setOcrTrainingRows((prev) => prev.map((item, idx) => idx === index ? { ...item, canonical: value } : item))
                               }}
-                              placeholder="Nome canônico correto"
+                              placeholder="Nome canÃ´nico correto"
                             />
                             <button
                               type="button"
@@ -2318,7 +2297,7 @@ export default function AdminPage() {
         {pokemonModal ? (
           <div className="character-modal-backdrop">
             <div className="character-modal">
-              <h2 className="character-modal__title">{pokemonModal.type === "create" ? "Novo Pokémon" : "Editar Pokémon"}</h2>
+              <h2 className="character-modal__title">{pokemonModal.type === "create" ? "Novo PokÃ©mon" : "Editar PokÃ©mon"}</h2>
               <form onSubmit={handleSubmitPokemon}>
                 <div className="character-modal__field"><label>ID (ex: 0003)</label><input className="character-modal__input" value={pokemonForm.dex_id} onChange={(event) => setPokemonForm((prev) => ({ ...prev, dex_id: event.target.value }))} placeholder="0001" /></div>
                 <div className="character-modal__field"><label>Nome (ex: Venusaur, Shiny Charizard, Mega Rayquaza)</label><input className="character-modal__input" value={pokemonForm.name} onChange={(event) => setPokemonForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Venusaur" /></div>
@@ -2337,12 +2316,12 @@ export default function AdminPage() {
               <div className="character-modal__field"><label>O que deve fazer</label><input className="character-modal__input" required value={taskForm.description} onChange={(event) => setTaskForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Tipo (selecione um ou mais)</label><div className="character-modal__checkboxes">{taskTypes.filter((item) => item.value).map((item) => <label key={item.value} className="character-modal__checkbox"><input type="checkbox" checked={taskForm.task_type.includes(item.value)} onChange={(event) => { if (!event.target.checked && taskForm.task_type.length === 1) { setToast({ type: "error", message: "Selecione ao menos um tipo de task" }); return; } setTaskForm((prev) => ({ ...prev, task_type: event.target.checked ? [...prev.task_type, item.value] : prev.task_type.filter((t) => t !== item.value) })); }} /><span>{item.label}</span></label>)}</div></div>
               <div className="character-modal__field"><label>Continente</label><select className="character-modal__input" value={taskForm.continent} onChange={(event) => setTaskForm((prev) => ({ ...prev, continent: event.target.value, nw_level: event.target.value === "nightmare_world" ? prev.nw_level : "" }))}>{continents.filter((item) => item.value).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
-              <div className="character-modal__field"><label>Nível mínimo <span style={{color: "#999", fontSize: "0.85em"}}>(vazio = 5)</span></label><input className="character-modal__input" type="number" min="0" max="625" value={taskForm.min_level} onChange={(event) => setTaskForm((prev) => ({ ...prev, min_level: event.target.value }))} /></div>
+              <div className="character-modal__field"><label>NÃ­vel mÃ­nimo <span style={{color: "#999", fontSize: "0.85em"}}>(vazio = 5)</span></label><input className="character-modal__input" type="number" min="0" max="625" value={taskForm.min_level} onChange={(event) => setTaskForm((prev) => ({ ...prev, min_level: event.target.value }))} /></div>
               {taskForm.continent === "nightmare_world" ? <div className="character-modal__field"><label>Nightmare Level (NW Level)</label><input className="character-modal__input" type="number" min="1" max="999" value={taskForm.nw_level} onChange={(event) => setTaskForm((prev) => ({ ...prev, nw_level: event.target.value }))} /></div> : null}
               <div className="character-modal__field"><label>Recompensa</label><input className="character-modal__input" required value={taskForm.reward_text} onChange={(event) => setTaskForm((prev) => ({ ...prev, reward_text: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Coordenada <span style={{color: "#999", fontSize: "0.85em"}}>(opcional)</span></label><input className="character-modal__input" placeholder="Ex: 1000000,-1000000,500" value={taskForm.coordinate} onChange={(event) => setTaskForm((prev) => ({ ...prev, coordinate: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Cidade</label><input className="character-modal__input" required value={taskForm.city} onChange={(event) => setTaskForm((prev) => ({ ...prev, city: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Disponível para o usuário adicionar</label><button type="button" className={taskForm.is_active ? "admin-page__toggle admin-page__toggle--active" : "admin-page__toggle"} onClick={() => setTaskForm((prev) => ({ ...prev, is_active: !prev.is_active }))}>{taskForm.is_active ? "Ativa" : "Inativa"}</button></div>
+              <div className="character-modal__field"><label>DisponÃ­vel para o usuÃ¡rio adicionar</label><button type="button" className={taskForm.is_active ? "admin-page__toggle admin-page__toggle--active" : "admin-page__toggle"} onClick={() => setTaskForm((prev) => ({ ...prev, is_active: !prev.is_active }))}>{taskForm.is_active ? "Ativa" : "Inativa"}</button></div>
               <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setTaskModal(null)} disabled={isSubmittingTask}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingTask}>{isSubmittingTask ? "Salvando..." : "Salvar"}</button></div>
             </form>
           </div>
@@ -2355,13 +2334,13 @@ export default function AdminPage() {
             <h2 className="character-modal__title">{questModal.type === "create" ? "Nova quest" : "Editar quest"}</h2>
             <form onSubmit={handleSubmitQuest}>
               <div className="character-modal__field"><label>Nome</label><input className="character-modal__input" value={questForm.name} onChange={(event) => setQuestForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Descrição</label><input className="character-modal__input" value={questForm.description} onChange={(event) => setQuestForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
+              <div className="character-modal__field"><label>DescriÃ§Ã£o</label><input className="character-modal__input" value={questForm.description} onChange={(event) => setQuestForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Continente</label><select className="character-modal__input" value={questForm.continent} onChange={(event) => setQuestForm((prev) => ({ ...prev, continent: event.target.value }))}>{continents.filter((item) => item.value).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
               <div className="character-modal__field"><label>Cidade</label><input className="character-modal__input" required value={questForm.city} onChange={(event) => setQuestForm((prev) => ({ ...prev, city: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Nível mínimo</label><input className="character-modal__input" type="number" min="0" max="625" value={questForm.min_level} onChange={(event) => setQuestForm((prev) => ({ ...prev, min_level: event.target.value }))} /></div>
+              <div className="character-modal__field"><label>NÃ­vel mÃ­nimo</label><input className="character-modal__input" type="number" min="0" max="625" value={questForm.min_level} onChange={(event) => setQuestForm((prev) => ({ ...prev, min_level: event.target.value }))} /></div>
               {questForm.continent === "nightmare_world" ? <div className="character-modal__field"><label>Nightmare Level (NW Level)</label><input className="character-modal__input" type="number" min="1" max="999" value={questForm.nw_level} onChange={(event) => setQuestForm((prev) => ({ ...prev, nw_level: event.target.value }))} /></div> : null}
               <div className="character-modal__field"><label>Recompensa</label><input className="character-modal__input" value={questForm.reward_text} onChange={(event) => setQuestForm((prev) => ({ ...prev, reward_text: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Ativa</label><select className="character-modal__input" value={String(questForm.is_active)} onChange={(event) => setQuestForm((prev) => ({ ...prev, is_active: event.target.value === "true" }))}><option value="true">Sim</option><option value="false">Não</option></select></div>
+              <div className="character-modal__field"><label>Ativa</label><select className="character-modal__input" value={String(questForm.is_active)} onChange={(event) => setQuestForm((prev) => ({ ...prev, is_active: event.target.value === "true" }))}><option value="true">Sim</option><option value="false">NÃ£o</option></select></div>
               <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setQuestModal(null)} disabled={isSubmittingQuest}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingQuest}>{isSubmittingQuest ? "Salvando..." : "Salvar"}</button></div>
             </form>
           </div>
@@ -2371,10 +2350,10 @@ export default function AdminPage() {
       {npcPriceModal ? (
         <div className="character-modal-backdrop">
           <div className="character-modal">
-            <h2 className="character-modal__title">{npcPriceModal.type === "create" ? "Novo item NPC" : "Editar preço NPC"}</h2>
+            <h2 className="character-modal__title">{npcPriceModal.type === "create" ? "Novo item NPC" : "Editar preÃ§o NPC"}</h2>
             <form onSubmit={handleSubmitNpcPrice}>
               <div className="character-modal__field"><label>Nome do item</label><input className="character-modal__input" value={npcPriceForm.name} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Preço unitário NPC</label><input className="character-modal__input" type="number" min="0" step="0.01" value={npcPriceForm.unit_price} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, unit_price: event.target.value }))} /></div>
+              <div className="character-modal__field"><label>PreÃ§o unitÃ¡rio NPC</label><input className="character-modal__input" type="number" min="0" step="0.01" value={npcPriceForm.unit_price} onChange={(event) => setNpcPriceForm((prev) => ({ ...prev, unit_price: event.target.value }))} /></div>
               <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setNpcPriceModal(null)} disabled={isSubmittingNpcPrice}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingNpcPrice}>{isSubmittingNpcPrice ? "Salvando..." : "Salvar"}</button></div>
             </form>
           </div>
@@ -2386,9 +2365,9 @@ export default function AdminPage() {
           <div className="character-modal character-modal--consumable">
             <div className="character-modal__header">
               <div>
-                <span className="character-modal__eyebrow">Catálogo de supply</span>
-                <h2 className="character-modal__title">{consumableModal.type === "create" ? "Novo consumível" : "Editar consumível"}</h2>
-                <p className="character-modal__description">Defina nome, categoria e preço NPC. A categoria vira filtro para o jogador na tela de hunts.</p>
+                <span className="character-modal__eyebrow">CatÃ¡logo de supply</span>
+                <h2 className="character-modal__title">{consumableModal.type === "create" ? "Novo consumÃ­vel" : "Editar consumÃ­vel"}</h2>
+                <p className="character-modal__description">Defina nome, categoria e preÃ§o NPC. A categoria vira filtro para o jogador na tela de hunts.</p>
               </div>
             </div>
             <form onSubmit={handleSubmitConsumable} className="character-modal__form">
@@ -2399,10 +2378,10 @@ export default function AdminPage() {
                 </div>
                 <div className="character-modal__field">
                   <label>Categoria</label>
-                  <input className="character-modal__input" value={consumableForm.categoria} onChange={(event) => setConsumableForm((prev) => ({ ...prev, categoria: event.target.value }))} placeholder="Ex: poções, berries, revive" />
+                  <input className="character-modal__input" value={consumableForm.categoria} onChange={(event) => setConsumableForm((prev) => ({ ...prev, categoria: event.target.value }))} placeholder="Ex: poÃ§Ãµes, berries, revive" />
                 </div>
                 <div className="character-modal__field">
-                  <label>Preço NPC</label>
+                  <label>PreÃ§o NPC</label>
                   <input className="character-modal__input" type="number" min="0" step="0.01" value={consumableForm.preco_npc} onChange={(event) => setConsumableForm((prev) => ({ ...prev, preco_npc: event.target.value }))} />
                 </div>
               </div>
@@ -2416,10 +2395,10 @@ export default function AdminPage() {
         <div className="character-modal-backdrop">
           <div className="character-modal character-modal--danger">
             <h2 className="character-modal__title">Remover {deleteModal.type === "task" ? "task" : "quest"}</h2>
-            <p className="character-modal__description">Você está prestes a remover permanentemente <strong>{deleteModal.item.name}</strong>.</p>
+            <p className="character-modal__description">VocÃª estÃ¡ prestes a remover permanentemente <strong>{deleteModal.item.name}</strong>.</p>
             <div className="character-modal__notice-list">
-              <div className="character-modal__notice character-modal__notice--warning">Essa ação apagará o item do sistema inteiro.</div>
-              <div className="character-modal__notice character-modal__notice--warning">Ela não pode ser desfeita.</div>
+              <div className="character-modal__notice character-modal__notice--warning">Essa aÃ§Ã£o apagarÃ¡ o item do sistema inteiro.</div>
+              <div className="character-modal__notice character-modal__notice--warning">Ela nÃ£o pode ser desfeita.</div>
             </div>
             <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={closeDeleteModal} disabled={isDeletingItem}>Cancelar</button><button type="button" className="character-modal__button character-modal__button--danger" onClick={handleDeleteConfirmed} disabled={isDeletingItem}>{isDeletingItem ? "Removendo..." : "Remover permanentemente"}</button></div>
           </div>
@@ -2428,8 +2407,8 @@ export default function AdminPage() {
 
       <ConfirmActionModal
         open={Boolean(userDeleteModal)}
-        title="Excluir usuário"
-        description={userDeleteModal ? `Excluir o usuário ${userDeleteModal.username || userDeleteModal.userId}? Esta ação remove tudo relacionado.` : ""}
+        title="Excluir usuÃ¡rio"
+        description={userDeleteModal ? `Excluir o usuÃ¡rio ${userDeleteModal.username || userDeleteModal.userId}? Esta aÃ§Ã£o remove tudo relacionado.` : ""}
         confirmLabel="Excluir"
         confirmTone="danger"
         isLoading={Boolean(deletingUserId)}
@@ -2441,3 +2420,4 @@ export default function AdminPage() {
     </div>
   )
 }
+

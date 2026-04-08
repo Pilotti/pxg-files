@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Quick test script for visual anchor detection on party window images.
-Run this in the backend directory to validate visual anchor detection.
+Quick local diagnostic script for visual anchor detection on party window images.
+This is not part of the product runtime.
 """
 import sys
 from pathlib import Path
 from PIL import Image
 
-# Add app to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add backend root to path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.hunts_ocr import (
     _detect_close_button_visual,
@@ -51,15 +51,12 @@ def test_image_visual_anchors(image_path: str) -> None:
 
 
 def main():
-    """Find and test all .png files in data/ocr_debug or provided paths."""
+    """Find and test local .png files in data/hunts or provided paths."""
     print("\nVisual Anchor Detection Test")
     print("="*60)
     
     # Check for test images in typical locations
-    test_dirs = [
-        Path("app/data/ocr_debug"),
-        Path("app/data/hunts"),
-    ]
+    test_dirs = [Path("app/data/hunts")]
     
     image_files = []
     for test_dir in test_dirs:
@@ -70,7 +67,7 @@ def main():
     
     if not image_files:
         print(f"\nNo test images found in {test_dirs}")
-        print("To test, place .png/.jpg files in app/data/ocr_debug/ or app/data/hunts/")
+        print("To test, place .png/.jpg files in app/data/hunts/")
         print("\nUsage: python test_visual_anchors.py [image_path1] [image_path2] ...")
         
         # Check if paths provided as arguments

@@ -1,12 +1,8 @@
-import asyncio
 import json
 import re
-from datetime import datetime
 from pathlib import Path
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.admin_security import (
@@ -14,7 +10,6 @@ from app.core.admin_security import (
     decode_admin_token,
     verify_admin_credentials,
 )
-from app.core.config import settings
 from app.db.session import get_db
 from app.models.tasks import (
     CharacterQuest,
@@ -35,12 +30,6 @@ from app.schemas.admin import (
     AdminLoginResponse,
     AdminMeResponse,
     AdminUserListItem,
-    AdminOcrDebugFileResponse,
-    AdminOcrManualUploadResponse,
-    AdminOcrDebugSettingsResponse,
-    AdminOcrDebugSettingsUpdateRequest,
-    AdminOcrDebugSessionResponse,
-    AdminOcrDebugTextPreviewResponse,
     AdminNpcPriceResponse,
     AdminNpcPriceListResponse,
     AdminNpcPriceUpdateRequest,
@@ -79,17 +68,6 @@ from app.services.consumables import (
     update_consumable,
 )
 from app.services.hunt_npc_prices import has_npc_price_item, list_npc_prices, update_npc_price
-from app.services.hunts_ocr import extract_drop_lines_from_image, refresh_approved_aliases_cache
-from app.services.ocr_debug_logs import (
-    clear_all_ocr_debug_sessions,
-    delete_ocr_debug_file,
-    delete_ocr_debug_session,
-    get_ocr_debug_file_path,
-    list_ocr_debug_files,
-    list_ocr_debug_sessions,
-    read_ocr_debug_text,
-)
-from app.services.ocr_debug_settings import is_ocr_debug_enabled, set_ocr_debug_enabled
 from app.services.task_json_storage import export_task_templates_to_json_files
 from app.services.quest_json_storage import export_quest_templates_to_json_files
 
@@ -144,14 +122,6 @@ def get_current_admin(authorization: str | None = Header(None)) -> dict:
 
     token = authorization.replace("Bearer ", "", 1).strip()
     return decode_admin_token(token)
-
-
-def _safe_debug_filename(name: str, fallback: str) -> str:
-    safe = (name or "").replace(" ", "_")
-    safe = "".join(char for char in safe if char.isalnum() or char in {"_", ".", "-"})
-    return safe or fallback
-
-
 @router.post("/login", response_model=AdminLoginResponse)
 def admin_login(data: AdminLoginRequest):
     if not verify_admin_credentials(data.username.strip(), data.password):
@@ -219,212 +189,6 @@ def admin_delete_user(
     db.commit()
 
     return ActionResponse(detail="Usuário removido com sucesso")
-
-
-@router.get("/ocr-debug", response_model=AdminOcrDebugSettingsResponse)
-def admin_get_ocr_debug_settings(_: dict = Depends(get_current_admin)):
-    return AdminOcrDebugSettingsResponse(debug_ocr_enabled=is_ocr_debug_enabled())
-
-
-@router.put("/ocr-debug", response_model=AdminOcrDebugSettingsResponse)
-def admin_update_ocr_debug_settings(
-    data: AdminOcrDebugSettingsUpdateRequest,
-    _: dict = Depends(get_current_admin),
-):
-    enabled = set_ocr_debug_enabled(data.debug_ocr_enabled)
-    return AdminOcrDebugSettingsResponse(debug_ocr_enabled=enabled)
-
-
-@router.get("/ocr-debug/sessions", response_model=list[AdminOcrDebugSessionResponse])
-def admin_list_ocr_debug_sessions(
-    limit: int = Query(40, ge=1, le=200),
-    _: dict = Depends(get_current_admin),
-):
-    return [AdminOcrDebugSessionResponse(**item) for item in list_ocr_debug_sessions(limit=limit)]
-
-
-@router.get("/ocr-debug/sessions/{session_id}/files", response_model=list[AdminOcrDebugFileResponse])
-def admin_list_ocr_debug_files(
-    session_id: str,
-    _: dict = Depends(get_current_admin),
-):
-    try:
-        items = list_ocr_debug_files(session_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return [AdminOcrDebugFileResponse(**item) for item in items]
-
-
-@router.get(
-    "/ocr-debug/sessions/{session_id}/text/{file_name:path}",
-    response_model=AdminOcrDebugTextPreviewResponse,
-)
-def admin_read_ocr_debug_text(
-    session_id: str,
-    file_name: str,
-    _: dict = Depends(get_current_admin),
-):
-    try:
-        content = read_ocr_debug_text(session_id=session_id, file_name=file_name)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return AdminOcrDebugTextPreviewResponse(file_name=file_name, content=content)
-
-
-@router.get("/ocr-debug/sessions/{session_id}/download/{file_name:path}")
-def admin_download_ocr_debug_file(
-    session_id: str,
-    file_name: str,
-    _: dict = Depends(get_current_admin),
-):
-    try:
-        path = get_ocr_debug_file_path(session_id=session_id, file_name=file_name)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return FileResponse(path=str(path), filename=path.name)
-
-
-@router.delete("/ocr-debug/sessions/{session_id}/files/{file_name:path}", response_model=ActionResponse)
-def admin_delete_ocr_debug_file(
-    session_id: str,
-    file_name: str,
-    _: dict = Depends(get_current_admin),
-):
-    try:
-        delete_ocr_debug_file(session_id=session_id, file_name=file_name)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return ActionResponse(detail="Arquivo de debug removido com sucesso")
-
-
-@router.delete("/ocr-debug/sessions/{session_id}", response_model=ActionResponse)
-def admin_delete_ocr_debug_session(
-    session_id: str,
-    _: dict = Depends(get_current_admin),
-):
-    try:
-        delete_ocr_debug_session(session_id=session_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return ActionResponse(detail="Sessao de debug removida com sucesso")
-
-
-@router.delete("/ocr-debug/sessions", response_model=ActionResponse)
-def admin_clear_ocr_debug_sessions(_: dict = Depends(get_current_admin)):
-    removed = clear_all_ocr_debug_sessions()
-    return ActionResponse(detail=f"{removed} sessoes de debug removidas")
-
-
-@router.post("/ocr-debug/manual-upload", response_model=AdminOcrManualUploadResponse)
-async def admin_upload_ocr_debug_manual_training(
-    files: list[UploadFile] = File(...),
-    _: dict = Depends(get_current_admin),
-):
-    if not files:
-        raise HTTPException(status_code=400, detail="Nenhuma imagem enviada.")
-
-    if len(files) > settings.ocr_max_files:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Limite de arquivos excedido. Máximo permitido: {settings.ocr_max_files}.",
-        )
-
-    max_file_size_bytes = settings.ocr_max_file_size_mb * 1024 * 1024
-    ocr_timeout_seconds = settings.ocr_image_timeout_seconds
-    warnings: list[str] = []
-    recognized_lines = 0
-
-    debug_root = Path(__file__).resolve().parents[1] / "data" / "ocr_debug"
-    session_id = f"admin_manual_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
-    session_dir = debug_root / session_id
-    session_dir.mkdir(parents=True, exist_ok=True)
-
-    refresh_approved_aliases_cache(db)
-
-    for index, upload in enumerate(files, start=1):
-        file_name = upload.filename or f"imagem_{index}.png"
-
-        if not upload.content_type or not upload.content_type.startswith("image/"):
-            warnings.append(f"Imagem invalida: {file_name}")
-            continue
-
-        content = await upload.read()
-        if len(content) > max_file_size_bytes:
-            warnings.append(f"Arquivo muito grande: {file_name}")
-            continue
-
-        safe_name = _safe_debug_filename(file_name, f"image_{index:02d}.png")
-        (session_dir / f"{index:02d}_original_{safe_name}").write_bytes(content)
-
-        debug_notes: list[str] = []
-        image_debug_dir = session_dir / f"{index:02d}_{safe_name}"
-        try:
-            parsed_lines = await asyncio.wait_for(
-                asyncio.to_thread(
-                    extract_drop_lines_from_image,
-                    content,
-                    image_debug_dir,
-                    debug_notes,
-                    settings.ocr_tesseract_lang,
-                    settings.ocr_tesseract_oem,
-                ),
-                timeout=ocr_timeout_seconds,
-            )
-
-            recognized_lines += len(parsed_lines)
-            parsed_dump = "\n".join(
-                f"{line.name_display} | qtd={line.quantity:.0f} | total={line.npc_total_price:.2f}"
-                for line in parsed_lines
-            )
-            (session_dir / f"{index:02d}_manual_training_parsed.txt").write_text(
-                parsed_dump or "Nenhuma linha reconhecida.",
-                encoding="utf-8",
-            )
-
-            if debug_notes:
-                (session_dir / f"{index:02d}_manual_training_notes.txt").write_text(
-                    "\n".join(debug_notes),
-                    encoding="utf-8",
-                )
-        except TimeoutError:
-            warnings.append(f"Tempo excedido no OCR: {file_name}")
-        except Exception:
-            warnings.append(f"Imagem invalida: {file_name}")
-
-    report = {
-        "session_id": session_id,
-        "created_at": datetime.utcnow().isoformat(),
-        "source": "admin_manual_upload",
-        "processed_images": len(files),
-        "recognized_lines": recognized_lines,
-        "warnings": warnings,
-    }
-    (session_dir / "manual_training_report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-    return AdminOcrManualUploadResponse(
-        session_id=session_id,
-        processed_images=len(files),
-        recognized_lines=recognized_lines,
-        warnings=warnings,
-    )
 
 
 @router.get("/tasks", response_model=TaskCatalogListResponse)
@@ -1202,5 +966,3 @@ def admin_delete_pokemon(
         raise HTTPException(status_code=404, detail="Pokémon não encontrado.")
     _save_inimigos(names)
     return ActionResponse(detail="Pokémon removido da lista.")
-
-

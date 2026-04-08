@@ -36,17 +36,11 @@ services:
 
   - type: web
     name: pxg-files-frontend
-    runtime: static
+    env: docker
     rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
+    dockerfilePath: ./Dockerfile
+    plan: free
     autoDeploy: true
     envVars:
-      - key: NODE_VERSION
-        value: "20.19.0"
-      - key: VITE_API_URL
+      - key: NEXT_PUBLIC_API_URL
         sync: false
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
