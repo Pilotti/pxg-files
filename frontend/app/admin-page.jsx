@@ -51,12 +51,12 @@ const npcPriceInitialForm = {
   previous_name: "",
   name: "",
   unit_price: "0",
+}
 
 const consumableInitialForm = {
   previous_nome: "",
   nome: "",
   preco_npc: "0",
-}
 }
 
 const TASK_PAGE_SIZE = 30
@@ -1538,8 +1538,7 @@ export default function AdminPage() {
         </header>
 
         <div className="admin-page__tabs">
-          {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "Preços NPC"], ["users", "Usuários"], ["pokemon", "Pokémon"], ["sidebar", "Sidebar"], ["ocr-debug", "Logs OCR"] ].map(([value, label]) => (
-                      {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "Preços NPC"], ["consumables", "Consumíveis"], ["users", "Usuários"], ["pokemon", "Pokémon"], ["sidebar", "Sidebar"], ["ocr-debug", "Logs OCR"] ].map(([value, label]) => (
+          {[ ["tasks", "Tasks"], ["quests", "Quests"], ["aliases", "Itens OCR"], ["npc-prices", "Preços NPC"], ["consumables", "Consumíveis"], ["users", "Usuários"], ["pokemon", "Pokémon"], ["sidebar", "Sidebar"], ["ocr-debug", "Logs OCR"] ].map(([value, label]) => (
             <button key={value} type="button" className={activeTab === value ? "admin-page__tab admin-page__tab--active" : "admin-page__tab"} onClick={() => setActiveTab(value)}>
               {label}
             </button>
@@ -1867,79 +1866,73 @@ export default function AdminPage() {
               </div>
             )}
           </section>
+        ) : activeTab === "consumables" ? (
+          <section className="admin-page__panel">
+            <div className="admin-page__section-header">
+              <div>
+                <h2 className="admin-page__section-title">Consumíveis</h2>
+                <p className="admin-page__section-subtitle">Gerencie os itens consumíveis e seus preços NPC usados no cálculo de custo de supply das hunts.</p>
+              </div>
+              <button type="button" className="admin-page__primary-button" onClick={openCreateConsumable}>Novo consumível</button>
+            </div>
+
+            <div className="admin-page__filters-card">
+              <div className="admin-page__filters-grid admin-page__filters-grid--npc-prices">
+                <input
+                  className="admin-page__input"
+                  placeholder="Buscar consumível por nome"
+                  value={consumableFilters.search}
+                  onChange={(event) => updateConsumableFilters({ search: event.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="admin-page__stats-row">
+              <span className="admin-page__stat">Total: {consumableTotal}</span>
+              <span className="admin-page__stat">Página: {consumablePage} / {consumableTotalPages}</span>
+            </div>
+
+            <div className="admin-page__pagination">
+              <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.max(1, prev - 1))} disabled={isLoadingConsumables || consumablePage <= 1}>Anterior</button>
+              <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.min(consumableTotalPages, prev + 1))} disabled={isLoadingConsumables || consumablePage >= consumableTotalPages}>Próxima</button>
+            </div>
+
+            {isLoadingConsumables ? (
+              <div className="admin-page__empty admin-page__empty--full">Carregando consumíveis...</div>
+            ) : !consumables.length ? (
+              <div className="admin-page__empty admin-page__empty--full">Nenhum consumível encontrado.</div>
+            ) : (
+              <div className="admin-page__users-table-wrap">
+                <div className="admin-page__users-table">
+                  <div className="admin-page__npc-row admin-page__npc-row--head">
+                    <span>Nome</span>
+                    <span>Preço NPC</span>
+                    <span>Ações</span>
+                  </div>
+                  {consumables.map((item) => (
+                    <div key={item.nome} className="admin-page__npc-row">
+                      <span>{item.nome}</span>
+                      <span>{item.preco_npc}</span>
+                      <span className="admin-page__npc-actions">
+                        <button type="button" className="admin-page__ghost-button admin-page__ghost-button--sm" onClick={() => openEditConsumable(item)}>
+                          Editar
+                        </button>
+                        <button type="button" className="admin-page__danger-button admin-page__danger-button--sm" onClick={() => handleDeleteConsumable(item.nome)}>
+                          Remover
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
         ) : activeTab === "users" ? (
           <section className="admin-page__panel">
             <div className="admin-page__section-header">
               <div>
                 <h2 className="admin-page__section-title">Usuários cadastrados</h2>
                 <p className="admin-page__section-subtitle">Visualize ID e usuário sem expor dados sensíveis.</p>
-                      ) : activeTab === "consumables" ? (
-                        <section className="admin-page__panel">
-                          <div className="admin-page__section-header">
-                            <div>
-                              <h2 className="admin-page__section-title">Consumíveis</h2>
-                              <p className="admin-page__section-subtitle">Gerencie os itens consumíveis e seus preços NPC usados no cálculo de custo de supply das hunts.</p>
-                            </div>
-                            <button type="button" className="admin-page__primary-button" onClick={openCreateConsumable}>Novo consumível</button>
-                          </div>
-
-                          <div className="admin-page__filters-card">
-                            <div className="admin-page__filters-grid admin-page__filters-grid--npc-prices">
-                              <input
-                                className="admin-page__input"
-                                placeholder="Buscar consumível por nome"
-                                value={consumableFilters.search}
-                                onChange={(event) => updateConsumableFilters({ search: event.target.value })}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="admin-page__stats-row">
-                            <span className="admin-page__stat">Total: {consumableTotal}</span>
-                            <span className="admin-page__stat">Página: {consumablePage} / {consumableTotalPages}</span>
-                          </div>
-
-                          <div className="admin-page__pagination">
-                            <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.max(1, prev - 1))} disabled={isLoadingConsumables || consumablePage <= 1}>Anterior</button>
-                            <button type="button" className="admin-page__ghost-button" onClick={() => setConsumablePage((prev) => Math.min(consumableTotalPages, prev + 1))} disabled={isLoadingConsumables || consumablePage >= consumableTotalPages}>Próxima</button>
-                          </div>
-
-                          {isLoadingConsumables ? (
-                            <div className="admin-page__empty admin-page__empty--full">Carregando consumíveis...</div>
-                          ) : !consumables.length ? (
-                            <div className="admin-page__empty admin-page__empty--full">Nenhum consumível encontrado.</div>
-                          ) : (
-                            <div className="admin-page__users-table-wrap">
-                              <div className="admin-page__users-table">
-                                <div className="admin-page__npc-row admin-page__npc-row--head">
-                                  <span>Nome</span>
-                                  <span>Preço NPC</span>
-                                  <span>Ações</span>
-                                </div>
-                                {consumables.map((item) => (
-                                  <div key={item.nome} className="admin-page__npc-row">
-                                    <span>{item.nome}</span>
-                                    <span>{item.preco_npc}</span>
-                                    <span className="admin-page__npc-actions">
-                                      <button type="button" className="admin-page__ghost-button admin-page__ghost-button--sm" onClick={() => openEditConsumable(item)}>
-                                        Editar
-                                      </button>
-                                      <button type="button" className="admin-page__danger-button admin-page__danger-button--sm" onClick={() => handleDeleteConsumable(item.nome)}>
-                                        Remover
-                                      </button>
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </section>
-                      ) : activeTab === "users" ? (
-                        <section className="admin-page__panel">
-                          <div className="admin-page__section-header">
-                            <div>
-                              <h2 className="admin-page__section-title">Usuários cadastrados</h2>
-                              <p className="admin-page__section-subtitle">Visualize ID e usuário sem expor dados sensíveis.</p>
               </div>
               <button type="button" className="admin-page__ghost-button" onClick={() => loadUsers(debouncedUserFilters)}>
                 Atualizar
