@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import difflib
 import io
+import json
 from pathlib import Path
 import re
 import statistics
@@ -33,6 +35,180 @@ class OcrWord:
     conf: float
 
 
+# ---------------------------------------------------------------------------
+# Known-item dictionary for post-OCR fuzzy name correction
+# ---------------------------------------------------------------------------
+
+_KNOWN_ITEMS_CACHE: dict[str, str] | None = None  # normalized → display
+_KNOWN_ITEMS_MTIME: float = 0.0
+
+# Approved aliases from DB: observed_normalized → canonical_name
+# Populated externally via refresh_approved_aliases_cache().
+_APPROVED_ALIASES_CACHE: dict[str, str] = {}
+
+
+def _normalize_for_cache(key: str) -> str:
+    norm = unicodedata.normalize("NFKD", key or "")
+    norm = "".join(char for char in norm if not unicodedata.combining(char))
+    norm = re.sub(r"[^a-z0-9 ]+", " ", norm.lower())
+    return " ".join(norm.split())
+
+
+def _get_known_items() -> dict[str, str]:
+    """Return {normalized_name: display_name} for all items in hunts_npc_prices.json.
+    Reloads automatically when the file changes on disk.
+    """
+    global _KNOWN_ITEMS_CACHE, _KNOWN_ITEMS_MTIME
+
+    data_file = Path(__file__).resolve().parent.parent / "data" / "hunts_npc_prices.json"
+    try:
+        current_mtime = data_file.stat().st_mtime
+    except OSError:
+        current_mtime = 0.0
+
+    if _KNOWN_ITEMS_CACHE is not None and current_mtime == _KNOWN_ITEMS_MTIME:
+        return _KNOWN_ITEMS_CACHE
+
+    try:
+        raw: dict = json.loads(data_file.read_text(encoding="utf-8"))
+    except Exception:
+        raw = {}
+
+    mapping: dict[str, str] = {}
+    for key in raw:
+        norm = _normalize_for_cache(key)
+        if norm:
+            mapping[norm] = key.strip()
+
+    _KNOWN_ITEMS_CACHE = mapping
+    _KNOWN_ITEMS_MTIME = current_mtime
+    return _KNOWN_ITEMS_CACHE
+
+
+def refresh_approved_aliases_cache(db: object) -> int:
+    """Load all approved aliases from the DB into the in-memory cache.
+    Call this from API endpoints before running OCR so the fuzzy corrector
+    can use admin-trained aliases immediately.
+    Returns the number of aliases loaded.
+    """
+    global _APPROVED_ALIASES_CACHE
+    try:
+        from app.models.hunt_item_alias import HuntItemAlias  # avoid circular at module level
+        from sqlalchemy.orm import Session as _Session
+
+        rows = (
+            db.query(HuntItemAlias)  # type: ignore[attr-defined]
+            .filter(
+                HuntItemAlias.is_approved.is_(True),
+                HuntItemAlias.canonical_name.isnot(None),
+            )
+            .all()
+        )
+        mapping: dict[str, str] = {}
+        for row in rows:
+            obs_norm = _normalize_for_cache(row.observed_name or "")
+            canonical = (row.canonical_name or "").strip()
+            if obs_norm and canonical:
+                mapping[obs_norm] = canonical
+        _APPROVED_ALIASES_CACHE = mapping
+        return len(mapping)
+    except Exception:
+        return 0
+
+
+def _get_approved_aliases() -> dict[str, str]:
+    return _APPROVED_ALIASES_CACHE
+
+
+def _fuzzy_correct_item_name(name: str) -> tuple[str, float | None]:
+    """Try to match OCR name against known items via difflib.
+
+    Strategy:
+    - Exact match: always correct (score 1.0).
+    - Prefix match: if the name appears to be a truncated prefix of a known item
+      (either ending with '...', or unique prefix), use that known item.
+      This handles cases like 'compressed ghos...' → 'compressed ghost essence'.
+    - High-confidence fuzzy (>= 0.85): correct for unambiguous substitutions.
+    - Otherwise: leave unchanged to avoid false positives.
+
+    Returns (corrected_name, score) or (original_name, None) if no correction made.
+    """
+    is_truncated = (name or "").rstrip().endswith("...")
+    # Strip trailing ellipsis before normalizing
+    clean = re.sub(r"\.{2,}\s*$", "", (name or "")).strip()
+    # Strip leading digits/symbols that may bleed from the count column (e.g. "12 ghost es")
+    clean = re.sub(r"^\d+\s+", "", clean).strip()
+
+    normalized = re.sub(r"[^a-z0-9 ]+", " ", clean.lower())
+    normalized = " ".join(normalized.split())
+    if not normalized:
+        return name, None
+
+    # Approved DB aliases take priority over static JSON
+    aliases = _get_approved_aliases()
+    if normalized in aliases:
+        return aliases[normalized], 1.0
+
+    known = _get_known_items()
+
+    # Merge both sources for prefix/fuzzy search
+    combined: dict[str, str] = {**known, **aliases}
+
+    # Exact hit in static JSON
+    if normalized in combined:
+        return combined[normalized], 1.0
+
+    # Prefix match: find known names that start with the OCR text
+    prefix_matches = [(k, v) for k, v in combined.items() if k.startswith(normalized)]
+    if prefix_matches and (is_truncated or len(prefix_matches) == 1):
+        # Pick the shortest completion (most specific)
+        best_k, best_v = min(prefix_matches, key=lambda pair: len(pair[0]))
+        score = difflib.SequenceMatcher(None, normalized, best_k).ratio()
+        return best_v, score
+
+    # High-confidence fuzzy match only (threshold 0.85 to avoid false positives)
+    matches = difflib.get_close_matches(normalized, combined.keys(), n=1, cutoff=0.85)
+    if not matches:
+        return name, None
+
+    best_norm = matches[0]
+    score = difflib.SequenceMatcher(None, normalized, best_norm).ratio()
+    return combined[best_norm], score
+
+
+def _apply_fuzzy_name_correction(
+    lines: list["ParsedDropLine"],
+    debug_notes: list[str] | None = None,
+) -> list["ParsedDropLine"]:
+    """Apply fuzzy name correction to a list of parsed drop lines."""
+    corrected: list[ParsedDropLine] = []
+    for line in lines:
+        new_name, score = _fuzzy_correct_item_name(line.name_display)
+        if new_name != line.name_display:
+            if debug_notes is not None:
+                debug_notes.append(
+                    f"DEBUG fuzzy correction: '{line.name_display}' → '{new_name}' (score={score:.2f})"
+                )
+            new_normalized = re.sub(r"[^a-z0-9 ]+", " ", new_name.lower())
+            new_normalized = " ".join(new_normalized.split())
+            qty = line.quantity
+            total = line.npc_total_price
+            unit = total / qty if qty else 0.0
+            corrected.append(
+                ParsedDropLine(
+                    name_display=new_name,
+                    name_normalized=new_normalized,
+                    quantity=qty,
+                    npc_total_price=total,
+                    npc_unit_price=unit,
+                    duplicate_key=f"{new_normalized}:{int(qty)}:{total:.2f}",
+                )
+            )
+        else:
+            corrected.append(line)
+    return corrected
+
+
 def preprocess(image: Image.Image) -> Image.Image:
     img = ImageOps.grayscale(image)
     img = ImageOps.autocontrast(img)
@@ -52,14 +228,37 @@ def _prepare_ocr_patch(image: Image.Image, invert: bool = True, scale: int = 3) 
     return patch
 
 
-def _ocr_single_line(image: Image.Image, whitelist: str | None = None) -> str:
-    config = "--psm 7"
-    return pytesseract.image_to_string(image, config=config).strip()
+def _escape_tesseract_value(value: str) -> str:
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
 
 
-def _ocr_multiline(image: Image.Image, whitelist: str | None = None) -> str:
-    config = "--psm 6"
-    return pytesseract.image_to_string(image, config=config).strip()
+def _build_tesseract_config(psm: int, oem: int, whitelist: str | None = None) -> str:
+    config_parts = [f"--oem {oem}", f"--psm {psm}"]
+    if whitelist:
+        config_parts.append(f'-c tessedit_char_whitelist="{_escape_tesseract_value(whitelist)}"')
+    return " ".join(config_parts)
+
+
+def _ocr_single_line(
+    image: Image.Image,
+    whitelist: str | None = None,
+    *,
+    lang: str = "eng",
+    oem: int = 1,
+) -> str:
+    config = _build_tesseract_config(psm=7, oem=oem, whitelist=whitelist)
+    return pytesseract.image_to_string(image, lang=lang, config=config).strip()
+
+
+def _ocr_multiline(
+    image: Image.Image,
+    whitelist: str | None = None,
+    *,
+    lang: str = "eng",
+    oem: int = 1,
+) -> str:
+    config = _build_tesseract_config(psm=6, oem=oem, whitelist=whitelist)
+    return pytesseract.image_to_string(image, lang=lang, config=config).strip()
 
 
 def _save_debug_image(debug_dir: Path | None, name: str, image: Image.Image) -> str | None:
@@ -86,8 +285,14 @@ def _save_debug_text(debug_dir: Path | None, name: str, content: str) -> str | N
     return str(target)
 
 
-def _extract_words(image: Image.Image) -> list[OcrWord]:
-    data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+def _extract_words(image: Image.Image, *, lang: str = "eng", oem: int = 1) -> list[OcrWord]:
+    config = _build_tesseract_config(psm=6, oem=oem)
+    data = pytesseract.image_to_data(
+        image,
+        output_type=pytesseract.Output.DICT,
+        lang=lang,
+        config=config,
+    )
     words: list[OcrWord] = []
     for index, text in enumerate(data["text"]):
         cleaned = (text or "").strip()
@@ -115,28 +320,281 @@ def _extract_words(image: Image.Image) -> list[OcrWord]:
 
 
 def _normalize_ocr_word(text: str) -> str:
-    return re.sub(r"[^a-z]", "", (text or "").lower())
+    normalized = unicodedata.normalize("NFKD", text or "")
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return re.sub(r"[^a-z]", "", normalized.lower())
 
 
-def detect_table(image: Image.Image) -> Image.Image:
-    words = _extract_words(image)
+def _detect_party_window_region(image: Image.Image, words: list[OcrWord]) -> Image.Image | None:
+    if not words:
+        return None
+
+    pokemon_words: list[OcrWord] = []
+    party_words: list[OcrWord] = []
+    close_words: list[OcrWord] = []
+
+    for word in words:
+        normalized = _normalize_ocr_word(word.text)
+        if normalized in {"pokemon", "pokmon"}:
+            pokemon_words.append(word)
+            continue
+        if normalized == "party":
+            party_words.append(word)
+            continue
+        # Close button rendered as "X" on the right side of the header.
+        if normalized == "x" and word.x > int(image.width * 0.45):
+            close_words.append(word)
+
+    if not pokemon_words or not party_words:
+        return None
+
+    best_pair: tuple[OcrWord, OcrWord] | None = None
+    best_score = 10**9
+    for pokemon in pokemon_words:
+        pokemon_center_y = pokemon.y + (pokemon.h / 2)
+        for party in party_words:
+            party_center_y = party.y + (party.h / 2)
+            vertical_gap = abs(pokemon_center_y - party_center_y)
+            if vertical_gap > max(24, int((pokemon.h + party.h) * 0.8)):
+                continue
+            horizontal_gap = abs((party.x + party.w) - pokemon.x)
+            score = vertical_gap * 10 + horizontal_gap
+            if score < best_score:
+                best_score = score
+                best_pair = (pokemon, party)
+
+    if best_pair is None:
+        return None
+
+    first, second = best_pair
+    title_left = min(first.x, second.x)
+    title_right = max(first.x + first.w, second.x + second.w)
+    title_top = min(first.y, second.y)
+    title_bottom = max(first.y + first.h, second.y + second.h)
+
+    width, height = image.size
+    title_height = max(24, title_bottom - title_top)
+
+    matching_close_word = None
+    for close_word in close_words:
+        close_center_y = close_word.y + (close_word.h / 2)
+        title_center_y = (title_top + title_bottom) / 2
+        if (
+            abs(close_center_y - title_center_y) <= max(30, int(title_height * 1.3))
+            and close_word.x > title_right
+        ):
+            if matching_close_word is None or close_word.x > matching_close_word.x:
+                matching_close_word = close_word
+
+    # Require the close button anchor to avoid drifting to unrelated UI regions.
+    if matching_close_word is None:
+        return None
+
+    right = min(width, matching_close_word.x + matching_close_word.w + max(20, int(width * 0.015)))
+
+    # Derive a stable window width from title-left to close-button span.
+    span_title_to_close = max(220, right - title_left)
+    estimated_window_width = max(360, int(span_title_to_close * 1.45))
+    left = max(0, right - estimated_window_width)
+
+    top = max(0, title_top - max(34, int(title_height * 1.2)))
+    estimated_window_height = max(260, int(estimated_window_width * 0.68))
+    bottom = min(height, top + estimated_window_height)
+
+    if right - left < max(240, int(width * 0.20)):
+        return None
+
+    if bottom - top < max(180, int(height * 0.20)):
+        return None
+
+    return image.crop((left, top, right, bottom))
+
+
+def _detect_close_button_visual(image: Image.Image) -> tuple[int, int] | None:
+    """
+    Detect the red X close button in the top-right corner of the party window.
+    Returns (right, top) coordinates of the close button, or None if not found.
+    """
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    
+    pixels = image.load()
+    width, height = image.size
+    
+    # Search in top-right quadrant (right 30% × top 15%)
+    search_x_start = int(width * 0.70)
+    search_y_end = int(height * 0.15)
+    
+    # Red pixels: R >= 180, G <= 100, B <= 100
+    red_points: list[tuple[int, int]] = []
+    for y in range(0, search_y_end):
+        for x in range(search_x_start, width):
+            r, g, b = pixels[x, y][:3] if len(pixels[x, y]) >= 3 else (pixels[x, y][0], pixels[x, y][1], pixels[x, y][2])
+            if r >= 180 and g <= 100 and b <= 100:
+                red_points.append((x, y))
+    
+    if not red_points:
+        return None
+    
+    # Find the rightmost red cluster (close button is typically right-aligned)
+    avg_x = sum(p[0] for p in red_points) / len(red_points)
+    avg_y = sum(p[1] for p in red_points) / len(red_points)
+    
+    # Return position slightly right and below to account for button size
+    return (int(avg_x + 15), int(avg_y - 5))
+
+
+def _detect_blue_header_bar_visual(image: Image.Image) -> int | None:
+    """
+    Detect the blue horizontal bar at the top of the party window.
+    Returns the y-coordinate of the blue bar, or None if not found.
+    """
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    
+    pixels = image.load()
+    width, height = image.size
+    
+    # Search in top 20% of image
+    search_height = int(height * 0.20)
+    
+    # Blue pixels: R <= 100, G <= 150, B >= 180
+    for y in range(0, search_height):
+        blue_count = 0
+        for x in range(0, width):
+            r, g, b = pixels[x, y][:3] if len(pixels[x, y]) >= 3 else (pixels[x, y][0], pixels[x, y][1], pixels[x, y][2])
+            if r <= 100 and g <= 150 and b >= 180:
+                blue_count += 1
+        
+        # If more than 20% of the row is blue, we found the bar
+        if blue_count > width * 0.20:
+            return y
+    
+    return None
+
+
+def _detect_redefinir_button_visual(image: Image.Image) -> tuple[int, int] | None:
+    """
+    Detect the red 'Redefinir' button in the bottom-right corner of the party window.
+    Returns (right, bottom) coordinates of the button, or None if not found.
+    """
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    
+    pixels = image.load()
+    width, height = image.size
+    
+    # Search in bottom-right quadrant (right 40% × bottom 15%)
+    search_x_start = int(width * 0.60)
+    search_y_start = int(height * 0.85)
+    
+    # Red pixels: R >= 180, G <= 100, B <= 100
+    red_points: list[tuple[int, int]] = []
+    for y in range(search_y_start, height):
+        for x in range(search_x_start, width):
+            r, g, b = pixels[x, y][:3] if len(pixels[x, y]) >= 3 else (pixels[x, y][0], pixels[x, y][1], pixels[x, y][2])
+            if r >= 180 and g <= 100 and b <= 100:
+                red_points.append((x, y))
+    
+    if not red_points:
+        return None
+    
+    # Find the centroid of red cluster
+    avg_x = sum(p[0] for p in red_points) / len(red_points)
+    avg_y = sum(p[1] for p in red_points) / len(red_points)
+    
+    # Return position slightly right and below to account for button size
+    return (int(avg_x + 20), int(avg_y + 10))
+
+
+def _detect_party_window_region_visual(image: Image.Image) -> Image.Image | None:
+    """
+    Detect party window using visual anchors: X button (top-right), blue bar (top), Redefinir button (bottom-right).
+    This approach is robust across font scales, UI scales, and language variations.
+    Returns cropped window region or None if not all anchors found.
+    """
+    close_button = _detect_close_button_visual(image)
+    blue_bar_y = _detect_blue_header_bar_visual(image)
+    redefinir_button = _detect_redefinir_button_visual(image)
+    
+    # All three anchors should be present for reliable detection
+    if close_button is None or blue_bar_y is None or redefinir_button is None:
+        return None
+    
+    width, height = image.size
+    close_x, close_y = close_button
+    redefinir_x, redefinir_y = redefinir_button
+    
+    # Calculate window boundaries from anchors
+    # Top: use blue_bar_y with margin
+    top = max(0, blue_bar_y - max(5, int(height * 0.01)))
+    
+    # Right: use close button x-coordinate with margin
+    right = min(width, close_x + max(10, int(width * 0.02)))
+    
+    # Bottom: use redefinir button y-coordinate with margin
+    bottom = min(height, redefinir_y + max(8, int(height * 0.02)))
+    
+    # Left: derive from typical window width (estimate from top, close button, and bottom positions)
+    # Typical party window is about 360-400px wide
+    estimated_width = max(360, int(close_x * 0.9))
+    left = max(0, right - estimated_width)
+    
+    # Validate crop dimensions
+    crop_width = right - left
+    crop_height = bottom - top
+    
+    if crop_width < 240 or crop_height < 180:
+        return None
+    
+    return image.crop((left, top, right, bottom))
+
+
+def _detect_table_region_and_strategy(
+    image: Image.Image,
+    *,
+    lang: str = "eng",
+    oem: int = 1,
+    visual_image: Image.Image | None = None,
+) -> tuple[Image.Image, str]:
+    # Try visual anchor detection first (X + blue bar + Redefinir) - most robust across scales/languages
+    visual_source = visual_image if visual_image is not None else image
+    party_region = _detect_party_window_region_visual(visual_source)
+    if party_region is not None:
+        return party_region, "visual-anchor"
+    
+    # Fall back to text-based anchor detection (Pokémon Party + X)
+    words = _extract_words(image, lang=lang, oem=oem)
+    party_region = _detect_party_window_region(image, words)
+    crop_strategy = "text-anchor" if party_region is not None else "full-image"
+    if party_region is not None:
+        source_image = party_region
+        source_words = _extract_words(source_image, lang=lang, oem=oem)
+    else:
+        source_image = image
+        source_words = words
 
     header = {"item": None, "count": None, "value": None}
 
-    for word in words:
+    # Header keywords for PT-BR, EN, ES, PL
+    item_keywords = {"item", "articulo", "objeto", "przedmiot"}
+    count_keywords = {"contagem", "count", "cantidad", "conteo", "ilosc"}
+    value_keywords = {"valor", "value", "precio", "valoracion", "wartosc", "valuedl"}
+
+    for word in source_words:
         normalized_text = _normalize_ocr_word(word.text)
-        if normalized_text == "item":
+        if header["item"] is None and normalized_text in item_keywords:
             header["item"] = word
-        elif normalized_text in ["contagem", "count"]:
+        elif header["count"] is None and normalized_text in count_keywords:
             header["count"] = word
-        elif normalized_text in ["valor", "valuedl", "value"]:
+        elif header["value"] is None and normalized_text in value_keywords:
             header["value"] = word
 
     if not all(header.values()):
-        # Fallback to full image to avoid losing data when header detection fails.
-        return image
+        # Fallback keeps current behavior, but prefers the party window if detected.
+        return source_image, crop_strategy
 
-    width, height = image.size
+    width, height = source_image.size
     x_margin = max(20, int(width * 0.04))
     y_margin = max(16, int(height * 0.02))
 
@@ -147,9 +605,15 @@ def detect_table(image: Image.Image) -> Image.Image:
     top = max(0, header["item"].y - y_margin)
 
     footer_candidates: list[int] = []
-    for word in words:
+    footer_keywords = {
+        "ganho", "total", "pagina", "redefinir", "reset",
+        "gain", "earnings", "page",
+        "ganancia", "reiniciar", "pagina",
+        "zysk", "strona", "resetuj",
+    }
+    for word in source_words:
         normalized_text = _normalize_ocr_word(word.text)
-        if normalized_text in {"ganho", "total", "pagina", "redefinir", "reset"}:
+        if normalized_text in footer_keywords:
             if word.y > (header["item"].y + header["item"].h):
                 footer_candidates.append(word.y)
 
@@ -166,9 +630,25 @@ def detect_table(image: Image.Image) -> Image.Image:
     crop_area = crop_width * crop_height
     full_area = max(1, width * height)
     if crop_area / full_area < 0.22:
-        return image
+        return source_image, crop_strategy
 
-    return image.crop((left, top, right, bottom))
+    return source_image.crop((left, top, right, bottom)), f"{crop_strategy}-header-crop"
+
+
+def detect_table(
+    image: Image.Image,
+    *,
+    lang: str = "eng",
+    oem: int = 1,
+    visual_image: Image.Image | None = None,
+) -> Image.Image:
+    table, _ = _detect_table_region_and_strategy(
+        image,
+        lang=lang,
+        oem=oem,
+        visual_image=visual_image,
+    )
+    return table
 
 
 def _normalize_item_name(name: str) -> str:
@@ -313,10 +793,26 @@ def _clean_column_lines(raw_text: str, kind: str) -> list[str]:
     return cleaned_lines
 
 
-def _extract_column_candidates(crop: Image.Image, kind: str) -> tuple[list[tuple[float, str]], str]:
+def _extract_column_candidates(
+    crop: Image.Image,
+    kind: str,
+    *,
+    lang: str = "eng",
+    oem: int = 1,
+) -> tuple[list[tuple[float, str]], str]:
     patch = _prepare_ocr_patch(crop, scale=4)
-    raw_text = _ocr_multiline(patch)
-    words = _extract_words(patch)
+    whitelist_by_kind = {
+        "item": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-",
+        "count": "0123456789",
+        "value": "0123456789.,kKoO",
+    }
+    raw_text = _ocr_multiline(
+        patch,
+        whitelist=whitelist_by_kind.get(kind),
+        lang=lang,
+        oem=oem,
+    )
+    words = _extract_words(patch, lang=lang, oem=oem)
 
     if not words:
         fallback = [(float(index), value) for index, value in enumerate(_clean_column_lines(raw_text, kind), start=1)]
@@ -432,6 +928,9 @@ def _extract_drop_lines_by_columns(
     header: dict[str, OcrWord],
     debug_dir: Path | None = None,
     debug_notes: list[str] | None = None,
+    *,
+    lang: str = "eng",
+    oem: int = 1,
 ) -> list[ParsedDropLine]:
     table_width, table_height = table.size
     row_start_y = header["item"].y + header["item"].h + 8
@@ -482,9 +981,9 @@ def _extract_drop_lines_by_columns(
         if value_crop_path:
             debug_notes.append(f"DEBUG value column: {value_crop_path}")
 
-    item_candidates, item_text = _extract_column_candidates(item_crop, "item")
-    count_candidates, count_text = _extract_column_candidates(count_crop, "count")
-    value_candidates, value_text = _extract_column_candidates(value_crop, "value")
+    item_candidates, item_text = _extract_column_candidates(item_crop, "item", lang=lang, oem=oem)
+    count_candidates, count_text = _extract_column_candidates(count_crop, "count", lang=lang, oem=oem)
+    value_candidates, value_text = _extract_column_candidates(value_crop, "value", lang=lang, oem=oem)
 
     item_txt_path = _save_debug_text(debug_dir, "item_column_text", item_text)
     count_txt_path = _save_debug_text(debug_dir, "count_column_text", count_text)
@@ -537,50 +1036,57 @@ def _extract_drop_lines_by_columns(
     return aligned_lines
 
 
-def extract_drop_lines_from_image(
-    image_bytes: bytes,
+def _extract_drop_lines_from_table(
+    table: Image.Image,
+    *,
     debug_dir: Path | None = None,
     debug_notes: list[str] | None = None,
+    ocr_lang: str = "eng",
+    ocr_oem: int = 1,
+    variant_label: str = "table",
 ) -> list[ParsedDropLine]:
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    _save_debug_image(debug_dir, "original", image)
+    words = _extract_words(table, lang=ocr_lang, oem=ocr_oem)
 
-    image = preprocess(image)
-    _save_debug_image(debug_dir, "preprocessed", image)
-
-    table = ImageOps.autocontrast(detect_table(image))
-    table_path = _save_debug_image(debug_dir, "detected_table", table)
-    if table_path and debug_notes is not None:
-        debug_notes.append(f"DEBUG detected table: {table_path}")
-
-    words = _extract_words(table)
+    item_keywords = {"item", "articulo", "objeto", "przedmiot"}
+    count_keywords = {"contagem", "count", "cantidad", "conteo", "ilosc"}
+    value_keywords = {"valor", "value", "precio", "valoracion", "wartosc", "valuedl"}
 
     header = {"item": None, "count": None, "value": None}
     for word in words:
         normalized_text = _normalize_ocr_word(word.text)
-        if normalized_text == "item":
+        if header["item"] is None and normalized_text in item_keywords:
             header["item"] = word
-        elif normalized_text in {"contagem", "count"}:
+        elif header["count"] is None and normalized_text in count_keywords:
             header["count"] = word
-        elif normalized_text in {"valor", "valuedl", "value"}:
+        elif header["value"] is None and normalized_text in value_keywords:
             header["value"] = word
 
     if not all(header.values()):
-        raw_text = pytesseract.image_to_string(table, config="--psm 6")
-        raw_txt_path = _save_debug_text(debug_dir, "fallback_raw_text", raw_text)
+        if debug_notes is not None:
+            debug_notes.append(f"DEBUG {variant_label}: missing headers, using raw text fallback")
+        raw_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
+        raw_txt_path = _save_debug_text(debug_dir, f"{variant_label}_fallback_raw_text", raw_text)
         if raw_txt_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG fallback raw OCR text: {raw_txt_path}")
+            debug_notes.append(f"DEBUG {variant_label} raw OCR text: {raw_txt_path}")
         return parse_drop_lines(raw_text)
 
-    column_lines = _extract_drop_lines_by_columns(table, words, header, debug_dir=debug_dir, debug_notes=debug_notes)
+    column_lines = _extract_drop_lines_by_columns(
+        table,
+        words,
+        header,
+        debug_dir=debug_dir,
+        debug_notes=debug_notes,
+        lang=ocr_lang,
+        oem=ocr_oem,
+    )
     if column_lines:
         parsed_dump = "\n".join(
             f"{line.name_display} | qtd={line.quantity:.0f} | valor={line.npc_total_price:.2f}"
             for line in column_lines
         )
-        parsed_path = _save_debug_text(debug_dir, "parsed_lines_column_mode", parsed_dump)
+        parsed_path = _save_debug_text(debug_dir, f"{variant_label}_parsed_lines_column_mode", parsed_dump)
         if parsed_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG parsed lines (column mode): {parsed_path}")
+            debug_notes.append(f"DEBUG {variant_label} parsed lines (column mode): {parsed_path}")
         return column_lines
 
     table_width, table_height = table.size
@@ -589,20 +1095,16 @@ def extract_drop_lines_from_image(
 
     for word in words:
         normalized_text = _normalize_ocr_word(word.text)
-        if normalized_text in {"ganho", "total", "pagina", "redefinir", "reset"} and word.y > row_start_y:
+        if normalized_text in {"ganho", "total", "pagina", "redefinir", "reset", "gain", "earnings", "page", "ganancia", "reiniciar", "zysk", "strona", "resetuj"} and word.y > row_start_y:
             footer_start_y = min(footer_start_y, word.y)
 
-    usable_words = [
-        word
-        for word in words
-        if row_start_y <= word.y < footer_start_y
-    ]
+    usable_words = [word for word in words if row_start_y <= word.y < footer_start_y]
 
     if not usable_words:
-        raw_text = pytesseract.image_to_string(table, config="--psm 6")
-        raw_txt_path = _save_debug_text(debug_dir, "fallback_raw_text_no_words", raw_text)
+        raw_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
+        raw_txt_path = _save_debug_text(debug_dir, f"{variant_label}_fallback_raw_text_no_words", raw_text)
         if raw_txt_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG fallback raw OCR text: {raw_txt_path}")
+            debug_notes.append(f"DEBUG {variant_label} fallback raw OCR text: {raw_txt_path}")
         return parse_drop_lines(raw_text)
 
     avg_height = sum(word.h for word in usable_words) / len(usable_words)
@@ -631,13 +1133,8 @@ def extract_drop_lines_from_image(
     parsed_lines: list[ParsedDropLine] = []
     for row in rows:
         row_words = sorted(row, key=lambda current: current.x)
-
         item_words = [word for word in row_words if word.x < count_boundary_left]
-        count_words = [
-            word
-            for word in row_words
-            if count_boundary_left <= word.x < value_boundary_left
-        ]
+        count_words = [word for word in row_words if count_boundary_left <= word.x < value_boundary_left]
         value_words = [word for word in row_words if word.x >= value_boundary_left]
 
         row_top = max(0, min(word.y for word in row_words) - 6)
@@ -649,19 +1146,39 @@ def extract_drop_lines_from_image(
         value_crop = table.crop((max(0, value_boundary_left - 8), row_top, table_width, row_bottom))
 
         item_candidate_words = _join_words(item_words)
-        item_candidate_full = _ocr_single_line(_prepare_ocr_patch(item_crop), whitelist="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-")
-        item_candidate_trimmed = _ocr_single_line(_prepare_ocr_patch(item_crop_trimmed), whitelist="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-")
+        item_candidate_full = _ocr_single_line(
+            _prepare_ocr_patch(item_crop),
+            whitelist="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-",
+            lang=ocr_lang,
+            oem=ocr_oem,
+        )
+        item_candidate_trimmed = _ocr_single_line(
+            _prepare_ocr_patch(item_crop_trimmed),
+            whitelist="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-",
+            lang=ocr_lang,
+            oem=ocr_oem,
+        )
 
         item_candidates = [item_candidate_words, item_candidate_full, item_candidate_trimmed]
         name_display = max(item_candidates, key=_score_item_text)
 
         quantity_from_words = _join_words(count_words).replace(" ", "")
-        quantity_from_crop = _ocr_single_line(_prepare_ocr_patch(count_crop), whitelist="0123456789")
+        quantity_from_crop = _ocr_single_line(
+            _prepare_ocr_patch(count_crop),
+            whitelist="0123456789",
+            lang=ocr_lang,
+            oem=ocr_oem,
+        )
         quantity_text = quantity_from_crop or quantity_from_words
         quantity_text = re.sub(r"[^0-9]", "", quantity_text)
 
         value_from_words = _join_words(value_words).replace(" ", "")
-        value_from_crop = _ocr_single_line(_prepare_ocr_patch(value_crop), whitelist="0123456789.kK")
+        value_from_crop = _ocr_single_line(
+            _prepare_ocr_patch(value_crop),
+            whitelist="0123456789.kK",
+            lang=ocr_lang,
+            oem=ocr_oem,
+        )
         value_text = value_from_crop or value_from_words
         value_text = value_text.replace(" ", "")
 
@@ -696,27 +1213,99 @@ def extract_drop_lines_from_image(
             f"{line.name_display} | qtd={line.quantity:.0f} | valor={line.npc_total_price:.2f}"
             for line in parsed_lines
         )
-        parsed_path = _save_debug_text(debug_dir, "parsed_lines_row_mode", parsed_dump)
+        parsed_path = _save_debug_text(debug_dir, f"{variant_label}_parsed_lines_row_mode", parsed_dump)
         if parsed_path and debug_notes is not None:
-            debug_notes.append(f"DEBUG parsed lines (row mode): {parsed_path}")
+            debug_notes.append(f"DEBUG {variant_label} parsed lines (row mode): {parsed_path}")
         return parsed_lines
 
-    raw_text = pytesseract.image_to_string(table, config="--psm 6")
-    raw_txt_path = _save_debug_text(debug_dir, "fallback_raw_text_final", raw_text)
+    raw_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
+    raw_txt_path = _save_debug_text(debug_dir, f"{variant_label}_fallback_raw_text_final", raw_text)
     if raw_txt_path and debug_notes is not None:
-        debug_notes.append(f"DEBUG fallback raw OCR text: {raw_txt_path}")
+        debug_notes.append(f"DEBUG {variant_label} fallback raw OCR text: {raw_txt_path}")
     return parse_drop_lines(raw_text)
 
 
-def extract_text_from_image(image_bytes: bytes) -> str:
+def extract_drop_lines_from_image(
+    image_bytes: bytes,
+    debug_dir: Path | None = None,
+    debug_notes: list[str] | None = None,
+    ocr_lang: str = "eng",
+    ocr_oem: int = 1,
+) -> list[ParsedDropLine]:
+    original_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    _save_debug_image(debug_dir, "original", original_image)
+
+    # Detect and crop the table on the original RGB image so UI color anchors remain intact.
+    detected_table_raw, detect_strategy = _detect_table_region_and_strategy(
+        original_image,
+        lang=ocr_lang,
+        oem=ocr_oem,
+        visual_image=original_image,
+    )
+    if debug_notes is not None:
+        debug_notes.append(f"DEBUG table detection strategy: {detect_strategy}")
+
+    detected_table = ImageOps.autocontrast(detected_table_raw)
+    detected_table_path = _save_debug_image(debug_dir, "detected_table_color", detected_table)
+    if detected_table_path and debug_notes is not None:
+        debug_notes.append(f"DEBUG detected table (color): {detected_table_path}")
+
+    # Only after cropping the table do we preprocess/grayscale for text OCR.
+    preprocessed_table = preprocess(detected_table)
+    table_path = _save_debug_image(debug_dir, "detected_table", preprocessed_table)
+    if table_path and debug_notes is not None:
+        debug_notes.append(f"DEBUG detected table (preprocessed): {table_path}")
+
+    color_lines = _extract_drop_lines_from_table(
+        detected_table,
+        debug_dir=debug_dir,
+        debug_notes=debug_notes,
+        ocr_lang=ocr_lang,
+        ocr_oem=ocr_oem,
+        variant_label="color_table",
+    )
+    preprocessed_lines = _extract_drop_lines_from_table(
+        preprocessed_table,
+        debug_dir=debug_dir,
+        debug_notes=debug_notes,
+        ocr_lang=ocr_lang,
+        ocr_oem=ocr_oem,
+        variant_label="preprocessed_table",
+    )
+
+    def _score_lines(lines: list[ParsedDropLine]) -> tuple[int, int, float]:
+        total_named = sum(1 for line in lines if len((line.name_display or "").strip()) >= 4)
+        total_non_zero_value = sum(1 for line in lines if float(line.npc_total_price or 0) > 0)
+        total_quantity = sum(float(line.quantity or 0) for line in lines)
+        return (len(lines), total_non_zero_value, total_quantity + total_named)
+
+    color_score = _score_lines(color_lines)
+    preprocessed_score = _score_lines(preprocessed_lines)
+
+    best_label = "color_table"
+    best_lines = color_lines
+    if preprocessed_score > color_score:
+        best_label = "preprocessed_table"
+        best_lines = preprocessed_lines
+
+    if debug_notes is not None:
+        debug_notes.append(
+            f"DEBUG table OCR variant scores: color={color_score} preprocessed={preprocessed_score} winner={best_label}"
+        )
+
+    best_lines = _apply_fuzzy_name_correction(best_lines, debug_notes=debug_notes)
+    return best_lines
+
+
+def extract_text_from_image(image_bytes: bytes, *, ocr_lang: str = "eng", ocr_oem: int = 1) -> str:
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image = preprocess(image)
 
-    table = detect_table(image)
+    table = detect_table(image, lang=ocr_lang, oem=ocr_oem)
     table = ImageOps.autocontrast(table)
 
-    table_text = pytesseract.image_to_string(table, config="--psm 6")
-    full_text = pytesseract.image_to_string(image, config="--psm 6")
+    table_text = _ocr_multiline(table, lang=ocr_lang, oem=ocr_oem)
+    full_text = _ocr_multiline(image, lang=ocr_lang, oem=ocr_oem)
 
     def _score_ocr_text(raw_text: str) -> int:
         score = 0
@@ -778,11 +1367,3 @@ def deduplicate_drop_lines(lines: list[ParsedDropLine]) -> tuple[list[ParsedDrop
         unique_lines.append(line)
 
     return unique_lines, duplicates_ignored
-
-
-def extract_text(image_bytes: bytes) -> str:
-    return extract_text_from_image(image_bytes)
-
-
-def parse_lines(raw_text: str) -> list[ParsedDropLine]:
-    return parse_drop_lines(raw_text)

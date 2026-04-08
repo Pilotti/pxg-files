@@ -20,14 +20,20 @@ class AdminMeResponse(BaseModel):
     role: str = "admin"
 
 
+class AdminUserListItem(BaseModel):
+    id: int
+    username: str
+    email: str
+
+
 class AdminTaskCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    description: str | None = None
+    description: str = Field(min_length=1)
     task_type: list[TaskType] = Field(min_length=1)
     continent: Continent
-    min_level: int = Field(ge=5, le=625)
+    min_level: int = Field(default=5, ge=0, le=625)
     nw_level: int | None = Field(default=None, ge=1, le=999)
-    reward_text: str | None = None
+    reward_text: str = Field(min_length=1)
     coordinate: str | None = Field(default=None, max_length=80)
     city: str = Field(min_length=2, max_length=80)
     is_active: bool = True
@@ -42,11 +48,18 @@ class AdminTaskCreateRequest(BaseModel):
 
     @field_validator("description", "reward_text", mode="before")
     @classmethod
-    def strip_optional_text(cls, value):
-        if value is None:
-            return None
+    def strip_required_text_fields(cls, value):
         cleaned = str(value).strip()
-        return cleaned or None
+        if not cleaned:
+            raise ValueError("Campo obrigatório")
+        return cleaned
+
+    @field_validator("min_level", mode="before")
+    @classmethod
+    def normalize_min_level(cls, value):
+        if value in (None, ""):
+            return 5
+        return value
 
     @field_validator("coordinate", mode="before")
     @classmethod
@@ -54,9 +67,12 @@ class AdminTaskCreateRequest(BaseModel):
         if value is None or (isinstance(value, str) and not value.strip()):
             return None
         cleaned = str(value).strip()
-        if not re.fullmatch(r"-?\d{1,6}\s*,\s*-?\d{1,6}\s*,\s*-?\d{1,6}", cleaned):
+        if not re.fullmatch(r"-?\d{1,7}\s*,\s*-?\d{1,7}\s*,\s*-?\d{1,7}", cleaned):
             raise ValueError("Coordenada deve estar no formato x,y,z (números podem ser negativos)")
-        return cleaned
+        parts = [int(part.strip()) for part in cleaned.split(",")]
+        if any(part < -1_000_000 or part > 1_000_000 for part in parts):
+            raise ValueError("Cada coordenada deve estar entre -1000000 e 1000000")
+        return ",".join(str(part) for part in parts)
 
     @field_validator("task_type", mode="before")
     @classmethod
@@ -94,7 +110,8 @@ class AdminQuestCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = None
     continent: Continent
-    min_level: int = Field(ge=5, le=625)
+    city: str | None = None
+    min_level: int = Field(ge=0, le=625)
     nw_level: int | None = Field(default=None, ge=1, le=999)
     reward_text: str | None = None
     is_active: bool = True
@@ -139,6 +156,11 @@ class AdminHuntItemAliasUpdateRequest(BaseModel):
     is_approved: bool = True
 
 
+class AdminHuntItemAliasCreateRequest(BaseModel):
+    observed_name: str = Field(min_length=1, max_length=160)
+    canonical_name: str = Field(min_length=1, max_length=160)
+
+
 class AdminNpcPriceResponse(BaseModel):
     name: str
     normalized_name: str
@@ -146,8 +168,21 @@ class AdminNpcPriceResponse(BaseModel):
     related_aliases: list[str] = []
 
 
+class AdminNpcPriceListResponse(BaseModel):
+    items: list[AdminNpcPriceResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class AdminNpcPriceUpdateRequest(BaseModel):
     previous_name: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    unit_price: float = Field(ge=0)
+
+
+class AdminNpcPriceCreateRequest(BaseModel):
     name: str = Field(min_length=1)
     unit_price: float = Field(ge=0)
 
@@ -178,10 +213,25 @@ class AdminOcrDebugTextPreviewResponse(BaseModel):
     content: str
 
 
+class AdminOcrManualUploadResponse(BaseModel):
+    session_id: str
+    processed_images: int
+    recognized_lines: int
+    warnings: list[str] = []
+
+
 class AdminPokemonEntry(BaseModel):
     dex_id: str
     name: str
     full_name: str
+
+
+class AdminPokemonListResponse(BaseModel):
+    items: list[AdminPokemonEntry]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class AdminPokemonCreateRequest(BaseModel):

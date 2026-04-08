@@ -1,0 +1,16 @@
+[build]
+# Railway detecta automaticamente pelo Dockerfile em cada rootDir
+
+[[services]]
+name = "pxg-backend"
+rootDirectory = "backend"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+startCommand = ""  # Comandos definidos no Dockerfile CMD
+
+[[services]]
+name = "pxg-frontend"
+rootDirectory = "frontend"
+builder = "NIXPACKS"
+startCommand = "npm run start"
+buildCommand = "npm ci && npm run build"

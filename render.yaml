@@ -27,6 +27,12 @@ services:
         value: "43200"
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      - key: OCR_MAX_FILES
+        value: "10"
+      - key: OCR_MAX_FILE_SIZE_MB
+        value: "8"
+      - key: OCR_IMAGE_TIMEOUT_SECONDS
+        value: "15"
 
   - type: web
     name: pxg-files-frontend

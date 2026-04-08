@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.db.base import Base
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
 
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
@@ -10,6 +10,8 @@ from app.models.tasks import TaskTemplate, QuestTemplate, CharacterTask, Charact
 from app.models.hunt_item_alias import HuntItemAlias
 from app.models.hunt_session import HuntSession
 from app.models.sidebar_menu import SidebarMenuSetting
+from app.services.task_json_storage import ensure_task_json_files, import_task_templates_from_json_files
+from app.services.quest_json_storage import ensure_quest_json_files, import_quest_templates_from_json_files
 
 
 def init_db() -> None:
@@ -18,6 +20,24 @@ def init_db() -> None:
     from sqlalchemy import text
     with engine.connect() as conn:
         try:
+            if engine.dialect.name == "postgresql":
+                column_type = conn.execute(text(
+                    "SELECT data_type "
+                    "FROM information_schema.columns "
+                    "WHERE table_name = 'task_templates' AND column_name = 'task_type'"
+                )).scalar_one_or_none()
+
+                if column_type and column_type.lower() != "jsonb":
+                    conn.execute(text(
+                        "ALTER TABLE task_templates "
+                        "ALTER COLUMN task_type TYPE JSONB "
+                        "USING CASE "
+                        "WHEN task_type IS NULL OR btrim(task_type::text) = '' THEN '[]'::jsonb "
+                        "WHEN left(task_type::text, 1) = '[' THEN task_type::jsonb "
+                        "ELSE jsonb_build_array(task_type::text) "
+                        "END"
+                    ))
+
             conn.execute(text(
                 "ALTER TABLE hunt_sessions "
                 "ADD COLUMN IF NOT EXISTS consumables_json JSON"
@@ -47,6 +67,10 @@ def init_db() -> None:
                 "ADD COLUMN IF NOT EXISTS nw_level INTEGER"
             ))
             conn.execute(text(
+                "ALTER TABLE quest_templates "
+                "ADD COLUMN IF NOT EXISTS city VARCHAR(80)"
+            ))
+            conn.execute(text(
                 "UPDATE task_templates "
                 "SET continent = 'nightmare_world' "
                 "WHERE continent = 'nightmare'"
@@ -70,15 +94,28 @@ def init_db() -> None:
         except Exception:
             conn.rollback()
 
-    # Seed base catalog when a fresh database starts in production.
-    try:
-        from app.db.seed_tasks import seed_tasks, seed_quests
+    # Task/quest seed is intentionally disabled.
+    # Catalog data will now be managed manually from admin.
+    ensure_task_json_files()
+    ensure_quest_json_files()
 
-        seed_tasks()
-        seed_quests()
+    db = SessionLocal()
+    try:
+        import_task_templates_from_json_files(db)
     except Exception as exc:
-        # Keep startup resilient even if seed data has inconsistencies.
-        print(f"[init_db] seed sync skipped due to error: {exc}")
+        print(f"Falha ao sincronizar task JSONs: {exc}")
+        db.rollback()
+    finally:
+        db.close()
+
+    db = SessionLocal()
+    try:
+        import_quest_templates_from_json_files(db)
+    except Exception as exc:
+        print(f"Falha ao sincronizar quest JSONs: {exc}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

@@ -132,6 +132,29 @@ def update_hunt_item_alias(
     return alias
 
 
+def upsert_manual_alias(
+    db: Session,
+    observed_name: str,
+    canonical_name: str,
+) -> HuntItemAlias | None:
+    observed = (observed_name or "").strip()
+    canonical = (canonical_name or "").strip()
+    if not observed or not canonical:
+        return None
+
+    alias = register_observed_item(db, observed)
+    if alias is None:
+        return None
+
+    alias.canonical_name = canonical
+    alias.canonical_name_normalized = normalize_item_name(canonical)
+    alias.is_approved = True
+    alias.updated_at = func.now()
+    db.commit()
+    db.refresh(alias)
+    return alias
+
+
 def sync_aliases_for_canonical_name(
     db: Session,
     canonical_name: str,

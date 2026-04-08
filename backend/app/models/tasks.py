@@ -60,6 +60,7 @@ class QuestTemplate(Base):
     description = Column(Text, nullable=True)
 
     continent = Column(String(40), nullable=False, index=True)
+    city = Column(String(80), nullable=True, index=True)
 
     min_level = Column(Integer, nullable=False, index=True)
     nw_level = Column(Integer, nullable=True, index=True)

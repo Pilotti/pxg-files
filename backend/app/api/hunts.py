@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import time
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -8,7 +11,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_enabled_menu
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.models.hunt_session import HuntSession
@@ -30,6 +34,7 @@ from app.services.hunt_npc_prices import get_npc_unit_price_from_ocr_context
 from app.services.hunts_ocr import (
     deduplicate_drop_lines,
     extract_drop_lines_from_image,
+    refresh_approved_aliases_cache,
 )
 from app.services.ocr_debug_settings import is_ocr_debug_enabled
 from app.services.hunts_prices import (
@@ -37,12 +42,64 @@ from app.services.hunts_prices import (
     save_account_player_price,
 )
 
-router = APIRouter(prefix="/hunts", tags=["hunts"])
+router = APIRouter(
+    prefix="/hunts",
+    tags=["hunts"],
+    dependencies=[Depends(require_enabled_menu("hunts"))],
+)
 
 
 class SavePlayerPricePayload(BaseModel):
     item_name: str
     player_unit_price: float
+
+
+class OcrManualReviewRequest(BaseModel):
+    session_id: str
+    note: str | None = None
+
+
+def _safe_debug_filename(name: str, fallback: str) -> str:
+    safe = (name or "").replace(" ", "_")
+    safe = "".join(char for char in safe if char.isalnum() or char in {"_", ".", "-"})
+    return safe or fallback
+
+
+def _build_ocr_report_text(report: dict) -> str:
+    lines = [
+        f"session_id: {report.get('session_id', '')}",
+        f"debug_ocr_enabled: {report.get('debug_ocr_enabled', False)}",
+        f"character_id: {report.get('character_id', '')}",
+        f"total_files_received: {report.get('total_files_received', 0)}",
+        f"processed_images: {report.get('processed_images', 0)}",
+        f"recognized_lines: {report.get('recognized_lines', 0)}",
+        f"duplicates_ignored: {report.get('duplicates_ignored', 0)}",
+        f"final_rows: {report.get('final_rows', 0)}",
+        f"warnings_count: {len(report.get('warnings', []))}",
+        f"elapsed_ms: {report.get('elapsed_ms', 0)}",
+        "",
+        "warnings:",
+    ]
+
+    for warning in report.get("warnings", []):
+        lines.append(f"- {warning}")
+
+    lines.append("")
+    lines.append("files:")
+
+    for file_item in report.get("files", []):
+        lines.append(
+            "- "
+            f"name={file_item.get('file_name')} "
+            f"status={file_item.get('status')} "
+            f"size_bytes={file_item.get('size_bytes')} "
+            f"elapsed_ms={file_item.get('elapsed_ms')} "
+            f"recognized_lines={file_item.get('recognized_lines')}"
+        )
+        if file_item.get("error_detail"):
+            lines.append(f"  error_detail={file_item.get('error_detail')}")
+
+    return "\n".join(lines).strip() + "\n"
 
 
 @router.post("/ocr/drops", response_model=HuntDropsOcrResponse)
@@ -55,43 +112,98 @@ async def process_drops_ocr(
     if not files:
         raise HTTPException(status_code=400, detail="Nenhuma imagem enviada.")
 
+    if len(files) > settings.ocr_max_files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Limite de arquivos excedido. Máximo permitido: {settings.ocr_max_files}.",
+        )
+
+    refresh_approved_aliases_cache(db)
+
     recognized_lines = []
     warnings: list[str] = []
-    debug_root: Path | None = None
+    max_file_size_bytes = settings.ocr_max_file_size_mb * 1024 * 1024
+    ocr_timeout_seconds = settings.ocr_image_timeout_seconds
+    request_started = time.perf_counter()
+    file_reports: list[dict] = []
+    session_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
+    debug_root = Path(__file__).resolve().parents[1] / "data" / "ocr_debug"
+    session_dir = debug_root / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
 
     debug_ocr = is_ocr_debug_enabled()
 
-    if debug_ocr:
-        debug_root = Path(__file__).resolve().parents[1] / "data" / "ocr_debug"
-        session_dir = debug_root / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
-        session_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        session_dir = None
-
     for index, upload in enumerate(files, start=1):
+        started_at = time.perf_counter()
         file_name = upload.filename or f"imagem_{index}"
+        file_report = {
+            "file_name": file_name,
+            "content_type": upload.content_type or "",
+            "status": "ignored",
+            "size_bytes": 0,
+            "recognized_lines": 0,
+            "elapsed_ms": 0,
+            "error_detail": "",
+        }
 
         if not upload.content_type or not upload.content_type.startswith("image/"):
             warnings.append(f"Imagem invalida: {file_name}")
+            file_report["status"] = "invalid_content_type"
+            file_reports.append(file_report)
             continue
 
         content = await upload.read()
+        file_report["size_bytes"] = len(content)
+
+        original_name = _safe_debug_filename(file_name, f"image_{index:02d}.png")
+        (session_dir / f"{index:02d}_original_{original_name}").write_bytes(content)
+
+        if len(content) > max_file_size_bytes:
+            warnings.append(f"Arquivo muito grande: {file_name}")
+            file_report["status"] = "file_too_large"
+            file_report["error_detail"] = f"size={len(content)} limit={max_file_size_bytes}"
+            file_report["elapsed_ms"] = int((time.perf_counter() - started_at) * 1000)
+            file_reports.append(file_report)
+            continue
+
         before_lines = len(recognized_lines)
         debug_notes: list[str] = []
         image_debug_dir = None
-        if session_dir is not None:
+        if debug_ocr:
             image_name = file_name.replace(" ", "_")
             image_name = "".join(char for char in image_name if char.isalnum() or char in {"_", ".", "-"})
             image_debug_dir = session_dir / f"{index:02d}_{image_name}"
 
         try:
-            recognized_lines.extend(
-                extract_drop_lines_from_image(content, debug_dir=image_debug_dir, debug_notes=debug_notes)
+            parsed_lines = await asyncio.wait_for(
+                asyncio.to_thread(
+                    extract_drop_lines_from_image,
+                    content,
+                    image_debug_dir,
+                    debug_notes,
+                    settings.ocr_tesseract_lang,
+                    settings.ocr_tesseract_oem,
+                ),
+                timeout=ocr_timeout_seconds,
             )
+            recognized_lines.extend(parsed_lines)
+            file_report["recognized_lines"] = len(parsed_lines)
+            file_report["status"] = "ok" if parsed_lines else "no_lines"
             if len(recognized_lines) == before_lines:
                 warnings.append(f"Imagem invalida: {file_name}")
+        except TimeoutError:
+            warnings.append(f"Tempo excedido no OCR: {file_name}")
+            file_report["status"] = "timeout"
+            file_report["error_detail"] = f"timeout={ocr_timeout_seconds}s"
         except Exception as exc:
             warnings.append(f"Imagem invalida: {file_name}")
+            file_report["status"] = "processing_error"
+            file_report["error_detail"] = str(exc)
+
+        file_report["elapsed_ms"] = int((time.perf_counter() - started_at) * 1000)
+        if debug_notes:
+            file_report["debug_notes"] = debug_notes
+        file_reports.append(file_report)
 
     unique_lines, duplicates_ignored = deduplicate_drop_lines(recognized_lines)
     player_prices = get_account_player_prices(current_user.id)
@@ -134,6 +246,30 @@ async def process_drops_ocr(
 
     db.commit()
 
+    report = {
+        "session_id": session_id,
+        "debug_ocr_enabled": debug_ocr,
+        "character_id": character_id,
+        "total_files_received": len(files),
+        "processed_images": len(files),
+        "recognized_lines": len(recognized_lines),
+        "duplicates_ignored": duplicates_ignored,
+        "final_rows": len(rows),
+        "warnings": warnings,
+        "elapsed_ms": int((time.perf_counter() - request_started) * 1000),
+        "files": file_reports,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+    (session_dir / "ocr_report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (session_dir / "ocr_report.txt").write_text(
+        _build_ocr_report_text(report),
+        encoding="utf-8",
+    )
+
     return HuntDropsOcrResponse(
         rows=rows,
         summary=HuntDropSummary(
@@ -143,7 +279,41 @@ async def process_drops_ocr(
             final_rows=len(rows),
         ),
         warnings=warnings,
+        session_id=session_id,
+        manual_review_available=True,
     )
+
+
+@router.post("/ocr/manual-review")
+async def request_manual_ocr_review(
+    payload: OcrManualReviewRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    debug_root = Path(__file__).resolve().parents[1] / "data" / "ocr_debug"
+    session_id = Path(payload.session_id or "").name
+    session_dir = (debug_root / session_id).resolve()
+
+    if not session_id or not session_dir.exists() or not session_dir.is_dir():
+        raise HTTPException(status_code=404, detail="Sessão OCR não encontrada para revisão manual.")
+
+    if not str(session_dir).startswith(str(debug_root.resolve())):
+        raise HTTPException(status_code=400, detail="Sessão OCR inválida.")
+
+    note = (payload.note or "").strip()
+    request_payload = {
+        "requested_at": datetime.utcnow().isoformat(),
+        "session_id": session_id,
+        "user_id": current_user.id,
+        "user_email": current_user.email,
+        "note": note,
+        "status": "pending",
+    }
+    (session_dir / "manual_review_request.json").write_text(
+        json.dumps(request_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    return {"ok": True, "detail": "Solicitação de revisão manual enviada.", "session_id": session_id}
 
 
 @router.get("/player-prices/me")

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.tokens import decode_access_token, is_token_invalid
 from app.db.session import get_db
+from app.models.sidebar_menu import SidebarMenuSetting
 from app.models.user import User
 
 security = HTTPBearer()
@@ -30,3 +31,19 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
 
     return user
+
+
+def require_enabled_menu(menu_key: str):
+    normalized_key = str(menu_key or "").strip().lower()
+
+    def _check_menu_enabled(db: Session = Depends(get_db)) -> None:
+        menu_item = (
+            db.query(SidebarMenuSetting)
+            .filter(SidebarMenuSetting.menu_key == normalized_key)
+            .first()
+        )
+
+        if menu_item and not menu_item.is_enabled:
+            raise HTTPException(status_code=403, detail="Página bloqueada pelo admin")
+
+    return _check_menu_enabled

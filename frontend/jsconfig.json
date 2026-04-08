@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": "./*",
+      "react-router-dom": ["./lib/react-router-compat.js"]
+    }
+  }
+}

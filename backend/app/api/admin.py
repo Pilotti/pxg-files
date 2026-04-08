@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from fastapi.responses import FileResponse
+import asyncio
 import json
 import re
+from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.admin_security import (
@@ -10,6 +14,7 @@ from app.core.admin_security import (
     decode_admin_token,
     verify_admin_credentials,
 )
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.tasks import (
     CharacterQuest,
@@ -17,45 +22,62 @@ from app.models.tasks import (
     QuestTemplate,
     TaskTemplate,
 )
+from app.models.character import Character
+from app.models.hunt_session import HuntSession
+from app.models.refresh_token import RefreshToken
 from app.models.sidebar_menu import SidebarMenuSetting
+from app.models.user import User
 from app.schemas.admin import (
+    AdminHuntItemAliasCreateRequest,
     AdminHuntItemAliasResponse,
     AdminHuntItemAliasUpdateRequest,
     AdminLoginRequest,
     AdminLoginResponse,
     AdminMeResponse,
+    AdminUserListItem,
     AdminOcrDebugFileResponse,
+    AdminOcrManualUploadResponse,
     AdminOcrDebugSettingsResponse,
     AdminOcrDebugSettingsUpdateRequest,
     AdminOcrDebugSessionResponse,
     AdminOcrDebugTextPreviewResponse,
     AdminNpcPriceResponse,
+    AdminNpcPriceListResponse,
     AdminNpcPriceUpdateRequest,
+    AdminNpcPriceCreateRequest,
     AdminQuestCreateRequest,
     AdminQuestUpdateRequest,
     AdminTaskCreateRequest,
     AdminTaskUpdateRequest,
         AdminPokemonEntry,
+        AdminPokemonListResponse,
         AdminPokemonCreateRequest,
         AdminPokemonUpdateRequest,
         AdminSidebarMenuSettingResponse,
         AdminSidebarMenuSettingUpdateRequest,
 )
-from app.schemas.tasks import ActionResponse, QuestCatalogResponse, TaskCatalogResponse
+from app.schemas.tasks import ActionResponse, QuestCatalogResponse, TaskCatalogListResponse, TaskCatalogResponse
 from app.services.hunt_item_aliases import (
     get_related_alias_names,
     list_hunt_item_aliases,
     sync_aliases_for_canonical_name,
+    upsert_manual_alias,
     update_hunt_item_alias,
 )
-from app.services.hunt_npc_prices import list_npc_prices, update_npc_price
+from app.services.hunt_npc_prices import has_npc_price_item, list_npc_prices, update_npc_price
+from app.services.hunts_ocr import extract_drop_lines_from_image, refresh_approved_aliases_cache
 from app.services.ocr_debug_logs import (
+    clear_all_ocr_debug_sessions,
+    delete_ocr_debug_file,
+    delete_ocr_debug_session,
     get_ocr_debug_file_path,
     list_ocr_debug_files,
     list_ocr_debug_sessions,
     read_ocr_debug_text,
 )
 from app.services.ocr_debug_settings import is_ocr_debug_enabled, set_ocr_debug_enabled
+from app.services.task_json_storage import export_task_templates_to_json_files
+from app.services.quest_json_storage import export_quest_templates_to_json_files
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -110,6 +132,12 @@ def get_current_admin(authorization: str | None = Header(None)) -> dict:
     return decode_admin_token(token)
 
 
+def _safe_debug_filename(name: str, fallback: str) -> str:
+    safe = (name or "").replace(" ", "_")
+    safe = "".join(char for char in safe if char.isalnum() or char in {"_", ".", "-"})
+    return safe or fallback
+
+
 @router.post("/login", response_model=AdminLoginResponse)
 def admin_login(data: AdminLoginRequest):
     if not verify_admin_credentials(data.username.strip(), data.password):
@@ -125,6 +153,58 @@ def admin_login(data: AdminLoginRequest):
 @router.get("/me", response_model=AdminMeResponse)
 def admin_me(current_admin: dict = Depends(get_current_admin)):
     return AdminMeResponse(username=current_admin["sub"])
+
+
+@router.get("/users", response_model=list[AdminUserListItem])
+def admin_list_users(
+    search: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    query = db.query(User)
+
+    if search:
+        normalized_search = f"%{search.strip()}%"
+        query = query.filter(
+            User.display_name.ilike(normalized_search) | User.email.ilike(normalized_search)
+        )
+
+    items = query.order_by(User.id.asc()).limit(limit).all()
+
+    return [
+        AdminUserListItem(
+            id=item.id,
+            username=(item.display_name or "").strip() or item.email,
+            email=item.email,
+        )
+        for item in items
+    ]
+
+
+@router.delete("/users/{user_id}", response_model=ActionResponse)
+def admin_delete_user(
+    user_id: int,
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    character_ids = [item.id for item in db.query(Character.id).filter(Character.user_id == user_id).all()]
+
+    if character_ids:
+        db.query(CharacterTask).filter(CharacterTask.character_id.in_(character_ids)).delete(synchronize_session=False)
+        db.query(CharacterQuest).filter(CharacterQuest.character_id.in_(character_ids)).delete(synchronize_session=False)
+
+    db.query(HuntSession).filter(HuntSession.user_id == user_id).delete(synchronize_session=False)
+    db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete(synchronize_session=False)
+    db.query(Character).filter(Character.user_id == user_id).delete(synchronize_session=False)
+    db.delete(user)
+    db.commit()
+
+    return ActionResponse(detail="Usuário removido com sucesso")
 
 
 @router.get("/ocr-debug", response_model=AdminOcrDebugSettingsResponse)
@@ -199,7 +279,141 @@ def admin_download_ocr_debug_file(
     return FileResponse(path=str(path), filename=path.name)
 
 
-@router.get("/tasks", response_model=list[TaskCatalogResponse])
+@router.delete("/ocr-debug/sessions/{session_id}/files/{file_name:path}", response_model=ActionResponse)
+def admin_delete_ocr_debug_file(
+    session_id: str,
+    file_name: str,
+    _: dict = Depends(get_current_admin),
+):
+    try:
+        delete_ocr_debug_file(session_id=session_id, file_name=file_name)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return ActionResponse(detail="Arquivo de debug removido com sucesso")
+
+
+@router.delete("/ocr-debug/sessions/{session_id}", response_model=ActionResponse)
+def admin_delete_ocr_debug_session(
+    session_id: str,
+    _: dict = Depends(get_current_admin),
+):
+    try:
+        delete_ocr_debug_session(session_id=session_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return ActionResponse(detail="Sessao de debug removida com sucesso")
+
+
+@router.delete("/ocr-debug/sessions", response_model=ActionResponse)
+def admin_clear_ocr_debug_sessions(_: dict = Depends(get_current_admin)):
+    removed = clear_all_ocr_debug_sessions()
+    return ActionResponse(detail=f"{removed} sessoes de debug removidas")
+
+
+@router.post("/ocr-debug/manual-upload", response_model=AdminOcrManualUploadResponse)
+async def admin_upload_ocr_debug_manual_training(
+    files: list[UploadFile] = File(...),
+    _: dict = Depends(get_current_admin),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="Nenhuma imagem enviada.")
+
+    if len(files) > settings.ocr_max_files:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Limite de arquivos excedido. Máximo permitido: {settings.ocr_max_files}.",
+        )
+
+    max_file_size_bytes = settings.ocr_max_file_size_mb * 1024 * 1024
+    ocr_timeout_seconds = settings.ocr_image_timeout_seconds
+    warnings: list[str] = []
+    recognized_lines = 0
+
+    debug_root = Path(__file__).resolve().parents[1] / "data" / "ocr_debug"
+    session_id = f"admin_manual_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
+    session_dir = debug_root / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    refresh_approved_aliases_cache(db)
+
+    for index, upload in enumerate(files, start=1):
+        file_name = upload.filename or f"imagem_{index}.png"
+
+        if not upload.content_type or not upload.content_type.startswith("image/"):
+            warnings.append(f"Imagem invalida: {file_name}")
+            continue
+
+        content = await upload.read()
+        if len(content) > max_file_size_bytes:
+            warnings.append(f"Arquivo muito grande: {file_name}")
+            continue
+
+        safe_name = _safe_debug_filename(file_name, f"image_{index:02d}.png")
+        (session_dir / f"{index:02d}_original_{safe_name}").write_bytes(content)
+
+        debug_notes: list[str] = []
+        image_debug_dir = session_dir / f"{index:02d}_{safe_name}"
+        try:
+            parsed_lines = await asyncio.wait_for(
+                asyncio.to_thread(
+                    extract_drop_lines_from_image,
+                    content,
+                    image_debug_dir,
+                    debug_notes,
+                    settings.ocr_tesseract_lang,
+                    settings.ocr_tesseract_oem,
+                ),
+                timeout=ocr_timeout_seconds,
+            )
+
+            recognized_lines += len(parsed_lines)
+            parsed_dump = "\n".join(
+                f"{line.name_display} | qtd={line.quantity:.0f} | total={line.npc_total_price:.2f}"
+                for line in parsed_lines
+            )
+            (session_dir / f"{index:02d}_manual_training_parsed.txt").write_text(
+                parsed_dump or "Nenhuma linha reconhecida.",
+                encoding="utf-8",
+            )
+
+            if debug_notes:
+                (session_dir / f"{index:02d}_manual_training_notes.txt").write_text(
+                    "\n".join(debug_notes),
+                    encoding="utf-8",
+                )
+        except TimeoutError:
+            warnings.append(f"Tempo excedido no OCR: {file_name}")
+        except Exception:
+            warnings.append(f"Imagem invalida: {file_name}")
+
+    report = {
+        "session_id": session_id,
+        "created_at": datetime.utcnow().isoformat(),
+        "source": "admin_manual_upload",
+        "processed_images": len(files),
+        "recognized_lines": recognized_lines,
+        "warnings": warnings,
+    }
+    (session_dir / "manual_training_report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    return AdminOcrManualUploadResponse(
+        session_id=session_id,
+        processed_images=len(files),
+        recognized_lines=recognized_lines,
+        warnings=warnings,
+    )
+
+
+@router.get("/tasks", response_model=TaskCatalogListResponse)
 def admin_list_tasks(
     search: str | None = Query(None),
     task_type: str | None = Query(None),
@@ -209,6 +423,8 @@ def admin_list_tasks(
     min_level: int | None = Query(None, ge=0, le=625),
     max_level: int | None = Query(None, ge=0, le=625),
     is_active: bool | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=200),
     db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
@@ -219,8 +435,7 @@ def admin_list_tasks(
 
     if task_type:
         query = query.filter(
-            (TaskTemplate.task_type.astext.contains(f'"{task_type}"'))
-            | (TaskTemplate.task_type == task_type)
+            TaskTemplate.task_type.contains(f'"{task_type}"')
         )
 
     normalized_continent = normalize_continent_value(continent)
@@ -242,26 +457,42 @@ def admin_list_tasks(
     if is_active is not None:
         query = query.filter(TaskTemplate.is_active.is_(is_active))
 
-    items = query.order_by(TaskTemplate.min_level.asc(), TaskTemplate.name.asc()).all()
+    total = query.count()
+    offset = (page - 1) * page_size
+    items = (
+        query
+        .order_by(TaskTemplate.min_level.asc(), TaskTemplate.name.asc(), TaskTemplate.id.asc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
 
-    return [
-        TaskCatalogResponse(
-            id=item.id,
-            name=item.name,
-            description=item.description,
-            task_type=normalize_task_types(item.task_type),
-            continent=item.continent,
-            min_level=item.min_level,
-            nw_level=item.nw_level,
-            reward_text=item.reward_text,
-            npc_name=item.npc_name,
-            coordinate=item.coordinate,
-            city=item.city,
-            is_active=item.is_active,
-            status="available",
-        )
-        for item in items
-    ]
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return TaskCatalogListResponse(
+        items=[
+            TaskCatalogResponse(
+                id=item.id,
+                name=item.name,
+                description=item.description,
+                task_type=normalize_task_types(item.task_type),
+                continent=item.continent,
+                min_level=item.min_level,
+                nw_level=item.nw_level,
+                reward_text=item.reward_text,
+                npc_name=item.npc_name,
+                coordinate=item.coordinate,
+                city=item.city,
+                is_active=item.is_active,
+                status="available",
+            )
+            for item in items
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.post("/tasks", response_model=TaskCatalogResponse)
@@ -274,7 +505,7 @@ def admin_create_task(
     normalized_description = data.description.strip() if data.description else None
     normalized_reward = data.reward_text.strip() if data.reward_text else None
     normalized_npc = normalized_name
-    normalized_coordinate = data.coordinate.strip()
+    normalized_coordinate = data.coordinate.strip() if data.coordinate else None
     normalized_city = data.city.strip()
 
     item = TaskTemplate(
@@ -293,6 +524,7 @@ def admin_create_task(
     db.add(item)
     db.commit()
     db.refresh(item)
+    export_task_templates_to_json_files(db)
 
     return TaskCatalogResponse(
         id=item.id,
@@ -331,12 +563,13 @@ def admin_update_task(
     item.nw_level = data.nw_level
     item.reward_text = data.reward_text.strip() if data.reward_text else None
     item.npc_name = data.name.strip()
-    item.coordinate = data.coordinate.strip()
+    item.coordinate = data.coordinate.strip() if data.coordinate else None
     item.city = data.city.strip()
     item.is_active = data.is_active
 
     db.commit()
     db.refresh(item)
+    export_task_templates_to_json_files(db)
 
     return TaskCatalogResponse(
         id=item.id,
@@ -368,6 +601,7 @@ def admin_toggle_task_active(
 
     item.is_active = not item.is_active
     db.commit()
+    export_task_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Task ativada com sucesso" if item.is_active else "Task desativada com sucesso"
@@ -390,6 +624,7 @@ def admin_delete_task(
     )
     db.delete(item)
     db.commit()
+    export_task_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Task removida permanentemente do sistema e das listas dos personagens"
@@ -400,6 +635,7 @@ def admin_delete_task(
 def admin_list_quests(
     search: str | None = Query(None),
     continent: str | None = Query(None),
+    city: str | None = Query(None),
     nw_level: int | None = Query(None, ge=1, le=999),
     min_level: int | None = Query(None, ge=0, le=625),
     max_level: int | None = Query(None, ge=0, le=625),
@@ -415,6 +651,9 @@ def admin_list_quests(
     normalized_continent = normalize_continent_value(continent)
     if normalized_continent:
         query = query.filter(QuestTemplate.continent == normalized_continent)
+
+    if city:
+        query = query.filter(QuestTemplate.city.ilike(city.strip()))
 
     if nw_level is not None:
         query = query.filter(QuestTemplate.nw_level == nw_level)
@@ -436,6 +675,7 @@ def admin_list_quests(
             name=item.name,
             description=item.description,
             continent=item.continent,
+            city=item.city,
             min_level=item.min_level,
             nw_level=item.nw_level,
             reward_text=item.reward_text,
@@ -456,6 +696,7 @@ def admin_create_quest(
         name=data.name.strip(),
         description=data.description.strip() if data.description else None,
         continent=data.continent,
+        city=data.city.strip() if data.city else None,
         min_level=data.min_level,
         nw_level=data.nw_level,
         reward_text=data.reward_text.strip() if data.reward_text else None,
@@ -464,12 +705,14 @@ def admin_create_quest(
     db.add(item)
     db.commit()
     db.refresh(item)
+    export_quest_templates_to_json_files(db)
 
     return QuestCatalogResponse(
         id=item.id,
         name=item.name,
         description=item.description,
         continent=item.continent,
+        city=item.city,
         min_level=item.min_level,
         nw_level=item.nw_level,
         reward_text=item.reward_text,
@@ -493,6 +736,7 @@ def admin_update_quest(
     item.name = data.name.strip()
     item.description = data.description.strip() if data.description else None
     item.continent = data.continent
+    item.city = data.city.strip() if data.city else None
     item.min_level = data.min_level
     item.nw_level = data.nw_level
     item.reward_text = data.reward_text.strip() if data.reward_text else None
@@ -500,12 +744,14 @@ def admin_update_quest(
 
     db.commit()
     db.refresh(item)
+    export_quest_templates_to_json_files(db)
 
     return QuestCatalogResponse(
         id=item.id,
         name=item.name,
         description=item.description,
         continent=item.continent,
+        city=item.city,
         min_level=item.min_level,
         nw_level=item.nw_level,
         reward_text=item.reward_text,
@@ -527,6 +773,7 @@ def admin_toggle_quest_active(
 
     item.is_active = not item.is_active
     db.commit()
+    export_quest_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Quest ativada com sucesso" if item.is_active else "Quest desativada com sucesso"
@@ -549,6 +796,7 @@ def admin_delete_quest(
     )
     db.delete(item)
     db.commit()
+    export_quest_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Quest removida permanentemente do sistema e das listas dos personagens"
@@ -587,6 +835,14 @@ def admin_update_hunt_item_alias(
     db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
+    # When approving, canonical_name must exist in the known NPC price items.
+    if payload.is_approved and payload.canonical_name:
+        if not has_npc_price_item(payload.canonical_name):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Nome canônico '{payload.canonical_name}' não encontrado na lista de itens NPC.",
+            )
+
     updated = update_hunt_item_alias(
         db,
         alias_id=alias_id,
@@ -611,20 +867,71 @@ def admin_update_hunt_item_alias(
     )
 
 
-@router.get("/hunt-npc-prices", response_model=list[AdminNpcPriceResponse])
+@router.post("/hunt-item-aliases/manual", response_model=AdminHuntItemAliasResponse)
+def admin_create_manual_hunt_item_alias(
+    payload: AdminHuntItemAliasCreateRequest,
+    db: Session = Depends(get_db),
+    _: dict = Depends(get_current_admin),
+):
+    created = upsert_manual_alias(
+        db,
+        observed_name=payload.observed_name,
+        canonical_name=payload.canonical_name,
+    )
+
+    if not created:
+        raise HTTPException(status_code=400, detail="Nao foi possivel salvar alias manual")
+
+    return AdminHuntItemAliasResponse(
+        id=created.id,
+        observed_name=created.observed_name,
+        observed_name_normalized=created.observed_name_normalized,
+        canonical_name=created.canonical_name,
+        canonical_name_normalized=created.canonical_name_normalized,
+        is_approved=created.is_approved,
+        occurrences=created.occurrences,
+        last_seen_at=created.last_seen_at,
+        created_at=created.created_at,
+        updated_at=created.updated_at,
+    )
+
+
+@router.get("/hunt-npc-prices/names", response_model=list[str])
+def admin_list_hunt_npc_price_names(
+    _: dict = Depends(get_current_admin),
+):
+    """Return all known item names from hunts_npc_prices.json as a plain list."""
+    items = list_npc_prices()
+    return sorted(str(item["name"]) for item in items)
+
+
+@router.get("/hunt-npc-prices", response_model=AdminNpcPriceListResponse)
 def admin_list_hunt_npc_prices(
     search: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=200),
     db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
     items = list_npc_prices(search=search)
-    return [
-        AdminNpcPriceResponse(
-            **item,
-            related_aliases=get_related_alias_names(db, str(item["name"])),
-        )
-        for item in items
-    ]
+    total = len(items)
+    offset = (page - 1) * page_size
+    paged_items = items[offset: offset + page_size]
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return AdminNpcPriceListResponse(
+        items=[
+            AdminNpcPriceResponse(
+                **item,
+                related_aliases=get_related_alias_names(db, str(item["name"])),
+            )
+            for item in paged_items
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.put("/hunt-npc-prices", response_model=AdminNpcPriceResponse)
@@ -647,6 +954,31 @@ def admin_update_hunt_npc_price(
     return AdminNpcPriceResponse(
         **updated,
         related_aliases=get_related_alias_names(db, str(updated["name"])),
+    )
+
+
+@router.post("/hunt-npc-prices", response_model=AdminNpcPriceResponse, status_code=201)
+def admin_create_hunt_npc_price(
+    payload: AdminNpcPriceCreateRequest,
+    db: Session = Depends(get_db),
+    _: dict = Depends(get_current_admin),
+):
+    """Create a new NPC price item. Raises 409 if the name already exists."""
+    from app.services.hunt_npc_prices import has_npc_price_item
+    if has_npc_price_item(payload.name):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Item '{payload.name}' já existe na tabela de preços NPC.",
+        )
+    created = update_npc_price(
+        previous_name="",
+        new_name=payload.name,
+        unit_price=payload.unit_price,
+    )
+    db.commit()
+    return AdminNpcPriceResponse(
+        **created,
+        related_aliases=[],
     )
 
 
@@ -727,17 +1059,30 @@ def _parse_entry(nome: str) -> AdminPokemonEntry:
     return AdminPokemonEntry(dex_id="", name=nome, full_name=nome)
 
 
-@router.get("/pokemon", response_model=list[AdminPokemonEntry])
+@router.get("/pokemon", response_model=AdminPokemonListResponse)
 def admin_list_pokemon(
     search: str | None = Query(None),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=200),
     _: dict = Depends(get_current_admin),
 ):
     names = _load_inimigos()
     if search:
         term = search.strip().lower()
         names = [n for n in names if term in n.lower()]
-    return [_parse_entry(n) for n in names[:limit]]
+
+    total = len(names)
+    offset = (page - 1) * page_size
+    paged_names = names[offset: offset + page_size]
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return AdminPokemonListResponse(
+        items=[_parse_entry(n) for n in paged_names],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.post("/pokemon", response_model=AdminPokemonEntry, status_code=201)

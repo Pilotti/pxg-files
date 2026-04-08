@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend-main:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    container_name: pxg-backend-main
+
+  backend-ocr:
+    build: ./backend-ocr
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+    container_name: pxg-backend-ocr
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_OCR_API_URL=http://localhost:8001
+    depends_on:
+      - backend-main
+      - backend-ocr
+    container_name: pxg-frontend

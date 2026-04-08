@@ -106,3 +106,60 @@ def read_ocr_debug_text(session_id: str, file_name: str, max_chars: int = 12000)
 
 def get_ocr_debug_file_path(session_id: str, file_name: str) -> Path:
     return _file_path(session_id, file_name)
+
+
+def delete_ocr_debug_file(session_id: str, file_name: str) -> None:
+    path = _file_path(session_id, file_name)
+    session = _session_dir(session_id)
+
+    path.unlink(missing_ok=False)
+
+    # Remove empty subfolders to avoid stale directories.
+    parent = path.parent
+    while parent != session and parent.exists():
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+        parent = parent.parent
+
+
+def delete_ocr_debug_session(session_id: str) -> None:
+    session = _session_dir(session_id)
+
+    for item in sorted(session.rglob("*"), reverse=True):
+        if item.is_file():
+            item.unlink(missing_ok=True)
+        elif item.is_dir():
+            try:
+                item.rmdir()
+            except OSError:
+                pass
+
+    session.rmdir()
+
+
+def clear_all_ocr_debug_sessions() -> int:
+    _ensure_root()
+
+    removed = 0
+    for path in list(DEBUG_ROOT.iterdir()):
+        if not path.is_dir():
+            continue
+
+        for item in sorted(path.rglob("*"), reverse=True):
+            if item.is_file():
+                item.unlink(missing_ok=True)
+            elif item.is_dir():
+                try:
+                    item.rmdir()
+                except OSError:
+                    pass
+
+        try:
+            path.rmdir()
+            removed += 1
+        except OSError:
+            pass
+
+    return removed

@@ -3,14 +3,18 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_enabled_menu
 from app.db.session import get_db
 from app.models.character import Character
 from app.models.tasks import CharacterQuest, QuestTemplate
 from app.models.user import User
 from app.schemas.tasks import ActionResponse, CharacterQuestItem, QuestCatalogResponse
 
-router = APIRouter(prefix="/quests", tags=["quests"])
+router = APIRouter(
+    prefix="/quests",
+    tags=["quests"],
+    dependencies=[Depends(require_enabled_menu("quests"))],
+)
 
 
 def normalize_continent_value(value: str | None) -> str | None:
@@ -42,6 +46,7 @@ def get_owned_character(db: Session, current_user: User, character_id: int) -> C
 def get_quest_catalog(
     character_id: int = Query(...),
     continent: str | None = Query(None),
+    city: str | None = Query(None),
     nw_level: int | None = Query(None, ge=1, le=999),
     min_level: int | None = Query(None, ge=0, le=625),
     max_level: int | None = Query(None, ge=0, le=625),
@@ -55,6 +60,9 @@ def get_quest_catalog(
     normalized_continent = normalize_continent_value(continent)
     if normalized_continent:
         query = query.filter(QuestTemplate.continent == normalized_continent)
+
+    if city:
+        query = query.filter(QuestTemplate.city.ilike(city.strip()))
 
     if nw_level is not None:
         query = query.filter(QuestTemplate.nw_level == nw_level)
@@ -91,6 +99,7 @@ def get_quest_catalog(
                 name=template.name,
                 description=template.description,
                 continent=template.continent,
+                city=template.city,
                 min_level=template.min_level,
                 nw_level=template.nw_level,
                 reward_text=template.reward_text,
@@ -125,6 +134,7 @@ def list_character_quests(
             name=item.quest_template.name,
             description=item.quest_template.description,
             continent=item.quest_template.continent,
+            city=item.quest_template.city,
             min_level=item.quest_template.min_level,
             nw_level=item.quest_template.nw_level,
             reward_text=item.quest_template.reward_text,

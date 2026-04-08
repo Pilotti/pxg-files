@@ -30,6 +30,8 @@ class HuntDropsOcrResponse(BaseModel):
     rows: List[HuntDropRow] = Field(default_factory=list)
     summary: HuntDropSummary = Field(default_factory=HuntDropSummary)
     warnings: List[str] = Field(default_factory=list)
+    session_id: str | None = None
+    manual_review_available: bool = True
 
 
 # ---------- Hunt Session -------------------------------------------------------

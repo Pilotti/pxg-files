@@ -12,7 +12,12 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "admin123"
     ADMIN_SECRET_KEY: str = "change-this-admin-secret"
     ADMIN_TOKEN_TTL_SECONDS: int = 43200
-    CORS_ALLOWED_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:8000,http://127.0.0.1:8000,http://localhost,http://127.0.0.1"
+    CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:8000,http://127.0.0.1:8000,http://localhost,http://127.0.0.1"
+    OCR_MAX_FILES: int = 10
+    OCR_MAX_FILE_SIZE_MB: int = 8
+    OCR_IMAGE_TIMEOUT_SECONDS: int = 15
+    OCR_TESSERACT_LANG: str = "eng"
+    OCR_TESSERACT_OEM: int = 1
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -63,6 +68,29 @@ class Settings(BaseSettings):
         if raw == "*":
             return ["*"]
         return [item.strip() for item in raw.split(",") if item.strip()]
+
+    @property
+    def ocr_max_files(self) -> int:
+        return max(1, int(self.OCR_MAX_FILES))
+
+    @property
+    def ocr_max_file_size_mb(self) -> int:
+        return max(1, int(self.OCR_MAX_FILE_SIZE_MB))
+
+    @property
+    def ocr_image_timeout_seconds(self) -> int:
+        return max(1, int(self.OCR_IMAGE_TIMEOUT_SECONDS))
+
+    @property
+    def ocr_tesseract_lang(self) -> str:
+        return str(self.OCR_TESSERACT_LANG or "eng").strip() or "eng"
+
+    @property
+    def ocr_tesseract_oem(self) -> int:
+        value = int(self.OCR_TESSERACT_OEM)
+        if value < 0 or value > 3:
+            return 1
+        return value
 
 
 settings = Settings()

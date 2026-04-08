@@ -61,17 +61,3 @@ def save_account_player_price(
 
     store[key][normalized_name] = float(player_unit_price)
     _write_store(store)
-
-
-def get_character_player_prices(character_id: int | None) -> Dict[str, float]:
-    # Backward compatibility wrapper.
-    return get_account_player_prices(character_id)
-
-
-def save_character_player_price(
-    character_id: int,
-    item_name: str,
-    player_unit_price: float,
-) -> None:
-    # Backward compatibility wrapper.
-    save_account_player_price(character_id, item_name, player_unit_price)

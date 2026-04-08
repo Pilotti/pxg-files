@@ -3,17 +3,21 @@ from datetime import datetime
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_enabled_menu
 from app.db.session import get_db
 from app.models.character import Character
 from app.models.tasks import CharacterTask, TaskTemplate
 from app.models.user import User
-from app.schemas.tasks import ActionResponse, CharacterTaskItem, TaskCatalogResponse
+from app.schemas.tasks import ActionResponse, CharacterTaskItem, TaskCatalogListResponse, TaskCatalogResponse
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(
+    prefix="/tasks",
+    tags=["tasks"],
+    dependencies=[Depends(require_enabled_menu("tasks"))],
+)
 
 
 def normalize_task_types(value) -> list[str]:
@@ -60,21 +64,33 @@ def get_owned_character(db: Session, current_user: User, character_id: int) -> C
     return character
 
 
-@router.get("/catalog", response_model=list[TaskCatalogResponse])
+@router.get("/catalog", response_model=TaskCatalogListResponse)
 def get_task_catalog(
     character_id: int = Query(...),
+    search: str | None = Query(None),
     task_type: str | None = Query(None),
     continent: str | None = Query(None),
     city: str | None = Query(None),
     nw_level: int | None = Query(None, ge=1, le=999),
     min_level: int | None = Query(None, ge=0, le=625),
-    max_level: int | None = Query(None, ge=0, le=625),
+    include_unavailable: bool = Query(False),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     get_owned_character(db, current_user, character_id)
 
     query = db.query(TaskTemplate).filter(TaskTemplate.is_active.is_(True))
+
+    if search:
+        normalized_search = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                TaskTemplate.name.ilike(normalized_search),
+                TaskTemplate.npc_name.ilike(normalized_search),
+            )
+        )
 
     if task_type:
         query = query.filter(
@@ -94,17 +110,28 @@ def get_task_catalog(
     if min_level is not None:
         query = query.filter(TaskTemplate.min_level >= min_level)
 
-    if max_level is not None:
-        query = query.filter(TaskTemplate.min_level <= max_level)
-
-    templates = query.order_by(
-        TaskTemplate.min_level.asc(),
-        TaskTemplate.name.asc(),
-    ).all()
-
     character_links = (
         db.query(CharacterTask)
         .filter(CharacterTask.character_id == character_id)
+        .all()
+    )
+
+    linked_template_ids = {link.task_template_id for link in character_links}
+
+    if not include_unavailable and linked_template_ids:
+        query = query.filter(~TaskTemplate.id.in_(linked_template_ids))
+
+    total = query.count()
+    offset = (page - 1) * page_size
+    templates = (
+        query
+        .order_by(
+            TaskTemplate.min_level.asc(),
+            TaskTemplate.name.asc(),
+            TaskTemplate.id.asc(),
+        )
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
@@ -135,7 +162,15 @@ def get_task_catalog(
             )
         )
 
-    return result
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return TaskCatalogListResponse(
+        items=result,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("", response_model=list[CharacterTaskItem])

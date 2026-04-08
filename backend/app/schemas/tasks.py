@@ -27,6 +27,7 @@ class QuestTemplateBase(BaseModel):
     name: str
     description: str | None = None
     continent: Continent
+    city: str | None = None
     min_level: int = Field(ge=0, le=625)
     nw_level: int | None = Field(default=None, ge=1, le=999)
     reward_text: str | None = None
@@ -38,6 +39,14 @@ class TaskCatalogResponse(TaskTemplateBase):
 
     id: int
     status: TemplateStatus
+
+
+class TaskCatalogListResponse(BaseModel):
+    items: list[TaskCatalogResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class QuestCatalogResponse(QuestTemplateBase):
@@ -71,6 +80,7 @@ class CharacterQuestItem(BaseModel):
     name: str
     description: str | None = None
     continent: Continent
+    city: str | None = None
     min_level: int
     nw_level: int | None = None
     reward_text: str | None = None
