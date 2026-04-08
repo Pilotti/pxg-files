@@ -942,96 +942,96 @@ export default function AdminPage() {
   function updateNpcPriceFilters(updater) {
     setNpcPricePage(1)
     setNpcPriceFilters((prev) => {
-
-        function updateConsumableFilters(updater) {
-          setConsumablePage(1)
-          setConsumableFilters((prev) => {
-            if (typeof updater === "function") return updater(prev)
-            return { ...prev, ...updater }
-          })
-        }
-
-        async function loadConsumables(nextFilters = consumableFilters, nextPage = consumablePage) {
-          setIsLoadingConsumables(true)
-          try {
-            const response = await adminRequest(
-              `/admin/consumables${buildQuery({ ...nextFilters, page: nextPage, page_size: CONSUMABLE_PAGE_SIZE })}`,
-            )
-            const items = Array.isArray(response?.items) ? response.items : []
-            const total = Number(response?.total ?? items.length)
-            const totalPages = Math.max(1, Number(response?.total_pages ?? 1))
-            setConsumables(items)
-            setConsumableTotal(total)
-            setConsumableTotalPages(totalPages)
-            if (nextPage > totalPages) setConsumablePage(totalPages)
-          } catch (err) {
-            showError(err.message || "Erro ao carregar consumíveis")
-          } finally {
-            setIsLoadingConsumables(false)
-          }
-        }
-
-        function openCreateConsumable() {
-          setConsumableForm(consumableInitialForm)
-          setConsumableModal({ type: "create" })
-        }
-
-        function openEditConsumable(item) {
-          setConsumableForm({
-            previous_nome: item.nome,
-            nome: item.nome,
-            preco_npc: String(item.preco_npc ?? 0),
-          })
-          setConsumableModal({ type: "edit", item })
-        }
-
-        async function handleSubmitConsumable(event) {
-          event.preventDefault()
-          setIsSubmittingConsumable(true)
-          try {
-            if (consumableModal?.type === "create") {
-              await adminRequest("/admin/consumables", {
-                method: "POST",
-                body: JSON.stringify({
-                  nome: consumableForm.nome,
-                  preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
-                }),
-              })
-              showSuccess("Consumível criado com sucesso.")
-            } else {
-              await adminRequest("/admin/consumables", {
-                method: "PUT",
-                body: JSON.stringify({
-                  previous_nome: consumableForm.previous_nome,
-                  nome: consumableForm.nome,
-                  preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
-                }),
-              })
-              showSuccess("Consumível atualizado com sucesso.")
-            }
-            setConsumableModal(null)
-            await loadConsumables(debouncedConsumableFilters)
-          } catch (err) {
-            showError(err.message || "Erro ao salvar consumível")
-          } finally {
-            setIsSubmittingConsumable(false)
-          }
-        }
-
-        async function handleDeleteConsumable(nome) {
-          try {
-            await adminRequest(`/admin/consumables/${encodeURIComponent(nome)}`, { method: "DELETE" })
-            showSuccess("Consumível removido com sucesso.")
-            await loadConsumables(debouncedConsumableFilters)
-          } catch (err) {
-            showError(err.message || "Erro ao remover consumível")
-          }
-        }
       if (typeof updater === "function") {
         return updater(prev)
       }
       return { ...prev, ...updater }
     })
+  }
+
+  function updateConsumableFilters(updater) {
+    setConsumablePage(1)
+    setConsumableFilters((prev) => {
+      if (typeof updater === "function") return updater(prev)
+      return { ...prev, ...updater }
+    })
+  }
+
+  async function loadConsumables(nextFilters = consumableFilters, nextPage = consumablePage) {
+    setIsLoadingConsumables(true)
+    try {
+      const response = await adminRequest(
+        `/admin/consumables${buildQuery({ ...nextFilters, page: nextPage, page_size: CONSUMABLE_PAGE_SIZE })}`,
+      )
+      const items = Array.isArray(response?.items) ? response.items : []
+      const total = Number(response?.total ?? items.length)
+      const totalPages = Math.max(1, Number(response?.total_pages ?? 1))
+      setConsumables(items)
+      setConsumableTotal(total)
+      setConsumableTotalPages(totalPages)
+      if (nextPage > totalPages) setConsumablePage(totalPages)
+    } catch (err) {
+      showError(err.message || "Erro ao carregar consumíveis")
+    } finally {
+      setIsLoadingConsumables(false)
+    }
+  }
+
+  function openCreateConsumable() {
+    setConsumableForm(consumableInitialForm)
+    setConsumableModal({ type: "create" })
+  }
+
+  function openEditConsumable(item) {
+    setConsumableForm({
+      previous_nome: item.nome,
+      nome: item.nome,
+      preco_npc: String(item.preco_npc ?? 0),
+    })
+    setConsumableModal({ type: "edit", item })
+  }
+
+  async function handleSubmitConsumable(event) {
+    event.preventDefault()
+    setIsSubmittingConsumable(true)
+    try {
+      if (consumableModal?.type === "create") {
+        await adminRequest("/admin/consumables", {
+          method: "POST",
+          body: JSON.stringify({
+            nome: consumableForm.nome,
+            preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
+          }),
+        })
+        showSuccess("Consumível criado com sucesso.")
+      } else {
+        await adminRequest("/admin/consumables", {
+          method: "PUT",
+          body: JSON.stringify({
+            previous_nome: consumableForm.previous_nome,
+            nome: consumableForm.nome,
+            preco_npc: Number(String(consumableForm.preco_npc).replace(",", ".") || 0),
+          }),
+        })
+        showSuccess("Consumível atualizado com sucesso.")
+      }
+      setConsumableModal(null)
+      await loadConsumables(debouncedConsumableFilters)
+    } catch (err) {
+      showError(err.message || "Erro ao salvar consumível")
+    } finally {
+      setIsSubmittingConsumable(false)
+    }
+  }
+
+  async function handleDeleteConsumable(nome) {
+    try {
+      await adminRequest(`/admin/consumables/${encodeURIComponent(nome)}`, { method: "DELETE" })
+      showSuccess("Consumível removido com sucesso.")
+      await loadConsumables(debouncedConsumableFilters)
+    } catch (err) {
+      showError(err.message || "Erro ao remover consumível")
+    }
   }
 
   async function loadNpcPrices(nextFilters = npcPriceFilters, nextPage = npcPricePage) {

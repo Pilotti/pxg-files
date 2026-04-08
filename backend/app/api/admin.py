@@ -995,7 +995,6 @@ def admin_create_hunt_npc_price(
     )
 
 
-@router.get("/sidebar-menus", response_model=list[AdminSidebarMenuSettingResponse])
 @router.get("/consumables", response_model=AdminConsumableListResponse)
 def admin_list_consumables(
     search: str | None = Query(None),
