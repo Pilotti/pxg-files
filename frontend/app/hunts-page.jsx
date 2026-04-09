@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
+import { useEffect, useMemo, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -863,7 +864,7 @@ export default function HuntsPage() {
                 <div className="hunts-page__history-placeholder">
                   <strong className="hunts-page__history-placeholder-title">Nenhuma hunt registrada</strong>
                   <p className="hunts-page__history-placeholder-copy">
-                    Clique em "Nova Hunt" para registrar sua primeira sessão.
+                    Clique em Nova Hunt para registrar sua primeira sessão.
                   </p>
                 </div>
               ) : (
@@ -1100,7 +1101,15 @@ export default function HuntsPage() {
                             onClick={() => setPreviewFile(entry)}
                             title="Clique para pré-visualizar"
                           >
-                            <img src={entry.previewUrl} alt={entry.file.name} loading="lazy" />
+                            <Image
+                              src={entry.previewUrl}
+                              alt={entry.file.name}
+                              className="hunts-page__file-preview-image"
+                              width={320}
+                              height={200}
+                              loading="lazy"
+                              unoptimized
+                            />
                           </button>
 
                           <div className="hunts-page__file-meta">
@@ -1560,10 +1569,13 @@ export default function HuntsPage() {
             </div>
 
             <div className="hunts-page__example-body">
-              <img
+              <Image
                 className="hunts-page__example-image"
                 src="/hunt-ocr-example.svg"
                 alt="Exemplo de print ideal para o OCR de hunts"
+                width={1280}
+                height={720}
+                unoptimized
               />
 
               <ul className="hunts-page__example-rules">
@@ -1600,10 +1612,13 @@ export default function HuntsPage() {
                 Fechar
               </button>
             </div>
-            <img
+            <Image
               className="hunts-page__preview-image"
               src={previewFile.previewUrl}
               alt={`Pré-visualização de ${previewFile.file.name}`}
+              width={1600}
+              height={1000}
+              unoptimized
             />
           </div>
         </div>

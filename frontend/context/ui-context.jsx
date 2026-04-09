@@ -172,10 +172,13 @@ export function UIProvider({ children }) {
     : null
 
   useEffect(() => {
+    const toastTimeouts = toastTimeoutsRef.current
+    const loaderMeta = loaderMetaRef.current
+
     return () => {
-      toastTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId))
-      toastTimeoutsRef.current.clear()
-      loaderMetaRef.current.clear()
+      toastTimeouts.forEach((timeoutId) => clearTimeout(timeoutId))
+      toastTimeouts.clear()
+      loaderMeta.clear()
     }
   }, [])
 

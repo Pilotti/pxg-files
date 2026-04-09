@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import useStableScroll from "../hooks/use-stable-scroll.js"
 import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
@@ -174,22 +174,7 @@ export default function QuestsPage() {
     return () => clearTimeout(timer)
   }, [feedback])
 
-  useEffect(() => {
-    if (!activeCharacter?.id) {
-      setQuests([])
-      setIsLoadingQuests(false)
-      return
-    }
-
-    loadQuests()
-  }, [activeCharacter?.id])
-
-  useEffect(() => {
-    if (!isCatalogOpen || !activeCharacter?.id) return
-    loadCatalog(debouncedCatalogFilters)
-  }, [isCatalogOpen, debouncedCatalogFilters, activeCharacter?.id])
-
-  async function loadQuests() {
+  const loadQuests = useCallback(async () => {
     if (!activeCharacter?.id) return
 
     setIsLoadingQuests(true)
@@ -205,9 +190,9 @@ export default function QuestsPage() {
     } finally {
       setIsLoadingQuests(false)
     }
-  }
+  }, [activeCharacter?.id])
 
-  function buildCatalogQuery(nextFilters) {
+  const buildCatalogQuery = useCallback((nextFilters) => {
     const params = new URLSearchParams()
     params.append("character_id", String(activeCharacter.id))
 
@@ -217,9 +202,9 @@ export default function QuestsPage() {
     if (nextFilters.max_level) params.append("max_level", String(nextFilters.max_level))
 
     return params.toString()
-  }
+  }, [activeCharacter?.id])
 
-  async function loadCatalog(nextFilters = catalogFilters) {
+  const loadCatalog = useCallback(async (nextFilters = debouncedCatalogFilters) => {
     if (!activeCharacter?.id) return
 
     setIsLoadingCatalog(true)
@@ -243,7 +228,22 @@ export default function QuestsPage() {
     } finally {
       setIsLoadingCatalog(false)
     }
-  }
+  }, [activeCharacter?.id, buildCatalogQuery, debouncedCatalogFilters])
+
+  useEffect(() => {
+    if (!activeCharacter?.id) {
+      setQuests([])
+      setIsLoadingQuests(false)
+      return
+    }
+
+    loadQuests()
+  }, [activeCharacter?.id, loadQuests])
+
+  useEffect(() => {
+    if (!isCatalogOpen || !activeCharacter?.id) return
+    loadCatalog(debouncedCatalogFilters)
+  }, [isCatalogOpen, debouncedCatalogFilters, activeCharacter?.id, loadCatalog])
 
   function openCatalog() {
     preserveScroll()

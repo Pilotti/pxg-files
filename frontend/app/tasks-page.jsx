@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import useStableScroll from "../hooks/use-stable-scroll.js"
 import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
@@ -286,16 +286,6 @@ export default function TasksPage() {
     return () => clearTimeout(timer)
   }, [feedback])
 
-  useEffect(() => {
-    if (!activeCharacter?.id) {
-      setTasks([])
-      setIsLoadingTasks(false)
-      return
-    }
-
-    loadTasks()
-  }, [activeCharacter?.id])
-
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
@@ -329,11 +319,6 @@ export default function TasksPage() {
       return { ...prev, city: "" }
     })
   }, [activeCitiesOptions])
-
-  useEffect(() => {
-    if (!isCatalogOpen || !activeCharacter?.id) return
-    loadCatalog(catalogFiltersForLoading, catalogPage)
-  }, [isCatalogOpen, activeCharacter?.id, catalogFiltersForLoading, catalogPage, showUnavailableCatalogTasks])
 
   const catalogCityOptions = useMemo(() => {
     const citySet = new Set(
@@ -373,7 +358,7 @@ export default function TasksPage() {
     })
   }, [catalog, showUnavailableCatalogTasks])
 
-  async function loadTasks() {
+  const loadTasks = useCallback(async () => {
     if (!activeCharacter?.id) return
 
     setIsLoadingTasks(true)
@@ -389,9 +374,9 @@ export default function TasksPage() {
     } finally {
       setIsLoadingTasks(false)
     }
-  }
+  }, [activeCharacter?.id])
 
-  function buildCatalogQuery(nextFilters, nextPage = catalogPage) {
+  const buildCatalogQuery = useCallback((nextFilters, nextPage = catalogPage) => {
     const params = new URLSearchParams()
     params.append("character_id", String(activeCharacter.id))
 
@@ -406,7 +391,7 @@ export default function TasksPage() {
     params.append("page_size", String(CATALOG_PAGE_SIZE))
 
     return params.toString()
-  }
+  }, [activeCharacter?.id, catalogPage, showUnavailableCatalogTasks])
 
   function updateCatalogFilters(updater) {
     setCatalogPage(1)
@@ -449,7 +434,7 @@ export default function TasksPage() {
     }
   }
 
-  async function loadCatalog(nextFilters = catalogFilters, nextPage = catalogPage) {
+  const loadCatalog = useCallback(async (nextFilters = catalogFiltersForLoading, nextPage = catalogPage) => {
     if (!activeCharacter?.id) return
 
     setIsLoadingCatalog(true)
@@ -476,7 +461,22 @@ export default function TasksPage() {
     } finally {
       setIsLoadingCatalog(false)
     }
-  }
+  }, [activeCharacter?.id, buildCatalogQuery, catalogFiltersForLoading, catalogPage])
+
+  useEffect(() => {
+    if (!activeCharacter?.id) {
+      setTasks([])
+      setIsLoadingTasks(false)
+      return
+    }
+
+    loadTasks()
+  }, [activeCharacter?.id, loadTasks])
+
+  useEffect(() => {
+    if (!isCatalogOpen || !activeCharacter?.id) return
+    loadCatalog(catalogFiltersForLoading, catalogPage)
+  }, [isCatalogOpen, activeCharacter?.id, catalogFiltersForLoading, catalogPage, loadCatalog])
 
   function openCatalog() {
     preserveScroll()
