@@ -6,6 +6,7 @@ import AccountCharactersSection from "../components/account-characters-section.j
 import { useAuth } from "../context/auth-context.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import {
+  APP_ACCENT_OPTIONS,
   DEFAULT_APP_PREFERENCES,
   readAppPreferences,
   resetAppPreferences,
@@ -17,19 +18,6 @@ const tabs = [
   { key: "personagens", label: "Personagens" },
   { key: "aparencia", label: "Aparência" },
   { key: "preferencias", label: "Preferências" },
-]
-
-const accentOptions = [
-  { value: "volcanic", label: "Volcanic", hint: "Vermelho", primary: "#ef4444", strong: "#b91c1c", ring: "rgba(239, 68, 68, 0.3)" },
-  { value: "raibolt", label: "Raibolt", hint: "Amarelo", primary: "#d4a411", strong: "#976b00", ring: "rgba(212, 164, 17, 0.28)" },
-  { value: "orebound", label: "Orebound", hint: "Preto", primary: "#111827", strong: "#030712", ring: "rgba(148, 163, 184, 0.26)" },
-  { value: "naturia", label: "Naturia", hint: "Verde", primary: "#22c55e", strong: "#15803d", ring: "rgba(34, 197, 94, 0.28)" },
-  { value: "gardestrike", label: "Gardestrike", hint: "Marrom", primary: "#92400e", strong: "#78350f", ring: "rgba(180, 83, 9, 0.28)" },
-  { value: "ironhard", label: "Ironhard", hint: "Cinza", primary: "#6b7280", strong: "#4b5563", ring: "rgba(107, 114, 128, 0.28)" },
-  { value: "wingeon", label: "Wingeon", hint: "Branco", primary: "#b8c2d1", strong: "#8290a7", ring: "rgba(184, 194, 209, 0.28)" },
-  { value: "psycraft", label: "Psycraft", hint: "Rosa", primary: "#ec4899", strong: "#be185d", ring: "rgba(236, 72, 153, 0.28)" },
-  { value: "seavell", label: "Seavell", hint: "Azul", primary: "#3b82f6", strong: "#1d4ed8", ring: "rgba(59, 130, 246, 0.28)" },
-  { value: "malefic", label: "Malefic", hint: "Roxo", primary: "#8b5cf6", strong: "#6d28d9", ring: "rgba(139, 92, 246, 0.3)" },
 ]
 
 const startupOptions = [
@@ -235,7 +223,7 @@ export default function ConfiguracoesPage() {
                   aria-labelledby="settings-accent-title"
                   aria-busy={!isPreferencesHydrated}
                 >
-                  {accentOptions.map((option) => {
+                  {APP_ACCENT_OPTIONS.map((option) => {
                     const isActive = selectedAccent === option.value
 
                     return (

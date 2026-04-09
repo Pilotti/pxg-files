@@ -13,7 +13,7 @@ export const DEFAULT_APP_PREFERENCES = {
   openHomeAfterCharacterSwitch: true,
 };
 
-const ACCENT_MAP = {
+export const ACCENT_MAP = {
   volcanic: {
     primary: "#ef4444",
     strong: "#b91c1c",
@@ -85,6 +85,24 @@ const ACCENT_MAP = {
     surface: "rgba(55, 34, 94, 0.38)",
   },
 };
+
+export const APP_ACCENT_OPTIONS = [
+  { value: "volcanic", label: "Volcanic", hint: "Vermelho" },
+  { value: "raibolt", label: "Raibolt", hint: "Amarelo" },
+  { value: "orebound", label: "Orebound", hint: "Preto" },
+  { value: "naturia", label: "Naturia", hint: "Verde" },
+  { value: "gardestrike", label: "Gardestrike", hint: "Marrom" },
+  { value: "ironhard", label: "Ironhard", hint: "Cinza" },
+  { value: "wingeon", label: "Wingeon", hint: "Branco" },
+  { value: "psycraft", label: "Psycraft", hint: "Rosa" },
+  { value: "seavell", label: "Seavell", hint: "Azul" },
+  { value: "malefic", label: "Malefic", hint: "Roxo" },
+].map((option) => ({
+  ...option,
+  primary: ACCENT_MAP[option.value].primary,
+  strong: ACCENT_MAP[option.value].strong,
+  ring: ACCENT_MAP[option.value].ring,
+}));
 
 const LEGACY_ACCENT_MAP = {
   violet: "malefic",
@@ -206,6 +224,88 @@ function buildThemeTokens(accent) {
     brandSurface: `linear-gradient(135deg, color-mix(in srgb, ${accent.primary} 18%, rgba(13, 23, 43, 0.92)), color-mix(in srgb, ${accent.strong} 18%, rgba(8, 18, 38, 0.94)))`,
     brandBorder: `color-mix(in srgb, ${accent.primary} 36%, rgba(255, 255, 255, 0.14))`,
   };
+}
+
+export function getAppPreferencesBootstrapScript() {
+  const bootstrapConfig = JSON.stringify({
+    storageKey: STORAGE_KEY,
+    legacyStorageKeys: LEGACY_STORAGE_KEYS,
+    defaultPreferences: {
+      accent: DEFAULT_APP_PREFERENCES.accent,
+      density: DEFAULT_APP_PREFERENCES.density,
+      reducedMotion: DEFAULT_APP_PREFERENCES.reducedMotion,
+    },
+    accentMap: ACCENT_MAP,
+    legacyAccentMap: LEGACY_ACCENT_MAP,
+    densityMap: DENSITY_MAP,
+  });
+
+  return `
+(() => {
+  const config = ${bootstrapConfig};
+  const storageKeys = [config.storageKey, ...(config.legacyStorageKeys || [])];
+  const hexToRgb = ${hexToRgb.toString()};
+  const getRelativeLuminance = ${getRelativeLuminance.toString()};
+  const buildThemeTokens = ${buildThemeTokens.toString()};
+
+  function readPreferences() {
+    for (const key of storageKeys) {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+
+      try {
+        return JSON.parse(raw);
+      } catch {
+        window.localStorage.removeItem(key);
+      }
+    }
+
+    return null;
+  }
+
+  const stored = readPreferences();
+  const accentKey = config.legacyAccentMap[stored?.accent] || stored?.accent || config.defaultPreferences.accent;
+  const accent = config.accentMap[accentKey] || config.accentMap[config.defaultPreferences.accent];
+  const density = config.densityMap[stored?.density] || config.densityMap[config.defaultPreferences.density];
+  const themeTokens = buildThemeTokens(accent);
+  const root = document.documentElement;
+
+  root.style.setProperty("--primary", accent.primary);
+  root.style.setProperty("--primary-strong", accent.strong);
+  root.style.setProperty("--focus-ring", accent.ring);
+  root.style.setProperty("--theme-tint", accent.tint);
+  root.style.setProperty("--theme-surface", accent.surface);
+  root.style.setProperty("--theme-on-primary", themeTokens.onPrimary);
+  root.style.setProperty("--theme-primary-soft-text", themeTokens.primarySoftText);
+  root.style.setProperty("--theme-primary-soft-bg", themeTokens.primarySoftBackground);
+  root.style.setProperty("--theme-primary-soft-bg-alt", themeTokens.primarySoftBackgroundAlt);
+  root.style.setProperty("--theme-primary-soft-border", themeTokens.primarySoftBorder);
+  root.style.setProperty("--theme-primary-shadow", themeTokens.primaryShadow);
+  root.style.setProperty("--theme-app-bg-top", themeTokens.appBgTop);
+  root.style.setProperty("--theme-app-bg-bottom", themeTokens.appBgBottom);
+  root.style.setProperty("--theme-panel-surface", themeTokens.panelSurface);
+  root.style.setProperty("--theme-panel-surface-strong", themeTokens.panelSurfaceStrong);
+  root.style.setProperty("--theme-field-surface", themeTokens.fieldSurface);
+  root.style.setProperty("--theme-field-surface-hover", themeTokens.fieldSurfaceHover);
+  root.style.setProperty("--theme-field-border", themeTokens.fieldBorder);
+  root.style.setProperty("--theme-menu-text", themeTokens.menuText);
+  root.style.setProperty("--theme-menu-text-soft", themeTokens.menuTextSoft);
+  root.style.setProperty("--theme-menu-surface", themeTokens.menuSurface);
+  root.style.setProperty("--theme-menu-surface-strong", themeTokens.menuSurfaceStrong);
+  root.style.setProperty("--theme-menu-border", themeTokens.menuBorder);
+  root.style.setProperty("--theme-menu-hover", themeTokens.menuHover);
+  root.style.setProperty("--theme-menu-active", themeTokens.menuActive);
+  root.style.setProperty("--theme-brand-surface", themeTokens.brandSurface);
+  root.style.setProperty("--theme-brand-border", themeTokens.brandBorder);
+  root.style.setProperty("--ui-control-height", density.control);
+  root.style.setProperty("--ui-gap", density.contentGap);
+  root.style.setProperty("--ui-card-padding", density.cardPadding);
+  root.style.setProperty("--ui-section-padding", density.sectionPadding);
+  root.style.setProperty("--ui-radius", density.radius);
+  root.dataset.density = stored?.density || config.defaultPreferences.density;
+  root.dataset.reducedMotion = stored?.reducedMotion ? "true" : "false";
+})();
+`.trim();
 }
 
 function isBrowser() {

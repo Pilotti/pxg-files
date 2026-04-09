@@ -1,90 +1,67 @@
 # Deploy no Railway
 
+## Arquitetura atual
+
+O projeto usa dois serviços em produção:
+
+- `backend`: API principal FastAPI
+- `frontend`: aplicação Next.js
+
+O OCR de hunts roda dentro da API principal. Não existe mais um serviço `backend-ocr`.
+
 ## Pré-requisitos
-- Conta no Railway (https://railway.app)
-- GitHub com o repositório pushado
-- Railway CLI instalada (opcional)
 
-## Step 1: Backend (EasyOCR + FastAPI)
+- conta no Railway
+- repositório no GitHub
 
-1. Acesse https://railway.app/dashboard
-2. Click em "New Project"
-3. Selecione "Deploy from GitHub"
-4. Autorize e selecione seu repositório
-5. Configure:
-   - Root Directory: `backend-ocr`
-   - Build Command: (deixar vazio)
-   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+## Backend
 
-6. Click Deploy
-7. Aguarde ~5-10 minutos (primeira vez carrega EasyOCR)
-8. Copie a URL gerada (ex: https://seu-backend.railway.app)
+1. Crie um serviço para o diretório `backend`.
+2. Start command:
 
-## Step 2: Frontend (Next.js)
-
-1. Mantenha no mesmo projeto Railway
-2. Click "Add"
-3. Selecione "Deploy from GitHub"
-4. Configure:
-   - Root Directory: `frontend`
-   - Build Command: `npm run build`
-   - Start Command: `npm start`
-
-5. Variáveis de Ambiente:
-   ```
-   NEXT_PUBLIC_API_URL=https://seu-backend.railway.app
-   NODE_ENV=production
-   ```
-
-6. Click Deploy
-7. Aguarde deployar (~2 minutos)
-
-## Step 3: Testar
-
-- Frontend: https://seu-frontend.railway.app
-- Backend: https://seu-backend.railway.app
-- API Docs: https://seu-backend.railway.app/docs
-
-Acesse `/ocr` no frontend e teste!
-
-## Troubleshooting
-
-**Backend demorando muito?**
-- Primeira vez carrega os modelos EasyOCR (~1GB)
-- Próximas deployments são mais rápidas
-
-**"Connection refused"?**
-- Verificar se `NEXT_PUBLIC_API_URL` está correto
-- Confirmar se backend está rodando
-
-**Custo?**
-- Plano Hobby $5/mês inclui os créditos
-- Custo estimado com uso moderado: $5-15/mês
-
-## Variáveis de Ambiente
-
-### Backend
-```env
-PORT=8000
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-### Frontend
+3. Configure as variáveis mínimas:
+
+```env
+PORT=8000
+DATABASE_URL=...
+JWT_SECRET_KEY=...
+REFRESH_TOKEN_SECRET=...
+```
+
+## Frontend
+
+1. Crie um segundo serviço para o diretório `frontend`.
+2. Build command:
+
+```bash
+npm run build
+```
+
+3. Start command:
+
+```bash
+npm start
+```
+
+4. Configure as variáveis mínimas:
+
 ```env
 NEXT_PUBLIC_API_URL=https://seu-backend.railway.app
 NODE_ENV=production
 ```
 
-## Monitoramento
+## Validação
 
-Railway oferece logs em tempo real:
-- Acesse seu projeto
-- Clique em cada serviço
-- Veja logs em "Logs"
+- frontend: `https://seu-frontend.railway.app`
+- backend: `https://seu-backend.railway.app`
+- docs da API: `https://seu-backend.railway.app/docs`
+- fluxo principal para validar OCR: `/hunts`
 
-## Atualizações
+## Observações
 
-Todo push para GitHub atualiza automaticamente:
-```bash
-git push origin main
-# Railway detecta mudanças e redeploy automaticamente
-```
+- o OCR de hunts depende de Tesseract no ambiente do backend
+- se o backend subir sem Tesseract configurado corretamente, o endpoint `/hunts/ocr/drops` vai registrar erro em log ao processar imagens

@@ -16,14 +16,6 @@ backend/ocr_debug/
 backend/app/data/ocr_debug/
 backend/tasks.db
 
-# Python backend OCR
-backend-ocr/.env
-backend-ocr/.env.*
-backend-ocr/venv/
-backend-ocr/__pycache__/
-backend-ocr/**/*.py[cod]
-backend-ocr/.pytest_cache/
-
 # Node/frontend
 frontend/node_modules/
 frontend/dist/

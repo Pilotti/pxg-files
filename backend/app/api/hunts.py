@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -44,6 +45,8 @@ router = APIRouter(
     dependencies=[Depends(require_enabled_menu("hunts"))],
 )
 
+logger = logging.getLogger(__name__)
+
 
 class SavePlayerPricePayload(BaseModel):
     item_name: str
@@ -65,7 +68,7 @@ async def process_drops_ocr(
     if len(files) > settings.ocr_max_files:
         raise HTTPException(
             status_code=400,
-            detail=f"Limite de arquivos excedido. MÃ¡ximo permitido: {settings.ocr_max_files}.",
+            detail=f"Limite de arquivos excedido. Máximo permitido: {settings.ocr_max_files}.",
         )
 
     refresh_approved_aliases_cache(db)
@@ -79,13 +82,15 @@ async def process_drops_ocr(
         file_name = upload.filename or f"imagem_{index}"
 
         if not upload.content_type or not upload.content_type.startswith("image/"):
-            warnings.append(f"Imagem invalida: {file_name}")
+            logger.warning("Hunt OCR rejected non-image upload '%s' (%s).", file_name, upload.content_type)
+            warnings.append(f"Formato de arquivo inválido: {file_name}")
             continue
 
         content = await upload.read()
 
         if len(content) > max_file_size_bytes:
-            warnings.append(f"Arquivo muito grande: {file_name}")
+            logger.warning("Hunt OCR rejected oversized upload '%s' (%s bytes).", file_name, len(content))
+            warnings.append(f"Arquivo excede o limite permitido: {file_name}")
             continue
 
         before_lines = len(recognized_lines)
@@ -102,11 +107,18 @@ async def process_drops_ocr(
             )
             recognized_lines.extend(parsed_lines)
             if len(recognized_lines) == before_lines:
-                warnings.append(f"Imagem invalida: {file_name}")
+                logger.info("Hunt OCR did not recognize any drop lines for '%s'.", file_name)
+                warnings.append(f"Nenhum drop reconhecido na imagem: {file_name}")
         except TimeoutError:
-            warnings.append(f"Tempo excedido no OCR: {file_name}")
+            logger.warning(
+                "Hunt OCR timed out for '%s' after %s seconds.",
+                file_name,
+                ocr_timeout_seconds,
+            )
+            warnings.append(f"Tempo excedido ao processar a imagem: {file_name}")
         except Exception:
-            warnings.append(f"Imagem invalida: {file_name}")
+            logger.exception("Unexpected hunt OCR failure while processing '%s'.", file_name)
+            warnings.append(f"Falha ao processar imagem: {file_name}")
 
     unique_lines, duplicates_ignored = deduplicate_drop_lines(recognized_lines)
     player_prices = get_account_player_prices(current_user.id)
@@ -246,7 +258,7 @@ async def get_hunt_session(
         HuntSession.user_id == current_user.id,
     ).first()
     if session is None:
-        raise HTTPException(status_code=404, detail="SessÃ£o nÃ£o encontrada.")
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
     return HuntSessionDetail.model_validate(session)
 
 
@@ -261,7 +273,7 @@ async def delete_hunt_session(
         HuntSession.user_id == current_user.id,
     ).first()
     if session is None:
-        raise HTTPException(status_code=404, detail="SessÃ£o nÃ£o encontrada.")
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
     db.delete(session)
     db.commit()
 

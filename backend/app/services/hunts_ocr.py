@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import difflib
 import io
 import json
+import logging
 from pathlib import Path
 import re
 import statistics
@@ -11,6 +12,8 @@ import unicodedata
 
 import pytesseract
 from PIL import Image, ImageFilter, ImageOps
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -37,10 +40,10 @@ class OcrWord:
 # Known-item dictionary for post-OCR fuzzy name correction
 # ---------------------------------------------------------------------------
 
-_KNOWN_ITEMS_CACHE: dict[str, str] | None = None  # normalized â†’ display
+_KNOWN_ITEMS_CACHE: dict[str, str] | None = None  # normalized -> display
 _KNOWN_ITEMS_MTIME: float = 0.0
 
-# Approved aliases from DB: observed_normalized â†’ canonical_name
+# Approved aliases from DB: observed_normalized -> canonical_name
 # Populated externally via refresh_approved_aliases_cache().
 _APPROVED_ALIASES_CACHE: dict[str, str] = {}
 
@@ -70,6 +73,7 @@ def _get_known_items() -> dict[str, str]:
     try:
         raw: dict = json.loads(data_file.read_text(encoding="utf-8"))
     except Exception:
+        logger.exception("Failed to load hunts_npc_prices.json for OCR known-item cache.")
         raw = {}
 
     mapping: dict[str, str] = {}
@@ -111,6 +115,7 @@ def refresh_approved_aliases_cache(db: object) -> int:
         _APPROVED_ALIASES_CACHE = mapping
         return len(mapping)
     except Exception:
+        logger.exception("Failed to refresh approved hunt item aliases cache for OCR.")
         return 0
 
 
@@ -125,7 +130,7 @@ def _fuzzy_correct_item_name(name: str) -> tuple[str, float | None]:
     - Exact match: always correct (score 1.0).
     - Prefix match: if the name appears to be a truncated prefix of a known item
       (either ending with '...', or unique prefix), use that known item.
-      This handles cases like 'compressed ghos...' â†’ 'compressed ghost essence'.
+      This handles cases like 'compressed ghos...' -> 'compressed ghost essence'.
     - High-confidence fuzzy (>= 0.85): correct for unambiguous substitutions.
     - Otherwise: leave unchanged to avoid false positives.
 
@@ -389,7 +394,7 @@ def _detect_close_button_visual(image: Image.Image) -> tuple[int, int] | None:
     pixels = image.load()
     width, height = image.size
     
-    # Search in top-right quadrant (right 30% Ã— top 15%)
+    # Search in top-right quadrant (right 30% x top 15%)
     search_x_start = int(width * 0.70)
     search_y_end = int(height * 0.15)
     
@@ -449,7 +454,7 @@ def _detect_redefinir_button_visual(image: Image.Image) -> tuple[int, int] | Non
     pixels = image.load()
     width, height = image.size
     
-    # Search in bottom-right quadrant (right 40% Ã— bottom 15%)
+    # Search in bottom-right quadrant (right 40% x bottom 15%)
     search_x_start = int(width * 0.60)
     search_y_start = int(height * 0.85)
     
@@ -522,7 +527,7 @@ def _detect_table_region_and_strategy(
     if party_region is not None:
         return party_region, "visual-anchor"
     
-    # Fall back to text-based anchor detection (PokÃ©mon Party + X)
+    # Fall back to text-based anchor detection (Pokemon Party + X)
     words = _extract_words(image, lang=lang, oem=oem)
     party_region = _detect_party_window_region(image, words)
     crop_strategy = "text-anchor" if party_region is not None else "full-image"

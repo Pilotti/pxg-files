@@ -18,10 +18,10 @@ Write-Host "Iniciando Frontend em http://localhost:3000" -ForegroundColor Cyan
 Set-Location frontend
 
 if (-not (Test-Path "node_modules")) {
-    npm install -q
+    & npm.cmd install -q
 }
 
-Start-Process npm -ArgumentList "run dev"
+Start-Process -FilePath "npm.cmd" -ArgumentList "run","dev" -WorkingDirectory (Get-Location)
 Set-Location $root
 
 Write-Host ""
