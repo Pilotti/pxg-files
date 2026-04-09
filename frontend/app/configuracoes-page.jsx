@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "@/lib/react-router-compat"
 import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
@@ -20,16 +20,16 @@ const tabs = [
 ]
 
 const accentOptions = [
-  { value: "volcanic", label: "Volcanic", hint: "Vermelho" },
-  { value: "raibolt", label: "Raibolt", hint: "Amarelo" },
-  { value: "orebound", label: "Orebound", hint: "Preto" },
-  { value: "naturia", label: "Naturia", hint: "Verde" },
-  { value: "gardestrike", label: "Gardestrike", hint: "Marrom" },
-  { value: "ironhard", label: "Ironhard", hint: "Cinza" },
-  { value: "wingeon", label: "Wingeon", hint: "Branco" },
-  { value: "psycraft", label: "Psycraft", hint: "Rosa" },
-  { value: "seavell", label: "Seavell", hint: "Azul" },
-  { value: "malefic", label: "Malefic", hint: "Roxo" },
+  { value: "volcanic", label: "Volcanic", hint: "Vermelho", primary: "#ef4444", strong: "#b91c1c", ring: "rgba(239, 68, 68, 0.3)" },
+  { value: "raibolt", label: "Raibolt", hint: "Amarelo", primary: "#d4a411", strong: "#976b00", ring: "rgba(212, 164, 17, 0.28)" },
+  { value: "orebound", label: "Orebound", hint: "Preto", primary: "#111827", strong: "#030712", ring: "rgba(148, 163, 184, 0.26)" },
+  { value: "naturia", label: "Naturia", hint: "Verde", primary: "#22c55e", strong: "#15803d", ring: "rgba(34, 197, 94, 0.28)" },
+  { value: "gardestrike", label: "Gardestrike", hint: "Marrom", primary: "#92400e", strong: "#78350f", ring: "rgba(180, 83, 9, 0.28)" },
+  { value: "ironhard", label: "Ironhard", hint: "Cinza", primary: "#6b7280", strong: "#4b5563", ring: "rgba(107, 114, 128, 0.28)" },
+  { value: "wingeon", label: "Wingeon", hint: "Branco", primary: "#b8c2d1", strong: "#8290a7", ring: "rgba(184, 194, 209, 0.28)" },
+  { value: "psycraft", label: "Psycraft", hint: "Rosa", primary: "#ec4899", strong: "#be185d", ring: "rgba(236, 72, 153, 0.28)" },
+  { value: "seavell", label: "Seavell", hint: "Azul", primary: "#3b82f6", strong: "#1d4ed8", ring: "rgba(59, 130, 246, 0.28)" },
+  { value: "malefic", label: "Malefic", hint: "Roxo", primary: "#8b5cf6", strong: "#6d28d9", ring: "rgba(139, 92, 246, 0.3)" },
 ]
 
 const startupOptions = [
@@ -38,6 +38,14 @@ const startupOptions = [
   { value: "/quests", label: "Quests" },
   { value: "/configuracoes?aba=personagens", label: "Configurações" },
 ]
+
+const saveStateLabels = {
+  saved: "Tema salvo",
+  reset: "Preferências restauradas",
+  imported: "Preferências importadas",
+  exported: "Backup exportado",
+  error: "Falha ao importar arquivo",
+}
 
 function getActiveTab(search) {
   const params = new URLSearchParams(search)
@@ -62,6 +70,10 @@ function buildExportFile(preferences) {
   )
 }
 
+function getSaveStateMessage(saveState) {
+  return saveStateLabels[saveState] || ""
+}
+
 export default function ConfiguracoesPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -73,8 +85,13 @@ export default function ConfiguracoesPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const activeTab = useMemo(() => getActiveTab(location.search), [location.search])
+  const activeAccent = useMemo(
+    () => accentOptions.find((option) => option.value === preferences.accent) || accentOptions[accentOptions.length - 1],
+    [preferences.accent],
+  )
+  const saveStateMessage = useMemo(() => getSaveStateMessage(saveState), [saveState])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPreferences(readAppPreferences())
   }, [])
 
@@ -156,9 +173,28 @@ export default function ConfiguracoesPage() {
 
       <section className="settings-page">
         <div className="settings-page__header">
-          <h2 className="settings-page__title">Configurações</h2>
+          <div className="settings-page__headline">
+            <h2 className="settings-page__title">Configurações</h2>
+            {saveStateMessage ? (
+              <span
+                className={
+                  saveState === "error"
+                    ? "settings-page__save-state settings-page__save-state--error"
+                    : "settings-page__save-state"
+                }
+                role="status"
+                aria-live="polite"
+              >
+                {saveStateMessage}
+              </span>
+            ) : null}
+          </div>
 
-          <div className="settings-page__header-actions settings-page__tabs" role="tablist" aria-label="Abas das configurações">
+          <div
+            className="settings-page__header-actions settings-page__tabs"
+            role="tablist"
+            aria-label="Abas das configurações"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -187,26 +223,53 @@ export default function ConfiguracoesPage() {
                 <header className="settings-panel__header">
                   <div>
                     <span className="settings-panel__eyebrow">Aparência</span>
-                    <h2 className="settings-panel__title">Paleta de cores</h2>
+                    <h2 id="settings-accent-title" className="settings-panel__title">Paleta de cores</h2>
                     <p className="settings-panel__description">
                       Escolha o tom principal da interface.
                     </p>
                   </div>
+
+                  <div
+                    className="settings-accent-summary"
+                    style={{
+                      "--accent-summary-primary": activeAccent.primary,
+                      "--accent-summary-strong": activeAccent.strong,
+                      "--accent-summary-ring": activeAccent.ring,
+                    }}
+                  >
+                    <span className="settings-accent-summary__label">Tema atual</span>
+                    <strong className="settings-accent-summary__value">{activeAccent.label}</strong>
+                    <small className="settings-accent-summary__hint">{activeAccent.hint}</small>
+                  </div>
                 </header>
 
-                <div className="settings-accent-grid">
-                  {accentOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={preferences.accent === option.value ? "settings-accent-card settings-accent-card--active" : "settings-accent-card"}
-                      onClick={() => updatePreference("accent", option.value)}
-                    >
-                      <span className={`settings-accent-card__swatch settings-accent-card__swatch--${option.value}`} />
-                      <strong>{option.label}</strong>
-                      <small>{option.hint}</small>
-                    </button>
-                  ))}
+                <div className="settings-accent-grid" role="radiogroup" aria-labelledby="settings-accent-title">
+                  {accentOptions.map((option) => {
+                    const isActive = preferences.accent === option.value
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={isActive}
+                        className={isActive ? "settings-accent-card settings-accent-card--active" : "settings-accent-card"}
+                        style={{
+                          "--accent-card-primary": option.primary,
+                          "--accent-card-strong": option.strong,
+                          "--accent-card-ring": option.ring,
+                        }}
+                        onClick={() => updatePreference("accent", option.value)}
+                      >
+                        <span className="settings-accent-card__preview">
+                          <span className={`settings-accent-card__swatch settings-accent-card__swatch--${option.value}`} />
+                          {isActive ? <span className="settings-accent-card__selected">Tema atual</span> : null}
+                        </span>
+                        <strong>{option.label}</strong>
+                        <small>{option.hint}</small>
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
             </div>
@@ -228,11 +291,11 @@ export default function ConfiguracoesPage() {
                 <div className="settings-account-overview">
                   <div className="settings-account-overview__item">
                     <span className="settings-account-overview__label">Usuário</span>
-                    <strong>{user?.display_name || user?.displayName || "—"}</strong>
+                    <strong>{user?.display_name || user?.displayName || "-"}</strong>
                   </div>
                   <div className="settings-account-overview__item">
                     <span className="settings-account-overview__label">E-mail</span>
-                    <strong>{user?.email || "—"}</strong>
+                    <strong>{user?.email || "-"}</strong>
                   </div>
                   <div className="settings-account-overview__item">
                     <span className="settings-account-overview__label">Personagem ativo</span>
@@ -320,7 +383,7 @@ export default function ConfiguracoesPage() {
                 <div className="settings-session-grid">
                   <article className="settings-session-card">
                     <span className="settings-session-card__label">Conta ativa</span>
-                    <strong>{user?.email || "—"}</strong>
+                    <strong>{user?.email || "-"}</strong>
                     <p>Seus tokens e preferências locais ficam vinculados a este navegador.</p>
                   </article>
                   <article className="settings-session-card">

@@ -1,4 +1,7 @@
-const STORAGE_KEY = "pxg_app_preferences";
+import { STORAGE_KEYS } from "../constants/storage-keys.js";
+
+const STORAGE_KEY = STORAGE_KEYS.APP_PREFERENCES;
+const LEGACY_STORAGE_KEYS = ["pxg_app_preferences"];
 
 export const DEFAULT_APP_PREFERENCES = {
   accent: "malefic",
@@ -223,18 +226,49 @@ function normalizePreferences(prefs = {}) {
   };
 }
 
+function readStoredPreferences() {
+  if (!isBrowser()) {
+    return null;
+  }
+
+  const candidateKeys = [STORAGE_KEY, ...LEGACY_STORAGE_KEYS];
+
+  for (const key of candidateKeys) {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      const normalized = normalizePreferences(parsed);
+
+      if (key !== STORAGE_KEY) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        window.localStorage.removeItem(key);
+      }
+
+      return normalized;
+    } catch {
+      window.localStorage.removeItem(key);
+    }
+  }
+
+  return null;
+}
+
 export function readAppPreferences() {
   if (!isBrowser()) {
     return { ...DEFAULT_APP_PREFERENCES };
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
+    const stored = readStoredPreferences();
+    if (!stored) {
       return { ...DEFAULT_APP_PREFERENCES };
     }
 
-    return normalizePreferences(JSON.parse(raw));
+    return stored;
   } catch {
     return { ...DEFAULT_APP_PREFERENCES };
   }
@@ -297,6 +331,7 @@ export function saveAppPreferences(nextPreferences = {}) {
 
   if (isBrowser()) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    LEGACY_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
   }
 
   applyAppPreferences(normalized);
@@ -306,6 +341,7 @@ export function saveAppPreferences(nextPreferences = {}) {
 export function resetAppPreferences() {
   if (isBrowser()) {
     window.localStorage.removeItem(STORAGE_KEY);
+    LEGACY_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
   }
 
   applyAppPreferences(DEFAULT_APP_PREFERENCES);

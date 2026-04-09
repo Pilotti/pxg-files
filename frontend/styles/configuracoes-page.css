@@ -12,6 +12,13 @@
   gap: 18px;
 }
 
+.settings-page__headline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
 .settings-page__title {
   margin: 0;
   font-size: clamp(2rem, 3vw, 2.8rem);
@@ -200,6 +207,46 @@
   line-height: 1.6;
 }
 
+.settings-accent-summary {
+  min-width: 180px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent-summary-primary) 26%, rgba(255, 255, 255, 0.12));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent-summary-primary) 14%, rgba(255, 255, 255, 0.03)),
+      color-mix(in srgb, var(--accent-summary-strong) 12%, rgba(255, 255, 255, 0.02))
+    );
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--accent-summary-ring) 60%, transparent);
+}
+
+.settings-accent-summary__label,
+.settings-accent-summary__hint {
+  display: block;
+  color: var(--text-soft, var(--text));
+}
+
+.settings-accent-summary__label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.settings-accent-summary__value {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+
+.settings-accent-summary__hint {
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
 .settings-account-overview,
 .settings-session-grid,
 .settings-field-grid {
@@ -243,7 +290,8 @@
   min-height: 148px;
   padding: 22px;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  position: relative;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
 .settings-accent-card:hover,
@@ -256,8 +304,14 @@
 
 .settings-accent-card--active,
 .settings-density-card--active {
-  border-color: color-mix(in srgb, var(--primary) 34%, transparent);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent-card-primary, var(--primary)) 34%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent-card-primary, var(--primary)) 10%, rgba(255, 255, 255, 0.03)),
+      color-mix(in srgb, var(--accent-card-strong, var(--primary-strong)) 8%, rgba(255, 255, 255, 0.02))
+    );
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--accent-card-ring, var(--focus-ring)) 65%, transparent);
 }
 
 .settings-accent-card strong,
@@ -279,6 +333,23 @@
   line-height: 1.55;
 }
 
+.settings-accent-card:focus-visible,
+.settings-density-card:focus-visible,
+.settings-page__tab:focus-visible,
+.settings-action-button:focus-visible,
+.settings-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--focus-ring, rgba(79, 140, 255, 0.2));
+}
+
+.settings-accent-card__preview {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
 .settings-accent-card__swatch {
   width: 42px;
   height: 42px;
@@ -298,6 +369,21 @@
 .settings-accent-card__swatch--psycraft { background: linear-gradient(135deg, #ec4899, #be185d); }
 .settings-accent-card__swatch--seavell { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
 .settings-accent-card__swatch--malefic { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+.settings-accent-card__selected {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-card-primary, var(--primary)) 30%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--accent-card-primary, var(--primary)) 16%, rgba(255, 255, 255, 0.04));
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 .settings-toggle-card {
   display: flex;
@@ -418,6 +504,10 @@
 
   .settings-panel {
     padding: 18px;
+  }
+
+  .settings-panel__header {
+    flex-direction: column;
   }
 
   .settings-toggle-card {
