@@ -250,6 +250,13 @@
   font-weight: 700;
 }
 
+.hunts-page__upload-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .hunts-page__upload-input {
   position: absolute;
   width: 1px;
@@ -315,21 +322,9 @@
   font-weight: 700;
 }
 
-.hunts-page__example-link {
-  width: fit-content;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--theme-primary-soft-text);
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  transition: color 0.18s ease, opacity 0.18s ease;
-}
-
-.hunts-page__example-link:hover {
-  color: #dce8ff;
+.hunts-page__upload-example-button {
+  min-height: 36px;
+  padding: 0 14px;
 }
 
 .hunts-page__upload-help {
@@ -764,6 +759,11 @@
   }
 
   .hunts-page__file-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hunts-page__upload-header {
     flex-direction: column;
     align-items: flex-start;
   }

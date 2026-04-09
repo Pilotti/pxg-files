@@ -1044,9 +1044,19 @@ export default function HuntsPage() {
               </div>
 
               <div className="hunts-page__upload-box">
-                <label className="hunts-page__upload-label" htmlFor="hunts-drops-upload">
-                  Upload de imagens de drops
-                </label>
+                <div className="hunts-page__upload-header">
+                  <label className="hunts-page__upload-label" htmlFor="hunts-drops-upload">
+                    Upload de imagens de drops
+                  </label>
+
+                  <button
+                    type="button"
+                    className="hunts-page__ghost-button hunts-page__upload-example-button"
+                    onClick={() => setIsExampleModalOpen(true)}
+                  >
+                    Ver exemplo
+                  </button>
+                </div>
 
                 <input
                   id="hunts-drops-upload"
@@ -1067,14 +1077,6 @@ export default function HuntsPage() {
                   </span>
                   <span className="hunts-page__dropzone-action">Escolher arquivos</span>
                 </label>
-
-                <button
-                  type="button"
-                  className="hunts-page__example-link"
-                  onClick={() => setIsExampleModalOpen(true)}
-                >
-                  Ver exemplo de print ideal
-                </button>
 
                 {selectedFiles.length ? (
                   <>
