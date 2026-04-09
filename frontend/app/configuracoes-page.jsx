@@ -83,16 +83,15 @@ export default function ConfiguracoesPage() {
   const [preferences, setPreferences] = useState(DEFAULT_APP_PREFERENCES)
   const [saveState, setSaveState] = useState("idle")
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isPreferencesHydrated, setIsPreferencesHydrated] = useState(false)
 
   const activeTab = useMemo(() => getActiveTab(location.search), [location.search])
-  const activeAccent = useMemo(
-    () => accentOptions.find((option) => option.value === preferences.accent) || accentOptions[accentOptions.length - 1],
-    [preferences.accent],
-  )
   const saveStateMessage = useMemo(() => getSaveStateMessage(saveState), [saveState])
+  const selectedAccent = isPreferencesHydrated ? preferences.accent : null
 
   useLayoutEffect(() => {
     setPreferences(readAppPreferences())
+    setIsPreferencesHydrated(true)
   }, [])
 
   useEffect(() => {
@@ -228,24 +227,16 @@ export default function ConfiguracoesPage() {
                       Escolha o tom principal da interface.
                     </p>
                   </div>
-
-                  <div
-                    className="settings-accent-summary"
-                    style={{
-                      "--accent-summary-primary": activeAccent.primary,
-                      "--accent-summary-strong": activeAccent.strong,
-                      "--accent-summary-ring": activeAccent.ring,
-                    }}
-                  >
-                    <span className="settings-accent-summary__label">Tema atual</span>
-                    <strong className="settings-accent-summary__value">{activeAccent.label}</strong>
-                    <small className="settings-accent-summary__hint">{activeAccent.hint}</small>
-                  </div>
                 </header>
 
-                <div className="settings-accent-grid" role="radiogroup" aria-labelledby="settings-accent-title">
+                <div
+                  className="settings-accent-grid"
+                  role="radiogroup"
+                  aria-labelledby="settings-accent-title"
+                  aria-busy={!isPreferencesHydrated}
+                >
                   {accentOptions.map((option) => {
-                    const isActive = preferences.accent === option.value
+                    const isActive = selectedAccent === option.value
 
                     return (
                       <button

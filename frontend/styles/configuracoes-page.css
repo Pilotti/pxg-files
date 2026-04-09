@@ -207,46 +207,6 @@
   line-height: 1.6;
 }
 
-.settings-accent-summary {
-  min-width: 180px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--accent-summary-primary) 26%, rgba(255, 255, 255, 0.12));
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--accent-summary-primary) 14%, rgba(255, 255, 255, 0.03)),
-      color-mix(in srgb, var(--accent-summary-strong) 12%, rgba(255, 255, 255, 0.02))
-    );
-  box-shadow: 0 14px 30px color-mix(in srgb, var(--accent-summary-ring) 60%, transparent);
-}
-
-.settings-accent-summary__label,
-.settings-accent-summary__hint {
-  display: block;
-  color: var(--text-soft, var(--text));
-}
-
-.settings-accent-summary__label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.78;
-}
-
-.settings-accent-summary__value {
-  display: block;
-  margin-top: 8px;
-  font-size: 1.02rem;
-  color: var(--text);
-}
-
-.settings-accent-summary__hint {
-  margin-top: 4px;
-  line-height: 1.45;
-}
-
 .settings-account-overview,
 .settings-session-grid,
 .settings-field-grid {
