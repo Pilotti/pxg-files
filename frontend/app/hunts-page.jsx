@@ -62,6 +62,13 @@ function formatCompactDlValue(value) {
 }
 
 const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png"])
+const OCR_EXAMPLE_RULES = [
+  "A tabela de drops precisa aparecer inteira e legível.",
+  "As colunas Item, Contagem e Valor devem estar visíveis.",
+  "Evite prints borradas, tremidas ou muito distantes.",
+  "Não corte o topo nem o rodapé da janela da tabela.",
+  "Prefira uma captura limpa, sem overlays cobrindo os drops.",
+]
 
 function isAcceptedImageFile(file) {
   const mimeType = String(file?.type || "").toLowerCase()
@@ -76,6 +83,7 @@ export default function HuntsPage() {
   const [viewMode, setViewMode] = useState("overview")
   const [selectedFiles, setSelectedFiles] = useState([])
   const [previewFile, setPreviewFile] = useState(null)
+  const [isExampleModalOpen, setIsExampleModalOpen] = useState(false)
   const [isUploadingDrops, setIsUploadingDrops] = useState(false)
   const [dropsResult, setDropsResult] = useState(null)
   const [dropsRows, setDropsRows] = useState([])
@@ -1060,6 +1068,14 @@ export default function HuntsPage() {
                   <span className="hunts-page__dropzone-action">Escolher arquivos</span>
                 </label>
 
+                <button
+                  type="button"
+                  className="hunts-page__example-link"
+                  onClick={() => setIsExampleModalOpen(true)}
+                >
+                  Ver exemplo de print ideal
+                </button>
+
                 {selectedFiles.length ? (
                   <>
                     <div className="hunts-page__file-toolbar">
@@ -1515,6 +1531,48 @@ export default function HuntsPage() {
             ) : (
               <p className="hunts-page__enemy-empty">Nenhum consumível adicionado ainda.</p>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {isExampleModalOpen ? (
+        <div
+          className="hunts-page__preview-backdrop"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setIsExampleModalOpen(false)}
+        >
+          <div
+            className="hunts-page__preview-modal hunts-page__example-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="hunts-page__preview-header">
+              <strong className="hunts-page__preview-title">Exemplo de print ideal</strong>
+              <button
+                type="button"
+                className="hunts-page__ghost-button hunts-page__preview-close"
+                onClick={() => setIsExampleModalOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="hunts-page__example-body">
+              <img
+                className="hunts-page__example-image"
+                src="/hunt-ocr-example.svg"
+                alt="Exemplo de print ideal para o OCR de hunts"
+              />
+
+              <ul className="hunts-page__example-rules">
+                {OCR_EXAMPLE_RULES.map((rule) => (
+                  <li key={rule} className="hunts-page__example-rule">
+                    <span className="hunts-page__example-check" aria-hidden="true">✓</span>
+                    <span>{rule}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       ) : null}

@@ -1,0 +1,96 @@
+<svg width="820" height="520" viewBox="0 0 820 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="410" y1="0" x2="410" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10192B"/>
+      <stop offset="1" stop-color="#0A101C"/>
+    </linearGradient>
+    <linearGradient id="topbar" x1="410" y1="0" x2="410" y2="14" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EA2FF"/>
+      <stop offset="1" stop-color="#3D74E6"/>
+    </linearGradient>
+    <linearGradient id="blueBtn" x1="282" y1="325" x2="282" y2="375" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4B7FFF"/>
+      <stop offset="1" stop-color="#315ECF"/>
+    </linearGradient>
+    <linearGradient id="redBtn" x1="468" y1="325" x2="468" y2="375" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E86137"/>
+      <stop offset="1" stop-color="#C74220"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="12" width="820" height="508" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0156863 0 0 0 0 0.027451 0 0 0 0 0.0705882 0 0 0 0.4 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect width="820" height="520" rx="22" fill="url(#bg)"/>
+  <rect width="820" height="14" fill="url(#topbar)"/>
+
+  <g opacity="0.18">
+    <rect x="30" y="34" width="760" height="452" rx="18" fill="#0C121E" stroke="#A4B4D7" stroke-opacity="0.12"/>
+    <rect x="44" y="48" width="126" height="410" rx="8" fill="#17120F"/>
+    <rect x="206" y="78" width="478" height="14" rx="7" fill="#45484C"/>
+    <rect x="226" y="112" width="364" height="20" rx="10" fill="#2F3338"/>
+    <circle cx="250" cy="220" r="44" fill="#E04E63"/>
+    <circle cx="560" cy="150" r="54" fill="#2D6EEA"/>
+    <circle cx="626" cy="180" r="38" fill="#E46A30"/>
+    <circle cx="706" cy="196" r="58" fill="#2EC3B1"/>
+    <rect x="474" y="282" width="170" height="84" rx="14" fill="#15181E"/>
+    <rect x="330" y="290" width="98" height="76" rx="14" fill="#3D2D11"/>
+    <rect x="504" y="362" width="156" height="78" rx="12" fill="#080A10"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="4" y="18" width="812" height="488" fill="#05070D" fill-opacity="0.58"/>
+  </g>
+
+  <text x="410" y="72" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="38" text-anchor="middle">Grupo de Pokémon</text>
+
+  <g opacity="0.96">
+    <text x="38" y="148" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="34">Grupo</text>
+    <rect x="194" y="116" width="6" height="38" rx="3" fill="#4D7CFF"/>
+    <text x="38" y="206" fill="#FFFFFF" fill-opacity="0.62" font-family="Segoe UI, Arial, sans-serif" font-size="24">Saque</text>
+    <text x="38" y="270" fill="#FFFFFF" fill-opacity="0.62" font-family="Segoe UI, Arial, sans-serif" font-size="24">Detalhes</text>
+    <text x="38" y="332" fill="#FFFFFF" fill-opacity="0.62" font-family="Segoe UI, Arial, sans-serif" font-size="24">Recargas</text>
+    <text x="38" y="396" fill="#FFFFFF" fill-opacity="0.62" font-family="Segoe UI, Arial, sans-serif" font-size="24">Novo Grupo</text>
+  </g>
+
+  <circle cx="252" cy="132" r="8" fill="#22F089"/>
+  <text x="270" y="139" fill="#22F089" font-family="Segoe UI, Arial, sans-serif" font-size="19">👑 Mestre Pilotti</text>
+
+  <rect x="236" y="326" width="176" height="50" rx="25" fill="url(#blueBtn)"/>
+  <text x="324" y="358" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="18" text-anchor="middle">Adicionar Membro</text>
+
+  <rect x="420" y="326" width="178" height="50" rx="25" fill="url(#redBtn)"/>
+  <text x="509" y="358" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="18" text-anchor="middle">Desfazer grupo</text>
+
+  <text x="620" y="358" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="19">👥 Comum</text>
+
+  <g>
+    <text x="238" y="419" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="21">🔒 Saque</text>
+    <rect x="238" y="424" width="172" height="50" fill="#07090D" stroke="#D7D8DA" stroke-opacity="0.4"/>
+    <text x="250" y="456" fill="#FFFFFF" fill-opacity="0.92" font-family="Segoe UI, Arial, sans-serif" font-size="18">Compartilhado</text>
+    <path d="M380 444L389 453L398 444" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <text x="454" y="419" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="21">🔒 Experiência</text>
+    <rect x="422" y="424" width="172" height="50" fill="#07090D" stroke="#D7D8DA" stroke-opacity="0.4"/>
+    <text x="434" y="456" fill="#FFFFFF" fill-opacity="0.92" font-family="Segoe UI, Arial, sans-serif" font-size="18">Compartilhado</text>
+    <path d="M564 444L573 453L582 444" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <text x="608" y="419" fill="#FFFFFF" font-family="Segoe UI, Arial, sans-serif" font-size="21">🔒 Tarefa</text>
+    <rect x="606" y="424" width="180" height="50" fill="#07090D" stroke="#D7D8DA" stroke-opacity="0.4"/>
+    <text x="620" y="456" fill="#FFFFFF" fill-opacity="0.92" font-family="Segoe UI, Arial, sans-serif" font-size="18">Sequência</text>
+    <path d="M754 444L763 453L772 444" stroke="#FFFFFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <path d="M768 48L790 70" stroke="#FF4747" stroke-width="5.4" stroke-linecap="round"/>
+  <path d="M790 48L768 70" stroke="#FF4747" stroke-width="5.4" stroke-linecap="round"/>
+</svg>
