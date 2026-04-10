@@ -3,50 +3,9 @@ import { Link } from "@/lib/react-router-compat"
 import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
 import { useCharacter } from "../context/character-context.jsx"
+import { useI18n } from "../context/i18n-context.jsx"
 import { questsService } from "../services/quests-service.js"
 import { tasksService } from "../services/tasks-service.js"
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("pt-BR").format(Number(value) || 0)
-}
-
-function formatTaskType(value) {
-  const map = {
-    item_delivery: "Entrega de itens",
-    defeat: "Derrotar",
-    capture: "Capturar",
-  }
-
-  return map[value] || value || "—"
-}
-
-function formatContinent(value) {
-  const map = {
-    kanto: "Kanto",
-    johto: "Johto",
-    orange_islands: "Ilhas Laranjas",
-    outland: "Outland",
-    nightmare_world: "Nightmare World",
-    orre: "Orre",
-  }
-
-  return map[value] || value || "—"
-}
-
-function formatDate(value) {
-  if (!value) return "—"
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return "—"
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date)
-}
 
 function DashboardMetricCard({ label, value, helper, tone = "default" }) {
   return (
@@ -99,6 +58,28 @@ function DashboardList({ items, renderItem }) {
 
 export default function HomePage() {
   const { activeCharacter } = useCharacter()
+  const { t, locale } = useI18n()
+
+  const formatNumber = (value) => new Intl.NumberFormat(locale).format(Number(value) || 0)
+  const formatTaskType = (value) => {
+    const map = {
+      item_delivery: t("tasks.type.itemDelivery"),
+      defeat: t("tasks.type.defeat"),
+      capture: t("tasks.type.capture"),
+      outro: t("tasks.type.other"),
+    }
+    return map[value] || value || "—"
+  }
+  const formatContinent = (value) => t(`continents.${value || "all"}`) || value || "—"
+  const formatDate = (value) => {
+    if (!value) return "—"
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "—"
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(date)
+  }
 
   const [dashboardData, setDashboardData] = useState({
     tasks: [],
@@ -139,8 +120,7 @@ export default function HomePage() {
         })
       } catch (err) {
         if (!isMounted) return
-
-        setError(err.message || "Não foi possível carregar a visão geral do personagem.")
+        setError(err.message || t("dashboard.heroWithoutCharacter"))
       } finally {
         if (isMounted) {
           setIsLoading(false)
@@ -153,7 +133,7 @@ export default function HomePage() {
     return () => {
       isMounted = false
     }
-  }, [activeCharacter?.id])
+  }, [activeCharacter?.id, t])
 
   const overview = useMemo(() => {
     const activeTasks = dashboardData.tasks.filter((task) => !task.is_completed)
@@ -182,48 +162,48 @@ export default function HomePage() {
         <div className="dashboard-page__hero dashboard-page__hero--overview">
           <div className="dashboard-page__hero-content dashboard-page__hero-content--overview">
             <div className="dashboard-page__hero-copy">
-              <span className="dashboard-page__eyebrow">Personagem ativo</span>
+              <span className="dashboard-page__eyebrow">{t("dashboard.activeCharacter")}</span>
               <h2 className="dashboard-page__title">
-                {activeCharacter ? activeCharacter.nome : "Nenhum personagem selecionado"}
+                {activeCharacter ? activeCharacter.nome : t("dashboard.noCharacterSelected")}
               </h2>
               <p className="dashboard-page__description">
                 {activeCharacter
-                  ? `Tudo no PXG Files está vinculado ao personagem ${activeCharacter.nome}. Aqui você já enxerga hunts recentes, pendências de tasks e quests, além do impacto geral do personagem.`
-                  : "Selecione um personagem para liberar o dashboard principal."}
+                  ? t("dashboard.heroWithCharacter", { name: activeCharacter.nome })
+                  : t("dashboard.heroWithoutCharacter")}
               </p>
             </div>
 
             {activeCharacter ? (
               <div className="dashboard-page__hero-aside">
                 <div className="dashboard-page__identity-card">
-                  <span className="dashboard-page__identity-label">Resumo rápido</span>
+                  <span className="dashboard-page__identity-label">{t("dashboard.quickSummary")}</span>
                   <strong className="dashboard-page__identity-name">{activeCharacter.nome}</strong>
 
                   <div className="dashboard-page__identity-grid">
                     <div className="dashboard-page__identity-item">
-                      <span>Clã</span>
+                      <span>{t("dashboard.clan")}</span>
                       <strong>{activeCharacter.cla}</strong>
                     </div>
                     <div className="dashboard-page__identity-item">
-                      <span>Nível</span>
+                      <span>{t("dashboard.level")}</span>
                       <strong>{formatNumber(activeCharacter.nivel)}</strong>
                     </div>
                     <div className="dashboard-page__identity-item">
-                      <span>Tasks concluídas</span>
+                      <span>{t("dashboard.completedTasks")}</span>
                       <strong>{formatNumber(overview.completedTasks.length)}</strong>
                     </div>
                     <div className="dashboard-page__identity-item">
-                      <span>Quests concluídas</span>
+                      <span>{t("dashboard.completedQuests")}</span>
                       <strong>{formatNumber(overview.completedQuests.length)}</strong>
                     </div>
                   </div>
 
                   <div className="dashboard-page__hero-actions">
                     <Link className="dashboard-page__button dashboard-page__button--primary" to="/tasks">
-                      Abrir tasks
+                      {t("dashboard.openTasks")}
                     </Link>
                     <Link className="dashboard-page__button dashboard-page__button--ghost" to="/hunts">
-                      Abrir hunts
+                      {t("dashboard.openHunts")}
                     </Link>
                   </div>
                 </div>
@@ -236,39 +216,39 @@ export default function HomePage() {
 
         <div className="dashboard-page__metrics-grid">
           <DashboardMetricCard
-            label="Tasks pendentes"
+            label={t("dashboard.pendingTasks")}
             value={isLoading ? "..." : formatNumber(overview.activeTasks.length)}
-            helper="O que ainda falta concluir no personagem ativo."
+            helper={t("dashboard.pendingTasksHelper")}
             tone="default"
           />
           <DashboardMetricCard
-            label="Quests pendentes"
+            label={t("dashboard.pendingQuests")}
             value={isLoading ? "..." : formatNumber(overview.activeQuests.length)}
-            helper="Quests em aberto vinculadas ao personagem atual."
+            helper={t("dashboard.pendingQuestsHelper")}
             tone="default"
           />
           <DashboardMetricCard
-            label="Tasks concluídas"
+            label={t("dashboard.completedTasks")}
             value={isLoading ? "..." : formatNumber(overview.completedTasks.length)}
-            helper="Total já concluído para o personagem ativo."
+            helper={t("dashboard.completedTasksHelper")}
             tone="positive"
           />
           <DashboardMetricCard
-            label="Quests concluídas"
+            label={t("dashboard.completedQuests")}
             value={isLoading ? "..." : formatNumber(overview.completedQuests.length)}
-            helper="Progresso acumulado nas quests do personagem."
+            helper={t("dashboard.completedQuestsHelper")}
             tone="default"
           />
         </div>
 
         <div className="dashboard-page__content-grid">
           <DashboardSection
-            title="Tasks pendentes"
-            actionLabel="Abrir tasks"
+            title={t("dashboard.pendingTasks")}
+            actionLabel={t("dashboard.openTasks")}
             actionTo="/tasks"
           >
             {isLoading ? (
-              <div className="dashboard-page__loading-state">Carregando tasks...</div>
+              <div className="dashboard-page__loading-state">{t("dashboard.loadingTasks")}</div>
             ) : pendingTasks.length ? (
               <DashboardList
                 items={pendingTasks}
@@ -277,21 +257,21 @@ export default function HomePage() {
                     <div className="dashboard-page__list-card-main">
                       <strong className="dashboard-page__list-card-title">{task.name}</strong>
                       <span className="dashboard-page__list-card-subtitle">
-                        {task.description || "Sem descrição cadastrada."}
+                        {task.description || t("dashboard.noDescription")}
                       </span>
                     </div>
 
                     <div className="dashboard-page__list-card-meta">
                       <div>
-                        <span>Tipo</span>
+                        <span>{t("dashboard.type")}</span>
                         <strong>{formatTaskType(task.task_type)}</strong>
                       </div>
                       <div>
-                        <span>Continente</span>
+                        <span>{t("dashboard.continent")}</span>
                         <strong>{formatContinent(task.continent)}</strong>
                       </div>
                       <div>
-                        <span>Nível</span>
+                        <span>{t("dashboard.level")}</span>
                         <strong>{formatNumber(task.min_level)}</strong>
                       </div>
                     </div>
@@ -300,21 +280,21 @@ export default function HomePage() {
               />
             ) : (
               <DashboardEmptyState
-                title="Nenhuma task pendente"
-                description="As tasks ativas aparecem aqui automaticamente."
-                ctaLabel="Ativar task"
+                title={t("dashboard.noPendingTasks")}
+                description={t("dashboard.noPendingTasksDescription")}
+                ctaLabel={t("dashboard.activateTask")}
                 ctaTo="/tasks"
               />
             )}
           </DashboardSection>
 
           <DashboardSection
-            title="Quests pendentes"
-            actionLabel="Abrir quests"
+            title={t("dashboard.pendingQuests")}
+            actionLabel={t("dashboard.openTasks").replace("tasks", "quests")}
             actionTo="/quests"
           >
             {isLoading ? (
-              <div className="dashboard-page__loading-state">Carregando quests...</div>
+              <div className="dashboard-page__loading-state">{t("dashboard.loadingQuests")}</div>
             ) : pendingQuests.length ? (
               <DashboardList
                 items={pendingQuests}
@@ -323,21 +303,21 @@ export default function HomePage() {
                     <div className="dashboard-page__list-card-main">
                       <strong className="dashboard-page__list-card-title">{quest.name}</strong>
                       <span className="dashboard-page__list-card-subtitle">
-                        {quest.description || "Sem descrição cadastrada."}
+                        {quest.description || t("dashboard.noDescription")}
                       </span>
                     </div>
 
                     <div className="dashboard-page__list-card-meta">
                       <div>
-                        <span>Continente</span>
+                        <span>{t("dashboard.continent")}</span>
                         <strong>{formatContinent(quest.continent)}</strong>
                       </div>
                       <div>
-                        <span>Nível</span>
+                        <span>{t("dashboard.level")}</span>
                         <strong>{formatNumber(quest.min_level)}</strong>
                       </div>
                       <div>
-                        <span>Ativada em</span>
+                        <span>{t("dashboard.activatedAt")}</span>
                         <strong>{formatDate(quest.activated_at)}</strong>
                       </div>
                     </div>
@@ -346,55 +326,46 @@ export default function HomePage() {
               />
             ) : (
               <DashboardEmptyState
-                title="Nenhuma quest pendente"
-                description="Quando houver quests ativas em aberto, elas ficam visíveis aqui."
-                ctaLabel="Ativar quest"
+                title={t("dashboard.noPendingQuests")}
+                description={t("dashboard.noPendingQuestsDescription")}
+                ctaLabel={t("dashboard.activateQuest")}
                 ctaTo="/quests"
               />
             )}
           </DashboardSection>
 
           <DashboardSection
-            title="Diárias e próximos passos"
-            actionLabel="Abrir diárias"
+            title={t("dashboard.nextSteps")}
+            actionLabel={t("dashboard.openDailies")}
             actionTo="/diarias"
           >
             <div className="dashboard-page__next-steps">
               <article className="dashboard-page__next-step-card">
-                <span className="dashboard-page__next-step-tag">Já útil agora</span>
-                <strong>Home virou dashboard real</strong>
-                <p>
-                  Esta página já puxa tasks e quests reais do personagem ativo, em vez de ficar apenas
-                  como tela de apresentação.
-                </p>
+                <span className="dashboard-page__next-step-tag">{t("dashboard.usefulNow")}</span>
+                <strong>{t("dashboard.realHome")}</strong>
+                <p>{t("dashboard.realHomeDescription")}</p>
               </article>
 
               <article className="dashboard-page__next-step-card">
-                <span className="dashboard-page__next-step-tag">Próxima evolução</span>
-                <strong>Módulo de diárias</strong>
-                <p>
-                  O próximo passo mais forte é transformar a aba de diárias em checklist funcional com
-                  persistência por personagem.
-                </p>
+                <span className="dashboard-page__next-step-tag">{t("dashboard.nextEvolution")}</span>
+                <strong>{t("dashboard.dailiesModule")}</strong>
+                <p>{t("dashboard.dailiesModuleDescription")}</p>
               </article>
 
               <article className="dashboard-page__next-step-card">
-                <span className="dashboard-page__next-step-tag">Estrutura</span>
-                <strong>Limpeza de legado</strong>
-                <p>
-                  Ainda vale remover arquivos mortos e diretórios pesados do projeto para manutenção
-                  ficar mais limpa e segura.
-                </p>
+                <span className="dashboard-page__next-step-tag">{t("dashboard.structure")}</span>
+                <strong>{t("dashboard.legacyCleanup")}</strong>
+                <p>{t("dashboard.legacyCleanupDescription")}</p>
               </article>
             </div>
           </DashboardSection>
         </div>
 
         <div className="dashboard-page__footer-note">
-          <span>Tasks rastreadas:</span>
+          <span>{t("dashboard.trackedTasks")}:</span>
           <strong>{isLoading ? "..." : formatNumber(overview.trackedTasks)}</strong>
           <span>•</span>
-          <span>Quests rastreadas:</span>
+          <span>{t("dashboard.trackedQuests")}:</span>
           <strong>{isLoading ? "..." : formatNumber(overview.trackedQuests)}</strong>
         </div>
       </section>

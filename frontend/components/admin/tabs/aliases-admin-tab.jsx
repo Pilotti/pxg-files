@@ -43,7 +43,6 @@ export default function AliasesAdminTab({ showError, showSuccess }) {
       const names = await adminRequest("/admin/hunt-npc-prices/names")
       setNpcItemNames(Array.isArray(names) ? names : [])
     } catch {
-      // Mantem silencioso; a aba continua utilizável com input livre.
     }
   }, [])
 

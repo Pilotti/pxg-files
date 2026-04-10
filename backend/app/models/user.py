@@ -12,6 +12,7 @@ class User(Base):
     display_name = Column(String, nullable=False)
     password_hash = Column(String, nullable=False)
     refresh_token = Column(String, nullable=True)
+    preferred_language = Column(String(8), nullable=False, default="pt", server_default="pt")
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(

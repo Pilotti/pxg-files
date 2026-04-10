@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
@@ -20,5 +22,10 @@ class UserResponse(BaseModel):
     id: int
     display_name: str
     email: EmailStr
+    preferred_language: Literal["pt", "en", "es", "pl"] = "pt"
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class UserPreferencesUpdate(BaseModel):
+    preferred_language: Literal["pt", "en", "es", "pl"]

@@ -119,7 +119,6 @@ export function CharacterProvider({ children }) {
       return data
     } catch (error) {
       if (mountedRef.current && requestId === requestIdRef.current) {
-        console.error("Erro ao carregar personagens:", error)
         setCharacters([])
         setActiveCharacterIdState(null)
         persistActiveCharacterId(null)
@@ -154,9 +153,7 @@ export function CharacterProvider({ children }) {
     }
 
     setHasResolvedCharacters(false)
-    loadCharacters().catch(() => {
-      // o tratamento visual fica nas rotas; aqui só garantimos resolução do estado
-    })
+    loadCharacters().catch(() => {})
   }, [isAuthenticated, isBootstrapping, loadCharacters, resetCharactersState])
 
   const setActiveCharacterId = useCallback((id) => {

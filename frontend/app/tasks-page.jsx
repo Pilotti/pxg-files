@@ -4,34 +4,17 @@ import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
 import ConfirmActionModal from "../components/confirm-action-modal.jsx"
 import { useCharacter } from "../context/character-context.jsx"
+import { useI18n } from "../context/i18n-context.jsx"
 import { apiRequest } from "../services/api.js"
 import { readAppPreferences } from "../services/app-preferences.js"
 import "../styles/tasks-page.css"
 
-const taskTypes = [
-  { value: "", label: "Todos os tipos" },
-  { value: "item_delivery", label: "Entrega de itens" },
-  { value: "defeat", label: "Derrotar" },
-  { value: "capture", label: "Capturar" },
-  { value: "outro", label: "Outro" },
-]
-
-const continents = [
-  { value: "", label: "Todos os continentes" },
-  { value: "kanto", label: "Kanto" },
-  { value: "johto", label: "Johto" },
-  { value: "orange_islands", label: "Ilhas Laranjas" },
-  { value: "outland", label: "Outland" },
-  { value: "nightmare_world", label: "Nightmare World" },
-  { value: "orre", label: "Orre" },
-]
-
-function formatTaskType(value) {
+function formatTaskType(value, t) {
   const map = {
-    item_delivery: "Entrega de itens",
-    defeat: "Derrotar",
-    capture: "Capturar",
-    outro: "Outro",
+    item_delivery: t("tasks.type.itemDelivery"),
+    defeat: t("tasks.type.defeat"),
+    capture: t("tasks.type.capture"),
+    outro: t("tasks.type.other"),
   }
 
   if (Array.isArray(value)) {
@@ -41,10 +24,10 @@ function formatTaskType(value) {
   return map[value] || value
 }
 
-function getTaskTypeMeta(value) {
+function getTaskTypeMeta(value, t) {
   if (value === "defeat") {
     return {
-      label: "Derrotar",
+      label: t("tasks.type.defeat"),
       icon: "☠",
       className: "tasks-page__type-chip tasks-page__type-chip--defeat",
     }
@@ -52,7 +35,7 @@ function getTaskTypeMeta(value) {
 
   if (value === "item_delivery") {
     return {
-      label: "Entrega",
+      label: t("tasks.type.deliveryShort"),
       icon: "✦",
       className: "tasks-page__type-chip tasks-page__type-chip--delivery",
     }
@@ -60,7 +43,7 @@ function getTaskTypeMeta(value) {
 
   if (value === "capture") {
     return {
-      label: "Captura",
+      label: t("tasks.type.captureShort"),
       icon: "◓",
       className: "tasks-page__type-chip tasks-page__type-chip--capture",
     }
@@ -68,30 +51,21 @@ function getTaskTypeMeta(value) {
 
   if (value === "outro") {
     return {
-      label: "Outro",
+      label: t("tasks.type.otherShort"),
       icon: "▪",
       className: "tasks-page__type-chip tasks-page__type-chip--outro",
     }
   }
 
   return {
-    label: formatTaskType(value),
+    label: formatTaskType(value, t),
     icon: "•",
     className: "tasks-page__type-chip",
   }
 }
 
-function formatContinent(value) {
-  const map = {
-    kanto: "Kanto",
-    johto: "Johto",
-    orange_islands: "Ilhas Laranjas",
-    outland: "Outland",
-    nightmare_world: "Nightmare World",
-    orre: "Orre",
-  }
-
-  return map[value] || value
+function formatContinent(value, t) {
+  return t(`continents.${value || "all"}`) || value
 }
 
 function formatCity(value) {
@@ -104,13 +78,13 @@ function formatCity(value) {
     .join(" ")
 }
 
-function safeText(value, fallback = "Nao informado") {
+function safeText(value, fallback = "") {
   const content = String(value || "").trim()
   return content || fallback
 }
 
-function getTaskCardName(task) {
-  return safeText(task?.npc_name || task?.name)
+function getTaskCardName(task, fallback) {
+  return safeText(task?.npc_name || task?.name, fallback)
 }
 
 function parseRewardText(rewardText) {
@@ -138,10 +112,10 @@ function parseRewardText(rewardText) {
   return result
 }
 
-function RewardDisplay({ rewardText }) {
+function RewardDisplay({ rewardText, t }) {
   const reward = parseRewardText(rewardText)
   if (!reward) {
-    return <strong>{safeText(rewardText)}</strong>
+    return <strong>{safeText(rewardText, t("common.notProvided"))}</strong>
   }
 
   return (
@@ -173,7 +147,7 @@ function useDebouncedValue(value, delay = 250) {
   return debounced
 }
 
-function Toast({ feedback, onClose }) {
+function Toast({ feedback, onClose, t }) {
   if (!feedback) return null
 
   return (
@@ -186,7 +160,7 @@ function Toast({ feedback, onClose }) {
     >
       <div className="tasks-toast__content">
         <strong className="tasks-toast__title">
-          {feedback.type === "success" ? "Sucesso" : "Erro"}
+          {feedback.type === "success" ? t("common.success") : t("common.error")}
         </strong>
         <span className="tasks-toast__message">{feedback.message}</span>
       </div>
@@ -195,7 +169,7 @@ function Toast({ feedback, onClose }) {
         type="button"
         className="tasks-toast__close"
         onClick={onClose}
-        aria-label="Fechar aviso"
+        aria-label={t("common.close")}
       >
         ✕
       </button>
@@ -222,7 +196,26 @@ function TaskCardSkeleton() {
 export default function TasksPage() {
   const CATALOG_PAGE_SIZE = 24
   const { activeCharacter } = useCharacter()
+  const { t, locale } = useI18n()
   const preferences = useMemo(() => readAppPreferences(), [])
+
+  const taskTypes = useMemo(() => ([
+    { value: "", label: t("tasks.type.all") },
+    { value: "item_delivery", label: t("tasks.type.itemDelivery") },
+    { value: "defeat", label: t("tasks.type.defeat") },
+    { value: "capture", label: t("tasks.type.capture") },
+    { value: "outro", label: t("tasks.type.other") },
+  ]), [t])
+
+  const continents = useMemo(() => ([
+    { value: "", label: t("continents.all") },
+    { value: "kanto", label: t("continents.kanto") },
+    { value: "johto", label: t("continents.johto") },
+    { value: "orange_islands", label: t("continents.orange_islands") },
+    { value: "outland", label: t("continents.outland") },
+    { value: "nightmare_world", label: t("continents.nightmare_world") },
+    { value: "orre", label: t("continents.orre") },
+  ]), [t])
 
   const [tasks, setTasks] = useState([])
   const [catalog, setCatalog] = useState([])
@@ -259,22 +252,21 @@ export default function TasksPage() {
   const debouncedCatalogFilters = useDebouncedValue(catalogFilters, 250)
   const debouncedListFilters = useDebouncedValue(listFilters, 150)
 
-  // Usa city SEM debounce para carregar o catálogo rápido
   const catalogFiltersForLoading = useMemo(() => ({
     ...debouncedCatalogFilters,
     city: catalogFilters.city,
   }), [debouncedCatalogFilters, catalogFilters.city])
 
-  async function handleCopyCoordinate(rawCoordinate) {
+  const handleCopyCoordinate = useCallback(async (rawCoordinate) => {
     const coordinate = String(rawCoordinate || "").trim()
     if (!coordinate) return
     try {
       await navigator.clipboard.writeText(coordinate)
-      setFeedback({ type: "success", message: `Coordenada copiada: ${coordinate}` })
+      setFeedback({ type: "success", message: t("tasks.coordCopied", { coordinate }) })
     } catch {
-      setFeedback({ type: "error", message: "Nao foi possivel copiar a coordenada." })
+      setFeedback({ type: "error", message: t("tasks.coordCopyError") })
     }
-  }
+  }, [t])
 
   useEffect(() => {
     if (!feedback) return
@@ -290,9 +282,9 @@ export default function TasksPage() {
     return [...tasks].sort((a, b) => {
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
       if (a.min_level !== b.min_level) return a.min_level - b.min_level
-      return a.name.localeCompare(b.name, "pt-BR")
+      return a.name.localeCompare(b.name, locale)
     })
-  }, [tasks])
+  }, [tasks, locale])
 
   const activeCitiesOptions = useMemo(() => {
     const pendingTasks = sortedTasks.filter((task) => !task.is_completed)
@@ -304,13 +296,12 @@ export default function TasksPage() {
     )
 
     return Array.from(citySet)
-      .sort((a, b) => a.localeCompare(b, "pt-BR"))
+      .sort((a, b) => a.localeCompare(b, locale))
       .map((city) => ({ value: city, label: formatCity(city) }))
-  }, [sortedTasks])
+  }, [sortedTasks, locale])
 
   useEffect(() => {
     setListFilters((prev) => {
-      // Keep "all cities" as default and only clear invalid selections.
       if (!prev.city) return prev
 
       const hasSelectedCity = activeCitiesOptions.some((city) => city.value === prev.city)
@@ -329,9 +320,9 @@ export default function TasksPage() {
     )
 
     return Array.from(citySet)
-      .sort((a, b) => a.localeCompare(b, "pt-BR"))
+      .sort((a, b) => a.localeCompare(b, locale))
       .map((city) => ({ value: city, label: formatCity(city) }))
-  }, [catalog])
+  }, [catalog, locale])
 
   useEffect(() => {
     if (!isCatalogOpen) {
@@ -354,9 +345,9 @@ export default function TasksPage() {
       const levelDiff = (a.min_level || 0) - (b.min_level || 0)
       if (levelDiff !== 0) return levelDiff
 
-      return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR")
+      return String(a.name || "").localeCompare(String(b.name || ""), locale)
     })
-  }, [catalog, showUnavailableCatalogTasks])
+  }, [catalog, showUnavailableCatalogTasks, locale])
 
   const loadTasks = useCallback(async () => {
     if (!activeCharacter?.id) return
@@ -369,12 +360,12 @@ export default function TasksPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível carregar as tasks.",
+        message: err.message || t("tasks.loadError"),
       })
     } finally {
       setIsLoadingTasks(false)
     }
-  }, [activeCharacter?.id])
+  }, [activeCharacter?.id, t])
 
   const buildCatalogQuery = useCallback((nextFilters, nextPage = catalogPage) => {
     const params = new URLSearchParams()
@@ -417,7 +408,7 @@ export default function TasksPage() {
 
       setFeedback({
         type: "success",
-        message: "Task voltou para pendente.",
+        message: t("tasks.uncompleteSuccess"),
       })
 
       await Promise.all([
@@ -427,7 +418,7 @@ export default function TasksPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível desconcluir a task.",
+        message: err.message || t("tasks.uncompleteError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -456,12 +447,12 @@ export default function TasksPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível carregar o catálogo de tasks.",
+        message: err.message || t("tasks.catalogLoadError"),
       })
     } finally {
       setIsLoadingCatalog(false)
     }
-  }, [activeCharacter?.id, buildCatalogQuery, catalogFiltersForLoading, catalogPage])
+  }, [activeCharacter?.id, buildCatalogQuery, catalogFiltersForLoading, catalogPage, t])
 
   useEffect(() => {
     if (!activeCharacter?.id) {
@@ -505,14 +496,14 @@ export default function TasksPage() {
 
       setFeedback({
         type: "success",
-        message: "Task ativada com sucesso.",
+        message: t("tasks.activateSuccess"),
       })
 
       await Promise.all([loadTasks(), loadCatalog(catalogFiltersForLoading)])
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível ativar a task.",
+        message: err.message || t("tasks.activateError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -533,7 +524,7 @@ export default function TasksPage() {
 
       setFeedback({
         type: "success",
-        message: "Task concluída com sucesso.",
+        message: t("tasks.completeSuccess"),
       })
 
       await Promise.all([
@@ -543,7 +534,7 @@ export default function TasksPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível concluir a task.",
+        message: err.message || t("tasks.completeError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -564,7 +555,7 @@ export default function TasksPage() {
 
       setFeedback({
         type: "success",
-        message: "Task removida da lista ativa.",
+        message: t("tasks.removeSuccess"),
       })
       setRemoveConfirm(null)
 
@@ -575,7 +566,7 @@ export default function TasksPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível remover a task.",
+        message: err.message || t("tasks.removeError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -653,18 +644,18 @@ export default function TasksPage() {
 
   return (
     <AppShell>
-      <Toast feedback={feedback} onClose={() => setFeedback(null)} />
+      <Toast feedback={feedback} onClose={() => setFeedback(null)} t={t} />
 
       <ConfirmActionModal
         open={isConfirmingRemove}
-        title="Remover task ativa?"
+        title={t("tasks.modal.removeTitle")}
         description={
           removeConfirm
-            ? `A task "${removeConfirm.name}" será removida da lista ativa deste personagem. Você poderá ativá-la novamente depois.`
+            ? t("tasks.modal.removeDescription", { name: removeConfirm.name })
             : ""
         }
-        confirmLabel="Remover task"
-        cancelLabel="Cancelar"
+        confirmLabel={t("tasks.modal.removeConfirm")}
+        cancelLabel={t("common.cancel")}
         confirmTone="danger"
         isLoading={processingTemplateId === removeConfirm?.templateId}
         onCancel={() => {
@@ -682,7 +673,7 @@ export default function TasksPage() {
       <section className="tasks-page">
         <div className="tasks-page__header">
           <div>
-            <h2 className="tasks-page__title">Tasks ativas</h2>
+            <h2 className="tasks-page__title">{t("tasks.title")}</h2>
           </div>
 
           <button
@@ -691,23 +682,23 @@ export default function TasksPage() {
             onClick={openCatalog}
             disabled={!activeCharacter}
           >
-            Nova Task
+            {t("tasks.newTask")}
           </button>
         </div>
 
         <div className="tasks-page__stats">
           <div className="tasks-page__stat-card">
-            <span className="tasks-page__stat-label">Total</span>
+            <span className="tasks-page__stat-label">{t("tasks.total")}</span>
             <strong className="tasks-page__stat-value">{stats.total}</strong>
           </div>
 
           <div className="tasks-page__stat-card">
-            <span className="tasks-page__stat-label">Pendentes</span>
+            <span className="tasks-page__stat-label">{t("tasks.pending")}</span>
             <strong className="tasks-page__stat-value">{stats.pending}</strong>
           </div>
 
           <div className="tasks-page__stat-card tasks-page__stat-card--success">
-            <span className="tasks-page__stat-label">Concluídas</span>
+            <span className="tasks-page__stat-label">{t("tasks.completed")}</span>
             <strong className="tasks-page__stat-value">{stats.completed}</strong>
           </div>
         </div>
@@ -716,7 +707,7 @@ export default function TasksPage() {
           <div className="tasks-page__filters-grid">
             <input
               className="tasks-page__input"
-              placeholder="Buscar task ativa"
+              placeholder={t("tasks.searchActive")}
               value={listFilters.search}
               onChange={(e) =>
                 setListFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -730,9 +721,9 @@ export default function TasksPage() {
                 setListFilters((prev) => ({ ...prev, status: e.target.value }))
               }
             >
-              <option value="">Todos os status</option>
-              <option value="pending">Pendentes</option>
-              <option value="completed">Concluídas</option>
+              <option value="">{t("tasks.allStatus")}</option>
+              <option value="pending">{t("tasks.status.pending")}</option>
+              <option value="completed">{t("tasks.status.completed")}</option>
             </select>
 
             <select
@@ -770,7 +761,7 @@ export default function TasksPage() {
                 setListFilters((prev) => ({ ...prev, city: e.target.value }))
               }
             >
-              <option value="">Todas as cidades</option>
+              <option value="">{t("tasks.allCities")}</option>
               {activeCitiesOptions.map((city) => (
                 <option key={city.value} value={city.value}>
                   {city.label}
@@ -784,15 +775,15 @@ export default function TasksPage() {
           <div className="tasks-page__filters-summary">
             <span className="tasks-page__filters-result">
               {showCompletedTasks
-                ? `${hiddenCompletedCount} tasks concluídas visíveis no fim da lista.`
-                : `${hiddenCompletedCount} tasks concluídas ocultas.`}
+                ? t("tasks.visibleCompleted", { count: hiddenCompletedCount })
+                : t("tasks.hiddenCompleted", { count: hiddenCompletedCount })}
             </span>
             <button
               type="button"
               className="tasks-page__ghost-button"
               onClick={() => setShowCompletedTasks((prev) => !prev)}
             >
-              {showCompletedTasks ? "Ocultar concluídas" : "Desocultar concluídas"}
+              {showCompletedTasks ? t("tasks.hideCompleted") : t("tasks.showCompleted")}
             </button>
           </div>
         )}
@@ -806,7 +797,7 @@ export default function TasksPage() {
             </>
           ) : !filteredTasks.length ? (
             <div className="tasks-page__empty tasks-page__empty--full">
-              Nenhuma task encontrada para os filtros atuais.
+              {t("tasks.noneFound")}
             </div>
           ) : (
             filteredTasks.map((task, index) => {
@@ -825,7 +816,7 @@ export default function TasksPage() {
                 >
                   <div className="tasks-page__card-main">
                     <div className="tasks-page__card-top">
-                      <strong className="tasks-page__card-title">{getTaskCardName(task)}</strong>
+                      <strong className="tasks-page__card-title">{getTaskCardName(task, t("common.notProvided"))}</strong>
 
                       <span
                         className={
@@ -834,7 +825,7 @@ export default function TasksPage() {
                             : "tasks-page__status tasks-page__status--pending"
                         }
                       >
-                        {task.is_completed ? "Concluída" : "Pendente"}
+                        {task.is_completed ? t("tasks.status.completedShort") : t("tasks.status.pendingShort")}
                       </span>
                     </div>
 
@@ -844,14 +835,14 @@ export default function TasksPage() {
                         className="tasks-page__coord-button"
                         onClick={() => handleCopyCoordinate(task.coordinate)}
                         disabled={!String(task.coordinate || "").trim()}
-                        title={String(task.coordinate || "").trim() ? "Clique para copiar" : "Sem coordenada"}
+                        title={String(task.coordinate || "").trim() ? t("tasks.clickToCopy") : t("tasks.noCoordinate")}
                       >
-                        <strong>{safeText(task.coordinate)}</strong>
+                        <strong>{safeText(task.coordinate, t("common.notProvided"))}</strong>
                       </button>
                       <span className="tasks-page__task-location-item">
                         <span className="tasks-page__task-location-stack">
-                          <strong>{safeText(task.city)}</strong>
-                          <span className="tasks-page__task-location-secondary">{formatContinent(task.continent)}</span>
+                          <strong>{safeText(task.city, t("common.notProvided"))}</strong>
+                          <span className="tasks-page__task-location-secondary">{formatContinent(task.continent, t)}</span>
                         </span>
                       </span>
                     </div>
@@ -859,11 +850,11 @@ export default function TasksPage() {
                     <div className="tasks-page__task-details">
                       {task.description ? <p className="tasks-page__card-description">{task.description}</p> : null}
                       <span>
-                        Tipo:
+                        {t("dashboard.type")}:
                         <strong>
                           <span className="tasks-page__types-group">
                             {typeArray.map((type) => {
-                              const typeMeta = getTaskTypeMeta(type)
+                              const typeMeta = getTaskTypeMeta(type, t)
                               return (
                                 <span key={type} className={typeMeta.className}>
                                   <span aria-hidden="true" className="tasks-page__type-icon">{typeMeta.icon}</span>
@@ -874,9 +865,9 @@ export default function TasksPage() {
                           </span>
                         </strong>
                       </span>
-                      <span>Nivel minimo: <strong>{task.min_level}</strong></span>
-                      {task.continent === "nightmare_world" && task.nw_level !== null && task.nw_level !== undefined ? <span>NW Level: <strong>{task.nw_level}</strong></span> : null}
-                      <span>Recompensa: <RewardDisplay rewardText={task.reward_text} /></span>
+                      <span>{t("tasks.minLevel")}: <strong>{task.min_level}</strong></span>
+                      {task.continent === "nightmare_world" && task.nw_level !== null && task.nw_level !== undefined ? <span>{t("tasks.nightmareLevel")}: <strong>{task.nw_level}</strong></span> : null}
+                      <span>{t("tasks.reward")}: <RewardDisplay rewardText={task.reward_text} t={t} /></span>
                     </div>
                   </div>
 
@@ -890,7 +881,7 @@ export default function TasksPage() {
                           onClick={() => handleCompleteTask(task.template_id)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? "Salvando..." : "Concluir"}
+                          {isProcessing ? t("tasks.saving") : t("tasks.complete")}
                         </button>
 
                         <button
@@ -900,7 +891,7 @@ export default function TasksPage() {
                           onClick={() => requestRemoveTask(task)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? "Salvando..." : "Remover"}
+                          {isProcessing ? t("tasks.saving") : t("tasks.removeTask")}
                         </button>
                       </>
                     ) : (
@@ -912,11 +903,11 @@ export default function TasksPage() {
                           onClick={() => handleUncompleteTask(task.template_id)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? "Salvando..." : "Desconcluir"}
+                          {isProcessing ? t("tasks.saving") : t("tasks.uncomplete")}
                         </button>
 
                         <div className="tasks-page__completed-note">
-                          Task concluída.
+                          {t("tasks.completedNote")}
                         </div>
                       </>
                     )}
@@ -947,15 +938,15 @@ export default function TasksPage() {
                 borderRadius: "50%",
                 animation: "spin 1s linear infinite",
               }} />
-              <p style={{ color: "#fff", fontSize: "18px" }}>Carregando tasks...</p>
+              <p style={{ color: "#fff", fontSize: "18px" }}>{t("tasks.catalog.loading")}</p>
             </div>
           ) : (
           <div className="tasks-catalog-modal">
             <div className="tasks-catalog-modal__header">
               <div>
-                <h2 className="tasks-catalog-modal__title">Nova Task</h2>
+                <h2 className="tasks-catalog-modal__title">{t("tasks.catalog.title")}</h2>
                 <p className="tasks-catalog-modal__subtitle">
-                  Ative novas tasks para o personagem atual.
+                  {t("tasks.catalog.subtitle")}
                 </p>
               </div>
 
@@ -972,7 +963,7 @@ export default function TasksPage() {
             <div className="tasks-catalog-modal__filters">
               <input
                 className="tasks-page__input"
-                placeholder="Buscar por nome"
+                placeholder={t("tasks.catalog.searchByName")}
                 value={catalogFilters.search}
                 onChange={(e) =>
                   updateCatalogFilters({ search: e.target.value })
@@ -1014,7 +1005,7 @@ export default function TasksPage() {
                   updateCatalogFilters({ city: e.target.value })
                 }
               >
-                <option value="">Todas as cidades</option>
+                <option value="">{t("tasks.allCities")}</option>
                 {catalogCityOptions.map((city) => (
                   <option key={city.value} value={city.value}>
                     {city.label}
@@ -1025,7 +1016,7 @@ export default function TasksPage() {
               <input
                 className="tasks-page__input"
                 type="number"
-                placeholder="Nível mín."
+                placeholder={t("tasks.catalog.minLevel")}
                 value={catalogFilters.min_level}
                 onChange={(e) =>
                   updateCatalogFilters({ min_level: e.target.value })
@@ -1036,7 +1027,7 @@ export default function TasksPage() {
                 <input
                   className="tasks-page__input"
                   type="number"
-                  placeholder="NW Level"
+                  placeholder={t("tasks.nightmareLevel")}
                   min="1"
                   max="999"
                   value={catalogFilters.nw_level}
@@ -1050,8 +1041,8 @@ export default function TasksPage() {
             <div className="tasks-catalog-modal__summary">
               <span className="tasks-page__filters-result">
                 {showUnavailableCatalogTasks
-                  ? `Mostrando disponíveis, ativas e concluídas. Total filtrado: ${catalogTotal}.`
-                  : `Mostrando apenas disponíveis. Total filtrado: ${catalogTotal}.`}
+                  ? t("tasks.catalog.allVisible", { total: catalogTotal })
+                  : t("tasks.catalog.onlyAvailable", { total: catalogTotal })}
               </span>
               <button
                 type="button"
@@ -1062,16 +1053,22 @@ export default function TasksPage() {
                 }}
               >
                 {showUnavailableCatalogTasks
-                  ? "Ocultar já ativadas/concluídas"
-                  : "Desocultar já ativadas/concluídas"}
+                  ? t("tasks.catalog.hideUnavailable")
+                  : t("tasks.catalog.showUnavailable")}
               </button>
             </div>
 
             <div className="tasks-page__filters-summary">
-              <span className="tasks-page__filters-result">Página {catalogPage} de {catalogTotalPages} • {displayedCatalog.length} itens na página</span>
+              <span className="tasks-page__filters-result">
+                {t("tasks.catalog.pageStatus", {
+                  page: catalogPage,
+                  totalPages: catalogTotalPages,
+                  count: displayedCatalog.length,
+                })}
+              </span>
               <div className="tasks-page__filters-summary-actions">
-                <button type="button" className="tasks-page__ghost-button" onClick={() => setCatalogPage((prev) => Math.max(1, prev - 1))} disabled={isLoadingCatalog || catalogPage <= 1}>Anterior</button>
-                <button type="button" className="tasks-page__ghost-button" onClick={() => setCatalogPage((prev) => Math.min(catalogTotalPages, prev + 1))} disabled={isLoadingCatalog || catalogPage >= catalogTotalPages}>Próxima</button>
+                <button type="button" className="tasks-page__ghost-button" onClick={() => setCatalogPage((prev) => Math.max(1, prev - 1))} disabled={isLoadingCatalog || catalogPage <= 1}>{t("tasks.catalog.previous")}</button>
+                <button type="button" className="tasks-page__ghost-button" onClick={() => setCatalogPage((prev) => Math.min(catalogTotalPages, prev + 1))} disabled={isLoadingCatalog || catalogPage >= catalogTotalPages}>{t("tasks.catalog.next")}</button>
               </div>
             </div>
 
@@ -1085,7 +1082,7 @@ export default function TasksPage() {
                   </>
                 ) : !displayedCatalog.length ? (
                   <div className="tasks-page__empty tasks-page__empty--full">
-                    Nenhuma task encontrada para os filtros atuais.
+                    {t("tasks.noneFound")}
                   </div>
                 ) : (
                   displayedCatalog.map((task) => {
@@ -1104,7 +1101,7 @@ export default function TasksPage() {
                         <div className="tasks-page__card-main">
                           <div className="tasks-page__card-top">
                             <strong className="tasks-page__card-title">
-                              {getTaskCardName(task)}
+                              {getTaskCardName(task, t("common.notProvided"))}
                             </strong>
 
                             <span
@@ -1117,10 +1114,10 @@ export default function TasksPage() {
                               }
                             >
                               {task.status === "completed"
-                                ? "Concluída"
+                                ? t("tasks.status.completedShort")
                                 : task.status === "active"
-                                  ? "Ativa"
-                                  : "Disponível"}
+                                  ? t("tasks.status.activeShort")
+                                  : t("tasks.status.availableShort")}
                             </span>
                           </div>
 
@@ -1130,14 +1127,14 @@ export default function TasksPage() {
                               className="tasks-page__coord-button"
                               onClick={() => handleCopyCoordinate(task.coordinate)}
                               disabled={!String(task.coordinate || "").trim()}
-                              title={String(task.coordinate || "").trim() ? "Clique para copiar" : "Sem coordenada"}
+                              title={String(task.coordinate || "").trim() ? t("tasks.clickToCopy") : t("tasks.noCoordinate")}
                             >
-                              <strong>{safeText(task.coordinate)}</strong>
+                              <strong>{safeText(task.coordinate, t("common.notProvided"))}</strong>
                             </button>
                             <span className="tasks-page__task-location-item">
                               <span className="tasks-page__task-location-stack">
-                                <strong>{safeText(task.city)}</strong>
-                                <span className="tasks-page__task-location-secondary">{formatContinent(task.continent)}</span>
+                                <strong>{safeText(task.city, t("common.notProvided"))}</strong>
+                                <span className="tasks-page__task-location-secondary">{formatContinent(task.continent, t)}</span>
                               </span>
                             </span>
                           </div>
@@ -1145,11 +1142,11 @@ export default function TasksPage() {
                           <div className="tasks-page__task-details">
                             {task.description ? <p className="tasks-page__card-description">{task.description}</p> : null}
                             <span>
-                              Tipo:
+                              {t("dashboard.type")}:
                               <strong>
                                 <span className="tasks-page__types-group">
                                   {typeArray.map((type) => {
-                                    const typeMeta = getTaskTypeMeta(type)
+                                    const typeMeta = getTaskTypeMeta(type, t)
                                     return (
                                       <span key={type} className={typeMeta.className}>
                                         <span aria-hidden="true" className="tasks-page__type-icon">{typeMeta.icon}</span>
@@ -1160,9 +1157,9 @@ export default function TasksPage() {
                                 </span>
                               </strong>
                             </span>
-                            <span>Nivel minimo: <strong>{task.min_level}</strong></span>
-                            {task.continent === "nightmare_world" && task.nw_level !== null && task.nw_level !== undefined ? <span>NW Level: <strong>{task.nw_level}</strong></span> : null}
-                            <span>Recompensa: <RewardDisplay rewardText={task.reward_text} /></span>
+                            <span>{t("tasks.minLevel")}: <strong>{task.min_level}</strong></span>
+                            {task.continent === "nightmare_world" && task.nw_level !== null && task.nw_level !== undefined ? <span>{t("tasks.nightmareLevel")}: <strong>{task.nw_level}</strong></span> : null}
+                            <span>{t("tasks.reward")}: <RewardDisplay rewardText={task.reward_text} t={t} /></span>
                           </div>
                         </div>
 
@@ -1175,15 +1172,15 @@ export default function TasksPage() {
                               onClick={() => handleActivateTask(task.id)}
                               disabled={isProcessing}
                             >
-                              {isProcessing ? "Ativando..." : "Ativar"}
+                              {isProcessing ? t("tasks.catalog.activating") : t("tasks.catalog.activate")}
                             </button>
                           ) : task.status === "active" ? (
                             <div className="tasks-page__active-note">
-                              Essa task já está ativa.
+                              {t("tasks.catalog.alreadyActive")}
                             </div>
                           ) : (
                             <div className="tasks-page__completed-note">
-                              Essa task já foi concluída por este personagem.
+                              {t("tasks.catalog.alreadyCompleted")}
                             </div>
                           )}
                         </div>

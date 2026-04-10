@@ -1,7 +1,10 @@
 import { Component } from "react"
+import { I18nContext } from "@/context/i18n-context.jsx"
 import "../styles/error-boundary.css"
 
 export default class ErrorBoundary extends Component {
+  static contextType = I18nContext
+
   constructor(props) {
     super(props)
     this.state = { hasError: false }
@@ -12,7 +15,6 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("Erro não tratado na interface:", error, errorInfo)
   }
 
   handleReload = () => {
@@ -20,23 +22,22 @@ export default class ErrorBoundary extends Component {
   }
 
   render() {
+    const t = this.context?.t ?? ((key) => key)
+
     if (this.state.hasError) {
       return (
         <div className="error-boundary">
           <div className="error-boundary__card">
-            <span className="error-boundary__eyebrow">Erro inesperado</span>
-            <h1 className="error-boundary__title">A interface encontrou uma falha.</h1>
-            <p className="error-boundary__text">
-              Recarregue a aplicação para restaurar o estado. Se o problema continuar,
-              vale revisar a última alteração feita nesta tela.
-            </p>
+            <span className="error-boundary__eyebrow">{t("errorBoundary.eyebrow")}</span>
+            <h1 className="error-boundary__title">{t("errorBoundary.title")}</h1>
+            <p className="error-boundary__text">{t("errorBoundary.text")}</p>
 
             <button
               type="button"
               className="error-boundary__button"
               onClick={this.handleReload}
             >
-              Recarregar aplicação
+              {t("errorBoundary.reload")}
             </button>
           </div>
         </div>

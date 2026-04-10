@@ -8,7 +8,7 @@ export default function AdminToast({ toast, onClose }) {
         <span className="admin-toast__message">{toast.message}</span>
       </div>
 
-      <button type="button" className="admin-toast__close" onClick={onClose} aria-label="Fechar aviso">
+      <button type="button" className="admin-toast__close" onClick={onClose} aria-label="Fechar notificação">
         x
       </button>
     </div>

@@ -4,4 +4,5 @@ export const STORAGE_KEYS = {
   ADMIN_TOKEN: "pxgfiles.admin_token",
   ACTIVE_CHARACTER_ID: "pxgfiles.active_character_id",
   APP_PREFERENCES: "pxgfiles.app_preferences",
+  LANGUAGE: "pxgfiles.language",
 }

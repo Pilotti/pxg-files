@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { useNavigate } from "@/lib/react-router-compat"
 import { adminRequest, setAdminToken } from "../services/admin-api.js"
@@ -31,7 +30,7 @@ export default function AdminLoginPage() {
       setAdminToken(response.access_token)
       navigate("/admin", { replace: true })
     } catch (err) {
-      setError(err.message || "Não foi possível entrar")
+      setError(err.message || "Não foi possível entrar no painel administrativo.")
     } finally {
       setIsSubmitting(false)
     }
@@ -43,32 +42,30 @@ export default function AdminLoginPage() {
 
       <div className="admin-login-page__layout">
         <section className="admin-login-page__hero">
-          <span className="admin-login-page__eyebrow">Admin</span>
-          <h1 className="admin-login-page__title">Painel administrativo</h1>
-          <p className="admin-login-page__subtitle">
-            Acesso interno para criação, edição e governança do catálogo de tasks e quests.
-          </p>
+          <span className="admin-login-page__eyebrow">Painel administrativo</span>
+          <h1 className="admin-login-page__title">Acesse o controle do PXG Files</h1>
+          <p className="admin-login-page__subtitle">Entre com sua conta administrativa para gerenciar conteúdos, preços, usuários e estrutura do app.</p>
 
           <div className="admin-login-page__benefits">
             <div className="admin-login-page__benefit-card">
-              <strong>Catálogo controlado</strong>
-              <span>Crie e ajuste templates sem depender do cliente final.</span>
+              <strong>Catálogos centralizados</strong>
+              <span>Atualize tasks, quests, Pokémon, consumíveis e itens de OCR em um só lugar.</span>
             </div>
             <div className="admin-login-page__benefit-card">
-              <strong>Filtros rápidos</strong>
-              <span>Encontre itens por nome, continente, level e status.</span>
+              <strong>Filtros e manutenção rápida</strong>
+              <span>Encontre registros com agilidade e mantenha o conteúdo do app sempre consistente.</span>
             </div>
             <div className="admin-login-page__benefit-card">
-              <strong>Operação segura</strong>
-              <span>Área separada do restante do sistema com autenticação própria.</span>
+              <strong>Gestão segura</strong>
+              <span>Use uma área separada para administrar o sistema sem impactar o fluxo normal dos usuários.</span>
             </div>
           </div>
         </section>
 
         <section className="admin-login-page__card">
           <div className="admin-login-page__card-header">
-            <h2>Entrar</h2>
-            <p>Use suas credenciais administrativas para acessar o painel.</p>
+            <h2>Entrar no admin</h2>
+            <p>Use suas credenciais para abrir o painel administrativo.</p>
           </div>
 
           <form className="admin-login-page__form" onSubmit={handleSubmit}>
@@ -83,7 +80,7 @@ export default function AdminLoginPage() {
                 }
                 disabled={isSubmitting}
                 autoComplete="username"
-                placeholder="Digite seu usuário admin"
+                placeholder="Digite seu usuário"
               />
             </div>
 

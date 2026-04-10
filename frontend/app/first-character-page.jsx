@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react"
 import { Navigate, useNavigate } from "@/lib/react-router-compat"
+import LanguageSelector from "@/components/language-selector.jsx"
+import { useI18n } from "@/context/i18n-context.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { clans } from "../data/clans.js"
 import "../styles/auth-page.css"
 
 export default function FirstCharacterPage() {
   const navigate = useNavigate()
+  const { t } = useI18n()
   const {
     addCharacter,
     hasCharacters,
@@ -40,12 +43,12 @@ export default function FirstCharacterPage() {
     setError("")
 
     if (!form.nome.trim()) {
-      setError("Informe o nome do personagem")
+      setError(t("auth.errors.missingCharacterName"))
       return
     }
 
     if (!form.nivel || Number(form.nivel) < 1) {
-      setError("Informe um nível válido")
+      setError(t("auth.errors.invalidLevel"))
       return
     }
 
@@ -61,7 +64,7 @@ export default function FirstCharacterPage() {
       setActiveCharacterId(created.id)
       navigate("/inicio", { replace: true })
     } catch (err) {
-      setError(err.message || "Erro ao criar personagem")
+      setError(err.message || t("auth.errors.createCharacterFailed"))
       setIsSubmitting(false)
     }
   }
@@ -72,24 +75,24 @@ export default function FirstCharacterPage() {
         <div className="auth-page__layout">
           <section className="auth-page__hero">
             <div className="auth-page__hero-content">
-              <h1 className="auth-page__title">Configure seu primeiro personagem</h1>
+              <LanguageSelector className="auth-page__language-selector" />
+              <h1 className="auth-page__title">{t("auth.firstCharacterTitle")}</h1>
 
               <p className="auth-page__description">
-                Antes de continuar, você precisa criar pelo menos um personagem.
-                Esse personagem será usado para organizar hunts, tasks, quests e tudo dentro do sistema.
+                {t("auth.firstCharacterDescription")}
               </p>
             </div>
           </section>
 
           <section className="auth-page__card">
             <div className="auth-page__card-header">
-              <h2 className="auth-page__card-title">Novo personagem</h2>
-              <p className="auth-page__card-description">Preencha os dados para começar.</p>
+              <h2 className="auth-page__card-title">{t("auth.newCharacter")}</h2>
+              <p className="auth-page__card-description">{t("auth.getStarted")}</p>
             </div>
 
             <form className="auth-form" onSubmit={handleSubmit}>
               <div className="auth-form__field">
-                <label>Nome</label>
+                <label>{t("auth.characterName")}</label>
                 <input
                   className="auth-form__input"
                   value={form.nome}
@@ -99,7 +102,7 @@ export default function FirstCharacterPage() {
               </div>
 
               <div className="auth-form__field">
-                <label>Clã</label>
+                <label>{t("auth.clan")}</label>
                 <select
                   className="auth-form__input"
                   value={form.cla}
@@ -115,7 +118,7 @@ export default function FirstCharacterPage() {
               </div>
 
               <div className="auth-form__field">
-                <label>Nível</label>
+                <label>{t("auth.level")}</label>
                 <input
                   type="number"
                   min="1"
@@ -129,7 +132,7 @@ export default function FirstCharacterPage() {
               {error && <p className="auth-form__error">{error}</p>}
 
               <button type="submit" className="auth-form__submit" disabled={isSubmitting}>
-                {isSubmitting ? "Criando..." : "Criar personagem"}
+                {isSubmitting ? t("auth.creating") : t("auth.createCharacter")}
               </button>
             </form>
           </section>

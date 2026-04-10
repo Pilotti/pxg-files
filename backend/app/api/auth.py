@@ -17,7 +17,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import LogoutRequest, RefreshRequest
 from app.schemas.token import TokenResponse
-from app.schemas.user import UserLogin, UserRegister, UserResponse
+from app.schemas.user import UserLogin, UserPreferencesUpdate, UserRegister, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -137,4 +137,17 @@ def logout_user(data: LogoutRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/preferences", response_model=UserResponse)
+def update_user_preferences(
+    payload: UserPreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current_user.preferred_language = payload.preferred_language
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user

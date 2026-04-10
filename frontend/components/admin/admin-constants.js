@@ -2,10 +2,10 @@ export const ADMIN_TABS = [
   ["tasks", "Tasks"],
   ["quests", "Quests"],
   ["aliases", "Itens OCR"],
-  ["npc-prices", "Precos NPC"],
-  ["consumables", "Consumiveis"],
-  ["users", "Usuarios"],
-  ["pokemon", "Pokemon"],
+  ["npc-prices", "Preços NPC"],
+  ["consumables", "Consumíveis"],
+  ["users", "Usuários"],
+  ["pokemon", "Pokémon"],
   ["sidebar", "Sidebar"],
 ]
 

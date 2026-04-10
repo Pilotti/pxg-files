@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "@/lib/react-router-compat"
+import LanguageSelector from "@/components/language-selector.jsx"
+import { useI18n } from "@/context/i18n-context.jsx"
 import { useAuth } from "../context/auth-context.jsx"
 import { useUI } from "../context/ui-context.jsx"
 import "../styles/auth-page.css"
@@ -8,6 +10,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const { runBlockingTask, showError } = useUI()
+  const { t } = useI18n()
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -21,12 +24,12 @@ export default function LoginPage() {
     const password = String(formData.get("password") || "")
 
     if (!email) {
-      setError("Informe o e-mail")
+      setError(t("auth.errors.missingEmail"))
       return
     }
 
     if (!password) {
-      setError("Informe a senha")
+      setError(t("auth.errors.missingPassword"))
       return
     }
 
@@ -37,12 +40,12 @@ export default function LoginPage() {
         await login({ email, password })
         navigate("/inicio", { replace: true })
       }, {
-        title: "Aguarde um instante",
-        text: "Validando seus dados e preparando o acesso...",
+        title: t("auth.waitTitle"),
+        text: t("auth.loginWait"),
         minDuration: 1000,
       })
     } catch (err) {
-      const message = err.message || "Não foi possível entrar"
+      const message = err.message || t("auth.errors.loginFailed")
       setError(message)
       showError(message)
       setIsSubmitting(false)
@@ -55,25 +58,26 @@ export default function LoginPage() {
         <div className="auth-page__layout">
           <section className="auth-page__hero">
             <div className="auth-page__hero-content">
-              <h1 className="auth-page__title">Entre na sua conta</h1>
+              <LanguageSelector className="auth-page__language-selector" />
+              <h1 className="auth-page__title">{t("auth.loginTitle")}</h1>
               <p className="auth-page__description">
-                Acesse seus personagens, hunts, tasks, quests, diárias e toda a organização da sua conta.
+                {t("auth.loginDescription")}
               </p>
             </div>
           </section>
 
           <section className="auth-page__card">
             <div className="auth-page__card-header">
-              <h2 className="auth-page__card-title">Login</h2>
+              <h2 className="auth-page__card-title">{t("auth.loginCardTitle")}</h2>
               <p className="auth-page__card-description">
-                Entre com seu e-mail e senha para continuar.
+                {t("auth.loginCardDescription")}
               </p>
             </div>
 
             <form className="auth-form" onSubmit={handleSubmit} noValidate>
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="email">
-                  E-mail
+                  {t("auth.email")}
                 </label>
                 <input
                   id="email"
@@ -88,7 +92,7 @@ export default function LoginPage() {
 
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="password">
-                  Senha
+                  {t("auth.password")}
                 </label>
                 <input
                   id="password"
@@ -108,12 +112,12 @@ export default function LoginPage() {
                 className="auth-form__submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Entrando..." : "Entrar"}
+                {isSubmitting ? t("auth.entering") : t("auth.enter")}
               </button>
             </form>
 
             <p className="auth-page__footer">
-              Ainda não tem conta? <Link to="/cadastro">Criar conta</Link>
+              {t("auth.noAccount")} <Link to="/cadastro">{t("auth.createAccount")}</Link>
             </p>
           </section>
         </div>

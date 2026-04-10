@@ -4,31 +4,13 @@ import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
 import ConfirmActionModal from "../components/confirm-action-modal.jsx"
 import { useCharacter } from "../context/character-context.jsx"
+import { useI18n } from "../context/i18n-context.jsx"
 import { apiRequest } from "../services/api.js"
 import { readAppPreferences } from "../services/app-preferences.js"
 import "../styles/quests-page.css"
 
-const continents = [
-  { value: "", label: "Todos os continentes" },
-  { value: "kanto", label: "Kanto" },
-  { value: "johto", label: "Johto" },
-  { value: "orange_islands", label: "Ilhas Laranjas" },
-  { value: "outland", label: "Outland" },
-  { value: "nightmare_world", label: "Nightmare World" },
-  { value: "orre", label: "Orre" },
-]
-
-function formatContinent(value) {
-  const map = {
-    kanto: "Kanto",
-    johto: "Johto",
-    orange_islands: "Ilhas Laranjas",
-    outland: "Outland",
-    nightmare_world: "Nightmare World",
-    orre: "Orre",
-  }
-
-  return map[value] || value
+function formatContinent(value, t) {
+  return t(`continents.${value || "all"}`) || value
 }
 
 function formatCity(value) {
@@ -52,7 +34,7 @@ function useDebouncedValue(value, delay = 250) {
   return debounced
 }
 
-function Toast({ feedback, onClose }) {
+function Toast({ feedback, onClose, t }) {
   if (!feedback) return null
 
   return (
@@ -65,7 +47,7 @@ function Toast({ feedback, onClose }) {
     >
       <div className="quests-toast__content">
         <strong className="quests-toast__title">
-          {feedback.type === "success" ? "Sucesso" : "Erro"}
+          {feedback.type === "success" ? t("common.success") : t("common.error")}
         </strong>
         <span className="quests-toast__message">{feedback.message}</span>
       </div>
@@ -74,7 +56,7 @@ function Toast({ feedback, onClose }) {
         type="button"
         className="quests-toast__close"
         onClick={onClose}
-        aria-label="Fechar aviso"
+        aria-label={t("common.close")}
       >
         ✕
       </button>
@@ -100,7 +82,18 @@ function QuestCardSkeleton() {
 
 export default function QuestsPage() {
   const { activeCharacter } = useCharacter()
+  const { t, locale } = useI18n()
   const preferences = useMemo(() => readAppPreferences(), [])
+
+  const continents = useMemo(() => ([
+    { value: "", label: t("continents.all") },
+    { value: "kanto", label: t("continents.kanto") },
+    { value: "johto", label: t("continents.johto") },
+    { value: "orange_islands", label: t("continents.orange_islands") },
+    { value: "outland", label: t("continents.outland") },
+    { value: "nightmare_world", label: t("continents.nightmare_world") },
+    { value: "orre", label: t("continents.orre") },
+  ]), [t])
 
   const [quests, setQuests] = useState([])
   const [catalog, setCatalog] = useState([])
@@ -140,9 +133,9 @@ export default function QuestsPage() {
     )
 
     return Array.from(citySet)
-      .sort((a, b) => a.localeCompare(b, "pt-BR"))
+      .sort((a, b) => a.localeCompare(b, locale))
       .map((city) => ({ value: city, label: formatCity(city) }))
-  }, [quests, listFilters.continent])
+  }, [quests, listFilters.continent, locale])
 
   const catalogCityOptions = useMemo(() => {
     const filteredByContinent = catalogFilters.continent
@@ -157,9 +150,9 @@ export default function QuestsPage() {
     )
 
     return Array.from(citySet)
-      .sort((a, b) => a.localeCompare(b, "pt-BR"))
+      .sort((a, b) => a.localeCompare(b, locale))
       .map((city) => ({ value: city, label: formatCity(city) }))
-  }, [catalog, catalogFilters.continent])
+  }, [catalog, catalogFilters.continent, locale])
 
   const debouncedCatalogFilters = useDebouncedValue(catalogFilters, 250)
   const debouncedListFilters = useDebouncedValue(listFilters, 150)
@@ -185,12 +178,12 @@ export default function QuestsPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível carregar as quests.",
+        message: err.message || t("quests.loadError"),
       })
     } finally {
       setIsLoadingQuests(false)
     }
-  }, [activeCharacter?.id])
+  }, [activeCharacter?.id, t])
 
   const buildCatalogQuery = useCallback((nextFilters) => {
     const params = new URLSearchParams()
@@ -223,12 +216,12 @@ export default function QuestsPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível carregar o catálogo de quests.",
+        message: err.message || t("quests.catalogLoadError"),
       })
     } finally {
       setIsLoadingCatalog(false)
     }
-  }, [activeCharacter?.id, buildCatalogQuery, debouncedCatalogFilters])
+  }, [activeCharacter?.id, buildCatalogQuery, debouncedCatalogFilters, t])
 
   useEffect(() => {
     if (!activeCharacter?.id) {
@@ -268,7 +261,7 @@ export default function QuestsPage() {
 
         setFeedback({
           type: "success",
-          message: "Quest voltou para pendente.",
+          message: t("quests.uncompleteSuccess"),
         })
 
         await Promise.all([
@@ -278,7 +271,7 @@ export default function QuestsPage() {
       } catch (err) {
         setFeedback({
           type: "error",
-          message: err.message || "Não foi possível desconcluir a quest.",
+          message: err.message || t("quests.uncompleteError"),
         })
       } finally {
         setProcessingTemplateId(null)
@@ -298,14 +291,14 @@ export default function QuestsPage() {
 
       setFeedback({
         type: "success",
-        message: "Quest ativada com sucesso.",
+        message: t("quests.activateSuccess"),
       })
 
       await Promise.all([loadQuests(), loadCatalog(debouncedCatalogFilters)])
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível ativar a quest.",
+        message: err.message || t("quests.activateError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -326,7 +319,7 @@ export default function QuestsPage() {
 
       setFeedback({
         type: "success",
-        message: "Quest concluída com sucesso.",
+        message: t("quests.completeSuccess"),
       })
 
       await Promise.all([
@@ -336,7 +329,7 @@ export default function QuestsPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível concluir a quest.",
+        message: err.message || t("quests.completeError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -357,7 +350,7 @@ export default function QuestsPage() {
 
       setFeedback({
         type: "success",
-        message: "Quest removida da lista ativa.",
+        message: t("quests.removeSuccess"),
       })
       setRemoveConfirm(null)
 
@@ -368,7 +361,7 @@ export default function QuestsPage() {
     } catch (err) {
       setFeedback({
         type: "error",
-        message: err.message || "Não foi possível remover a quest.",
+        message: err.message || t("quests.removeError"),
       })
     } finally {
       setProcessingTemplateId(null)
@@ -395,9 +388,9 @@ export default function QuestsPage() {
     return [...quests].sort((a, b) => {
       if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
       if (a.min_level !== b.min_level) return a.min_level - b.min_level
-      return a.name.localeCompare(b.name, "pt-BR")
+      return a.name.localeCompare(b.name, locale)
     })
-  }, [quests])
+  }, [quests, locale])
 
   const filteredQuests = useMemo(() => {
     const search = debouncedListFilters.search.trim().toLowerCase()
@@ -435,18 +428,18 @@ export default function QuestsPage() {
 
   return (
     <AppShell>
-      <Toast feedback={feedback} onClose={() => setFeedback(null)} />
+      <Toast feedback={feedback} onClose={() => setFeedback(null)} t={t} />
 
       <ConfirmActionModal
         open={isConfirmingRemove}
-        title="Remover quest ativa?"
+        title={t("quests.modal.removeTitle")}
         description={
           removeConfirm
-            ? `A quest "${removeConfirm.name}" será removida da lista ativa deste personagem. Você poderá ativá-la novamente depois.`
+            ? t("quests.modal.removeDescription", { name: removeConfirm.name })
             : ""
         }
-        confirmLabel="Remover quest"
-        cancelLabel="Cancelar"
+        confirmLabel={t("quests.modal.removeConfirm")}
+        cancelLabel={t("common.cancel")}
         confirmTone="danger"
         isLoading={processingTemplateId === removeConfirm?.templateId}
         onCancel={() => {
@@ -464,7 +457,7 @@ export default function QuestsPage() {
       <section className="quests-page">
         <div className="quests-page__header">
           <div>
-            <h2 className="quests-page__title">Quests ativas</h2>
+            <h2 className="quests-page__title">{t("quests.title")}</h2>
           </div>
 
           <button
@@ -473,23 +466,23 @@ export default function QuestsPage() {
             onClick={openCatalog}
             disabled={!activeCharacter}
           >
-            Nova Quest
+            {t("quests.newQuest")}
           </button>
         </div>
 
         <div className="quests-page__stats">
           <div className="quests-page__stat-card">
-            <span className="quests-page__stat-label">Total</span>
+            <span className="quests-page__stat-label">{t("quests.total")}</span>
             <strong className="quests-page__stat-value">{stats.total}</strong>
           </div>
 
           <div className="quests-page__stat-card">
-            <span className="quests-page__stat-label">Pendentes</span>
+            <span className="quests-page__stat-label">{t("quests.pending")}</span>
             <strong className="quests-page__stat-value">{stats.pending}</strong>
           </div>
 
           <div className="quests-page__stat-card quests-page__stat-card--success">
-            <span className="quests-page__stat-label">Concluídas</span>
+            <span className="quests-page__stat-label">{t("quests.completed")}</span>
             <strong className="quests-page__stat-value">{stats.completed}</strong>
           </div>
         </div>
@@ -498,7 +491,7 @@ export default function QuestsPage() {
           <div className="quests-page__filters-grid">
             <input
               className="quests-page__input"
-              placeholder="Buscar quest ativa"
+              placeholder={t("quests.searchActive")}
               value={listFilters.search}
               onChange={(e) =>
                 setListFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -512,9 +505,9 @@ export default function QuestsPage() {
                 setListFilters((prev) => ({ ...prev, status: e.target.value }))
               }
             >
-              <option value="">Todos os status</option>
-              <option value="pending">Pendentes</option>
-              <option value="completed">Concluídas</option>
+              <option value="">{t("quests.allStatus")}</option>
+              <option value="pending">{t("quests.pending")}</option>
+              <option value="completed">{t("quests.status.completed")}</option>
             </select>
 
             <select
@@ -538,7 +531,7 @@ export default function QuestsPage() {
                 setListFilters((prev) => ({ ...prev, city: e.target.value }))
               }
             >
-              <option value="">Todas as cidades</option>
+              <option value="">{t("quests.allCities")}</option>
               {cityOptions.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
@@ -557,7 +550,7 @@ export default function QuestsPage() {
             </>
           ) : !filteredQuests.length ? (
             <div className="quests-page__empty quests-page__empty--full">
-              Nenhuma quest encontrada para os filtros atuais.
+              {t("quests.noneFound")}
             </div>
           ) : (
             filteredQuests.map((quest) => {
@@ -583,23 +576,23 @@ export default function QuestsPage() {
                             : "quests-page__status quests-page__status--pending"
                         }
                       >
-                        {quest.is_completed ? "Concluída" : "Pendente"}
+                        {quest.is_completed ? t("quests.status.completedShort") : t("quests.status.pendingShort")}
                       </span>
                     </div>
 
                     <p className="quests-page__card-description">
-                      {quest.description || "Sem descrição."}
+                      {quest.description || t("quests.descriptionFallback")}
                     </p>
 
                     <div className="quests-page__meta">
-                      <span>Continente: {formatContinent(quest.continent)}</span>
-                      <span>Cidade: {formatCity(quest.city) || "Não informada"}</span>
-                      <span>Nível mínimo: {quest.min_level}</span>
-                      {quest.continent === "nightmare_world" && quest.nw_level !== null && quest.nw_level !== undefined ? <span>NW Level: {quest.nw_level}</span> : null}
+                      <span>{t("quests.continent")}: {formatContinent(quest.continent, t)}</span>
+                      <span>{t("quests.city")}: {formatCity(quest.city) || t("quests.cityFallback")}</span>
+                      <span>{t("quests.minLevel")}: {quest.min_level}</span>
+                      {quest.continent === "nightmare_world" && quest.nw_level !== null && quest.nw_level !== undefined ? <span>{t("quests.nightmareLevel")}: {quest.nw_level}</span> : null}
                     </div>
 
                     <div className="quests-page__reward">
-                      Recompensa: {quest.reward_text || "Não informada"}
+                      {t("quests.reward")}: {quest.reward_text || t("quests.rewardFallback")}
                     </div>
                   </div>
 
@@ -613,7 +606,7 @@ export default function QuestsPage() {
                           onClick={() => handleCompleteQuest(quest.template_id)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? "Salvando..." : "Concluir"}
+                          {isProcessing ? t("tasks.saving") : t("quests.complete")}
                         </button>
 
                         <button
@@ -623,7 +616,7 @@ export default function QuestsPage() {
                           onClick={() => requestRemoveQuest(quest)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? "Salvando..." : "Remover"}
+                          {isProcessing ? t("tasks.saving") : t("quests.removeQuest")}
                         </button>
                       </>
                     ) : (
@@ -635,11 +628,11 @@ export default function QuestsPage() {
                           onClick={() => handleUncompleteQuest(quest.template_id)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? "Salvando..." : "Desconcluir"}
+                          {isProcessing ? t("tasks.saving") : t("quests.uncomplete")}
                         </button>
 
                         <div className="quests-page__completed-note">
-                          Quest concluída.
+                        {t("quests.completedNote")}
                         </div>
                       </>
                     )}
@@ -656,9 +649,9 @@ export default function QuestsPage() {
           <div className="quests-catalog-modal">
             <div className="quests-catalog-modal__header">
               <div>
-                <h2 className="quests-catalog-modal__title">Nova Quest</h2>
+                <h2 className="quests-catalog-modal__title">{t("quests.catalog.title")}</h2>
                 <p className="quests-catalog-modal__subtitle">
-                  Ative novas quests para o personagem atual.
+                  {t("quests.catalog.subtitle")}
                 </p>
               </div>
 
@@ -675,7 +668,7 @@ export default function QuestsPage() {
             <div className="quests-catalog-modal__filters">
               <input
                 className="quests-page__input"
-                placeholder="Buscar por nome"
+                placeholder={t("quests.catalog.searchByName")}
                 value={catalogFilters.search}
                 onChange={(e) =>
                   setCatalogFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -703,7 +696,7 @@ export default function QuestsPage() {
                   setCatalogFilters((prev) => ({ ...prev, city: e.target.value }))
                 }
               >
-                <option value="">Todas as cidades</option>
+                <option value="">{t("quests.allCities")}</option>
                 {catalogCityOptions.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
@@ -714,7 +707,7 @@ export default function QuestsPage() {
               <input
                 className="quests-page__input"
                 type="number"
-                placeholder="Nível mín."
+                placeholder={t("quests.catalog.minLevel")}
                 value={catalogFilters.min_level}
                 onChange={(e) =>
                   setCatalogFilters((prev) => ({ ...prev, min_level: e.target.value }))
@@ -724,7 +717,7 @@ export default function QuestsPage() {
               <input
                 className="quests-page__input"
                 type="number"
-                placeholder="Nível máx."
+                placeholder={t("quests.catalog.maxLevel")}
                 value={catalogFilters.max_level}
                 onChange={(e) =>
                   setCatalogFilters((prev) => ({ ...prev, max_level: e.target.value }))
@@ -742,7 +735,7 @@ export default function QuestsPage() {
                   </>
                 ) : !catalog.length ? (
                   <div className="quests-page__empty quests-page__empty--full">
-                    Nenhuma quest encontrada para os filtros atuais.
+                    {t("quests.noneFound")}
                   </div>
                 ) : (
                   catalog.map((quest) => {
@@ -773,26 +766,26 @@ export default function QuestsPage() {
                               }
                             >
                               {quest.status === "completed"
-                                ? "Concluída"
+                                ? t("quests.status.completedShort")
                                 : quest.status === "active"
-                                  ? "Ativa"
-                                  : "Disponível"}
+                                  ? t("quests.status.activeShort")
+                                  : t("quests.status.availableShort")}
                             </span>
                           </div>
 
                           <p className="quests-page__card-description">
-                            {quest.description || "Sem descrição."}
+                            {quest.description || t("quests.descriptionFallback")}
                           </p>
 
                           <div className="quests-page__meta">
-                            <span>Continente: {formatContinent(quest.continent)}</span>
-                            <span>Cidade: {formatCity(quest.city) || "Não informada"}</span>
-                            <span>Nível mínimo: {quest.min_level}</span>
-                            {quest.continent === "nightmare_world" && quest.nw_level !== null && quest.nw_level !== undefined ? <span>NW Level: {quest.nw_level}</span> : null}
+                            <span>{t("quests.continent")}: {formatContinent(quest.continent, t)}</span>
+                            <span>{t("quests.city")}: {formatCity(quest.city) || t("quests.cityFallback")}</span>
+                            <span>{t("quests.minLevel")}: {quest.min_level}</span>
+                            {quest.continent === "nightmare_world" && quest.nw_level !== null && quest.nw_level !== undefined ? <span>{t("quests.nightmareLevel")}: {quest.nw_level}</span> : null}
                           </div>
 
                           <div className="quests-page__reward">
-                            Recompensa: {quest.reward_text || "Não informada"}
+                            {t("quests.reward")}: {quest.reward_text || t("quests.rewardFallback")}
                           </div>
                         </div>
 
@@ -805,15 +798,15 @@ export default function QuestsPage() {
                               onClick={() => handleActivateQuest(quest.id)}
                               disabled={isProcessing}
                             >
-                              {isProcessing ? "Ativando..." : "Ativar"}
+                              {isProcessing ? t("quests.catalog.activating") : t("quests.catalog.activate")}
                             </button>
                           ) : quest.status === "active" ? (
                             <div className="quests-page__active-note">
-                              Essa quest já está ativa.
+                              {t("quests.catalog.alreadyActive")}
                             </div>
                           ) : (
                             <div className="quests-page__completed-note">
-                              Essa quest já foi concluída por este personagem.
+                              {t("quests.catalog.alreadyCompleted")}
                             </div>
                           )}
                         </div>

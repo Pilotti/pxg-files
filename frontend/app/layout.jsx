@@ -13,6 +13,7 @@ import '@/styles/tasks-page.css'
 import '@/styles/app-toast.css'
 import '@/styles/status-overlay.css'
 import '@/styles/error-boundary.css'
+import '@/styles/language-selector.css'
 
 const APP_PREFERENCES_BOOTSTRAP_SCRIPT = getAppPreferencesBootstrapScript()
 
@@ -23,7 +24,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: APP_PREFERENCES_BOOTSTRAP_SCRIPT }} />
         <Providers>

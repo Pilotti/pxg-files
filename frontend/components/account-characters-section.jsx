@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@/lib/react-router-compat"
+import { useI18n } from "@/context/i18n-context.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { clans } from "../data/clans.js"
 import CharacterSwitchOverlay from "./character-switch-overlay.jsx"
@@ -9,7 +10,7 @@ import "../styles/character-modal.css"
 const initialForm = {
   nome: "",
   cla: clans[0],
-  nivel: ""
+  nivel: "",
 }
 
 function wait(ms) {
@@ -20,7 +21,7 @@ function StarIcon({ filled = false }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d="M12 3.75l2.53 5.13 5.66.82-4.1 4  .97 5.64L12 16.68 6.94 19.34l.97-5.64-4.1-4 5.66-.82L12 3.75z"
+        d="M12 3.75l2.53 5.13 5.66.82-4.1 4 .97 5.64L12 16.68 6.94 19.34l.97-5.64-4.1-4 5.66-.82L12 3.75z"
         fill={filled ? "currentColor" : "none"}
         stroke="currentColor"
         strokeWidth="1.8"
@@ -70,6 +71,7 @@ function CharacterStat({ label, value, accent = "default" }) {
 
 export default function AccountCharactersSection() {
   const navigate = useNavigate()
+  const { t, locale } = useI18n()
 
   const {
     characters,
@@ -79,7 +81,7 @@ export default function AccountCharactersSection() {
     addCharacter,
     updateCharacter,
     removeCharacter,
-    setFavorite
+    setFavorite,
   } = useCharacter()
 
   const [modal, setModal] = useState(null)
@@ -105,17 +107,16 @@ export default function AccountCharactersSection() {
     return [...characters].sort((a, b) => {
       if (a.is_favorite && !b.is_favorite) return -1
       if (!a.is_favorite && b.is_favorite) return 1
-      return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR")
+      return String(a.nome || "").localeCompare(String(b.nome || ""), locale)
     })
-  }, [characters])
+  }, [characters, locale])
 
   const totalCharacters = sortedCharacters.length
   const favoriteCharacter = sortedCharacters.find((character) => character.is_favorite)
 
   useEffect(() => {
     function handleKeyDown(event) {
-      if (event.key !== "Escape") return
-      if (isBusy) return
+      if (event.key !== "Escape" || isBusy) return
 
       if (postCreateModal) {
         setPostCreateModal(null)
@@ -153,7 +154,7 @@ export default function AccountCharactersSection() {
     setForm({
       nome: character.nome,
       cla: character.cla,
-      nivel: String(character.nivel)
+      nivel: String(character.nivel),
     })
     setModal({ type: "edit", character })
   }
@@ -191,17 +192,17 @@ export default function AccountCharactersSection() {
     const nivel = Number(form.nivel)
 
     if (!nome) {
-      setError("Informe o nome do personagem.")
+      setError(t("characters.errors.missingName"))
       return
     }
 
     if (!cla) {
-      setError("Informe o clã do personagem.")
+      setError(t("characters.errors.missingClan"))
       return
     }
 
     if (!form.nivel || Number.isNaN(nivel) || nivel < 1) {
-      setError("Informe um nível válido.")
+      setError(t("characters.errors.invalidLevel"))
       return
     }
 
@@ -213,7 +214,7 @@ export default function AccountCharactersSection() {
         const previousActive = activeCharacter
           ? {
               id: activeCharacter.id,
-              nome: activeCharacter.nome
+              nome: activeCharacter.nome,
             }
           : null
 
@@ -231,7 +232,7 @@ export default function AccountCharactersSection() {
 
         setPostCreateModal({
           createdCharacter,
-          currentCharacter: previousActive
+          currentCharacter: previousActive,
         })
         return
       }
@@ -239,7 +240,7 @@ export default function AccountCharactersSection() {
       await updateCharacter(modal.character.id, { nome, cla, nivel })
       closeModal()
     } catch (err) {
-      setError(err.message || "Não foi possível salvar o personagem.")
+      setError(err.message || t("characters.errors.saveFailed"))
     } finally {
       setIsSubmitting(false)
     }
@@ -252,7 +253,6 @@ export default function AccountCharactersSection() {
     try {
       await setFavorite(characterId)
     } catch (err) {
-      console.error(err)
     } finally {
       setFavoriteLoadingId(null)
     }
@@ -272,7 +272,7 @@ export default function AccountCharactersSection() {
         navigate("/primeiro-personagem", { replace: true })
       }
     } catch (err) {
-      setDeleteError(err.message || "Não foi possível remover o personagem.")
+      setDeleteError(err.message || t("characters.errors.removeFailed"))
     } finally {
       setDeleteLoadingId(null)
     }
@@ -319,18 +319,15 @@ export default function AccountCharactersSection() {
   return (
     <>
       {(isSwitchingCharacter || isApplyingPostCreateChoice) && (
-        <CharacterSwitchOverlay text="Aplicando o personagem selecionado..." />
+        <CharacterSwitchOverlay text={t("characters.applyingCharacter")} />
       )}
 
       <section className="account-characters">
         <div className="account-characters__hero">
           <div className="account-characters__hero-copy">
-            <span className="account-characters__eyebrow">GESTÃO DE PERSONAGENS</span>
-            <h2 className="account-characters__title">Controle completo da conta.</h2>
-            <p className="account-characters__subtitle">
-              Organize personagens, mantenha um principal fixo e troque rapidamente
-              o contexto ativo sem perder clareza visual.
-            </p>
+            <span className="account-characters__eyebrow">{t("characters.eyebrow")}</span>
+            <h2 className="account-characters__title">{t("characters.title")}</h2>
+            <p className="account-characters__subtitle">{t("characters.subtitle")}</p>
           </div>
 
           <button
@@ -340,28 +337,36 @@ export default function AccountCharactersSection() {
             disabled={isBusy}
           >
             <span className="account-characters__add-button-plus">＋</span>
-            <span>{isSubmitting && modal?.type === "create" ? "Criando..." : "Novo personagem"}</span>
+            <span>{isSubmitting && modal?.type === "create" ? t("auth.creating") : t("characters.newCharacter")}</span>
           </button>
         </div>
 
         <div className="account-characters__stats-grid">
-          <CharacterStat label="Total na conta" value={totalCharacters} />
-          <CharacterStat label="Personagem ativo" value={activeCharacter?.nome || "Nenhum"} accent="primary" />
-          <CharacterStat label="Principal" value={favoriteCharacter?.nome || "Não definido"} accent="favorite" />
+          <CharacterStat label={t("characters.totalInAccount")} value={totalCharacters} />
+          <CharacterStat
+            label={t("characters.activeCharacter")}
+            value={activeCharacter?.nome || t("common.none")}
+            accent="primary"
+          />
+          <CharacterStat
+            label={t("characters.mainCharacter")}
+            value={favoriteCharacter?.nome || t("characters.notDefined")}
+            accent="favorite"
+          />
         </div>
 
         {!sortedCharacters.length ? (
           <div className="account-characters__empty">
             <div className="account-characters__empty-icon">✦</div>
-            <strong>Nenhum personagem cadastrado.</strong>
-            <span>Crie o primeiro personagem da conta para liberar o restante do sistema.</span>
+            <strong>{t("characters.noneRegistered")}</strong>
+            <span>{t("characters.noneRegisteredHint")}</span>
             <button
               type="button"
               className="account-characters__empty-action"
               onClick={openCreate}
               disabled={isBusy}
             >
-              Criar primeiro personagem
+              {t("characters.createFirst")}
             </button>
           </div>
         ) : (
@@ -389,22 +394,26 @@ export default function AccountCharactersSection() {
                     <div className="account-character-card__main">
                       <div className="account-character-card__topline">
                         <strong className="account-character-card__name">{character.nome}</strong>
-                        {isActive && <span className="account-character-card__active-ping" aria-hidden="true" />}
+                        {isActive ? (
+                          <span className="account-character-card__active-ping" aria-hidden="true" />
+                        ) : null}
                       </div>
 
                       <span className="account-character-card__meta">{character.cla}</span>
-                      <span className="account-character-card__meta">Nível {character.nivel}</span>
+                      <span className="account-character-card__meta">
+                        {t("characters.level")} {character.nivel}
+                      </span>
 
                       <div className="account-character-card__badges">
-                        {character.is_favorite && (
+                        {character.is_favorite ? (
                           <span className="account-character-card__badge account-character-card__badge--favorite">
-                            Principal
+                            {t("characters.main")}
                           </span>
-                        )}
+                        ) : null}
 
-                        {isActive && (
-                          <span className="account-character-card__badge">Ativo</span>
-                        )}
+                        {isActive ? (
+                          <span className="account-character-card__badge">{t("characters.active")}</span>
+                        ) : null}
                       </div>
                     </div>
                   </button>
@@ -418,7 +427,11 @@ export default function AccountCharactersSection() {
                           : "account-character-card__icon-button"
                       }
                       onClick={() => handleFavorite(character.id)}
-                      title={character.is_favorite ? "Personagem principal" : "Definir como principal"}
+                      title={
+                        character.is_favorite
+                          ? t("characters.mainCharacterTitle")
+                          : t("characters.setAsMain")
+                      }
                       disabled={isFavoriteLoading || isBusy}
                     >
                       {isFavoriteLoading ? "..." : <StarIcon filled={character.is_favorite} />}
@@ -428,7 +441,7 @@ export default function AccountCharactersSection() {
                       type="button"
                       className="account-character-card__icon-button"
                       onClick={() => openEdit(character)}
-                      title="Editar personagem"
+                      title={t("characters.editCharacter")}
                       disabled={isBusy}
                     >
                       <PencilIcon />
@@ -438,7 +451,7 @@ export default function AccountCharactersSection() {
                       type="button"
                       className="account-character-card__icon-button account-character-card__icon-button--danger"
                       onClick={() => openDeleteModal(character)}
-                      title="Remover personagem"
+                      title={t("characters.removeCharacter")}
                       disabled={isDeleteLoading || isBusy}
                     >
                       {isDeleteLoading ? "..." : <TrashIcon />}
@@ -451,21 +464,25 @@ export default function AccountCharactersSection() {
         )}
       </section>
 
-      {modal && (
+      {modal ? (
         <div className="character-modal-backdrop" onClick={closeModal}>
           <div className="character-modal" onClick={(event) => event.stopPropagation()}>
             <div className="character-modal__header">
               <div>
                 <span className="character-modal__eyebrow">
-                  {modal.type === "create" ? "NOVO PERSONAGEM" : "EDIÇÃO"}
+                  {modal.type === "create"
+                    ? t("characters.modal.createEyebrow")
+                    : t("characters.modal.editEyebrow")}
                 </span>
                 <h2 className="character-modal__title">
-                  {modal.type === "create" ? "Criar personagem" : "Editar personagem"}
+                  {modal.type === "create"
+                    ? t("characters.modal.createTitle")
+                    : t("characters.modal.editTitle")}
                 </h2>
                 <p className="character-modal__description">
                   {modal.type === "create"
-                    ? "Adicione um novo personagem à conta com nome, clã e nível inicial."
-                    : "Atualize os dados do personagem selecionado sem perder o vínculo atual."}
+                    ? t("characters.modal.createDescription")
+                    : t("characters.modal.editDescription")}
                 </p>
               </div>
             </div>
@@ -473,7 +490,7 @@ export default function AccountCharactersSection() {
             <form className="character-modal__form" onSubmit={handleSubmit}>
               <div className="character-modal__field-grid">
                 <div className="character-modal__field character-modal__field--full">
-                  <label htmlFor="character-name">Nome</label>
+                  <label htmlFor="character-name">{t("auth.characterName")}</label>
                   <input
                     id="character-name"
                     className="character-modal__input"
@@ -482,13 +499,13 @@ export default function AccountCharactersSection() {
                       setForm((prev) => ({ ...prev, nome: event.target.value }))
                     }
                     disabled={isSubmitting}
-                    placeholder="Ex.: Pilotti"
+                    placeholder={t("characters.modal.namePlaceholder")}
                     autoFocus
                   />
                 </div>
 
                 <div className="character-modal__field">
-                  <label htmlFor="character-clan">Clã</label>
+                  <label htmlFor="character-clan">{t("auth.clan")}</label>
                   <select
                     id="character-clan"
                     className="character-modal__input"
@@ -507,7 +524,7 @@ export default function AccountCharactersSection() {
                 </div>
 
                 <div className="character-modal__field">
-                  <label htmlFor="character-level">Nível</label>
+                  <label htmlFor="character-level">{t("auth.level")}</label>
                   <input
                     id="character-level"
                     className="character-modal__input"
@@ -515,15 +532,18 @@ export default function AccountCharactersSection() {
                     min="1"
                     value={form.nivel}
                     onChange={(event) =>
-                      setForm((prev) => ({ ...prev, nivel: event.target.value.replace(/[^0-9]/g, "") }))
+                      setForm((prev) => ({
+                        ...prev,
+                        nivel: event.target.value.replace(/[^0-9]/g, ""),
+                      }))
                     }
                     disabled={isSubmitting}
-                    placeholder="Ex.: 123"
+                    placeholder={t("characters.modal.levelPlaceholder")}
                   />
                 </div>
               </div>
 
-              {error && <p className="character-modal__error">{error}</p>}
+              {error ? <p className="character-modal__error">{error}</p> : null}
 
               <div className="character-modal__actions">
                 <button
@@ -532,7 +552,7 @@ export default function AccountCharactersSection() {
                   onClick={closeModal}
                   disabled={isSubmitting}
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
 
                 <button
@@ -542,19 +562,19 @@ export default function AccountCharactersSection() {
                 >
                   {isSubmitting
                     ? modal.type === "create"
-                      ? "Criando..."
-                      : "Salvando..."
+                      ? t("auth.creating")
+                      : t("tasks.saving")
                     : modal.type === "create"
-                      ? "Criar personagem"
-                      : "Salvar alterações"}
+                      ? t("auth.createCharacter")
+                      : t("characters.modal.saveChanges")}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {deleteModal && (
+      {deleteModal ? (
         <div className="character-modal-backdrop" onClick={closeDeleteModal}>
           <div
             className="character-modal character-modal--danger"
@@ -562,36 +582,38 @@ export default function AccountCharactersSection() {
           >
             <div className="character-modal__header">
               <div>
-                <span className="character-modal__eyebrow character-modal__eyebrow--danger">AÇÃO IRREVERSÍVEL</span>
-                <h2 className="character-modal__title">Confirmar exclusão</h2>
+                <span className="character-modal__eyebrow character-modal__eyebrow--danger">
+                  {t("characters.modal.irreversible")}
+                </span>
+                <h2 className="character-modal__title">{t("characters.modal.confirmDelete")}</h2>
               </div>
             </div>
 
             <p className="character-modal__description">
-              Você está prestes a remover <strong>{deleteModal.nome}</strong>. Essa ação não pode ser desfeita.
+              {t("characters.modal.deleteDescription", { name: deleteModal.nome })}
             </p>
 
             <div className="character-modal__notice-list">
-              {deleteTargetWasActive && (
+              {deleteTargetWasActive ? (
                 <div className="character-modal__notice">
-                  Esse é o personagem ativo. O sistema aplicará fallback automático para manter a conta consistente.
+                  {t("characters.modal.deleteActiveNotice")}
                 </div>
-              )}
+              ) : null}
 
-              {deleteTargetIsFavorite && (
+              {deleteTargetIsFavorite ? (
                 <div className="character-modal__notice">
-                  Esse é o personagem principal. Outro personagem será promovido automaticamente, se ainda existir algum.
+                  {t("characters.modal.deleteMainNotice")}
                 </div>
-              )}
+              ) : null}
 
-              {willRemoveLastCharacter && (
+              {willRemoveLastCharacter ? (
                 <div className="character-modal__notice character-modal__notice--warning">
-                  Esse é o último personagem da conta. Após remover, você será levado direto para a tela de criação do primeiro personagem.
+                  {t("characters.modal.deleteLastNotice")}
                 </div>
-              )}
+              ) : null}
             </div>
 
-            {deleteError && <p className="character-modal__error">{deleteError}</p>}
+            {deleteError ? <p className="character-modal__error">{deleteError}</p> : null}
 
             <div className="character-modal__actions">
               <button
@@ -600,7 +622,7 @@ export default function AccountCharactersSection() {
                 onClick={closeDeleteModal}
                 disabled={Boolean(deleteLoadingId)}
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
 
               <button
@@ -609,38 +631,48 @@ export default function AccountCharactersSection() {
                 onClick={handleDeleteConfirmed}
                 disabled={Boolean(deleteLoadingId)}
               >
-                {deleteLoadingId ? "Removendo..." : "Excluir personagem"}
+                {deleteLoadingId
+                  ? t("characters.modal.deleting")
+                  : t("characters.modal.deleteButton")}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {postCreateModal && (
+      {postCreateModal ? (
         <div className="character-modal-backdrop" onClick={closePostCreateModal}>
           <div className="character-modal" onClick={(event) => event.stopPropagation()}>
             <div className="character-modal__header">
               <div>
-                <span className="character-modal__eyebrow">PERSONAGEM CRIADO</span>
-                <h2 className="character-modal__title">Escolha o próximo contexto</h2>
+                <span className="character-modal__eyebrow">
+                  {t("characters.modal.createdEyebrow")}
+                </span>
+                <h2 className="character-modal__title">
+                  {t("characters.modal.nextContextTitle")}
+                </h2>
               </div>
             </div>
 
             <p className="character-modal__description">
-              O personagem <strong>{postCreateModal.createdCharacter.nome}</strong> foi adicionado à sua conta.
+              {t("characters.modal.createdDescription", {
+                name: postCreateModal.createdCharacter.nome,
+              })}
             </p>
 
             <div className="character-modal__notice-list">
               <div className="character-modal__notice">
-                Personagem atual: <strong>{postCreateModal.currentCharacter?.nome || "Nenhum"}</strong>
+                {t("characters.modal.currentCharacter")}:{" "}
+                <strong>{postCreateModal.currentCharacter?.nome || t("common.none")}</strong>
               </div>
               <div className="character-modal__notice">
-                Novo personagem: <strong>{postCreateModal.createdCharacter.nome}</strong>
+                {t("characters.modal.newCharacter")}:{" "}
+                <strong>{postCreateModal.createdCharacter.nome}</strong>
               </div>
             </div>
 
             <p className="character-modal__description">
-              Deseja manter o personagem atual ativo ou ativar o novo agora?
+              {t("characters.modal.chooseContext")}
             </p>
 
             <div className="character-modal__actions">
@@ -650,7 +682,7 @@ export default function AccountCharactersSection() {
                 onClick={handleKeepCurrentCharacter}
                 disabled={isApplyingPostCreateChoice}
               >
-                Manter atual
+                {t("characters.modal.keepCurrent")}
               </button>
 
               <button
@@ -659,12 +691,12 @@ export default function AccountCharactersSection() {
                 onClick={handleActivateNewCharacter}
                 disabled={isApplyingPostCreateChoice}
               >
-                Ativar novo
+                {t("characters.modal.activateNew")}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   )
 }

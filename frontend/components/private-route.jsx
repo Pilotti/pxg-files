@@ -6,12 +6,7 @@ export default function PrivateRoute({ children }) {
   const { isAuthenticated, isBootstrapping } = useAuth()
 
   if (isBootstrapping) {
-    return (
-      <RouteLoader
-        title="Carregando sessão"
-        text="Validando sua autenticação..."
-      />
-    )
+    return <RouteLoader />
   }
 
   if (!isAuthenticated) {

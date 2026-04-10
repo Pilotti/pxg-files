@@ -120,6 +120,13 @@
   transition: grid-template-columns 0.28s ease, gap 0.28s ease, margin-bottom 0.28s ease;
 }
 
+.hunts-page__stats-hint {
+  margin: 0 0 18px;
+  color: rgba(226, 232, 255, 0.55);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
 .hunts-page__stats-grid--history {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -203,6 +210,34 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.hunts-page__history-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hunts-page__history-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(226, 232, 255, 0.65);
+  font-size: 0.82rem;
+}
+
+.hunts-page__history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.hunts-page__history-page {
+  color: rgba(226, 232, 255, 0.65);
+  font-size: 0.8rem;
 }
 
 .hunts-page__history-title {

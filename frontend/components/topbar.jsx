@@ -1,10 +1,13 @@
 import { useNavigate } from "@/lib/react-router-compat"
+import LanguageSelector from "@/components/language-selector.jsx"
+import { useI18n } from "@/context/i18n-context.jsx"
 import { useAuth } from "../context/auth-context.jsx"
 import "../styles/topbar.css"
 
 export default function Topbar() {
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const { t } = useI18n()
 
   async function handleLogout() {
     await logout()
@@ -22,12 +25,14 @@ export default function Topbar() {
         </div>
 
         <div className="topbar__right">
+          <LanguageSelector />
+
           <button
             type="button"
             className="topbar__icon-button"
             onClick={() => navigate("/configuracoes")}
-            aria-label="Abrir configurações"
-            title="Configurações"
+            aria-label={t("topbar.open_settings")}
+            title={t("common.settings")}
           >
             <span className="topbar__icon-button-symbol" aria-hidden="true">⚙</span>
           </button>
@@ -37,7 +42,7 @@ export default function Topbar() {
             className="topbar__button topbar__button--ghost"
             onClick={handleLogout}
           >
-            Sair
+            {t("common.logout")}
           </button>
         </div>
       </div>

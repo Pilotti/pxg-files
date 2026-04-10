@@ -1,17 +1,20 @@
 import { useEffect } from "react"
+import { useI18n } from "@/context/i18n-context.jsx"
 import "../styles/confirm-action-modal.css"
 
 export default function ConfirmActionModal({
   open,
   title,
   description,
-  confirmLabel = "Confirmar",
-  cancelLabel = "Cancelar",
+  confirmLabel,
+  cancelLabel,
   confirmTone = "danger",
   isLoading = false,
   onConfirm,
   onCancel,
 }) {
+  const { t } = useI18n()
+
   useEffect(() => {
     if (!open) return undefined
 
@@ -26,6 +29,9 @@ export default function ConfirmActionModal({
   }, [open, isLoading, onCancel])
 
   if (!open) return null
+
+  const resolvedConfirmLabel = confirmLabel ?? t("common.confirm")
+  const resolvedCancelLabel = cancelLabel ?? t("common.cancel")
 
   return (
     <div
@@ -60,7 +66,7 @@ export default function ConfirmActionModal({
             onClick={onCancel}
             disabled={isLoading}
           >
-            {cancelLabel}
+            {resolvedCancelLabel}
           </button>
 
           <button
@@ -69,7 +75,7 @@ export default function ConfirmActionModal({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading ? "Salvando..." : confirmLabel}
+            {isLoading ? t("common.saving") : resolvedConfirmLabel}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import Topbar from "../components/topbar.jsx"
 import AccountCharactersSection from "../components/account-characters-section.jsx"
 import { useAuth } from "../context/auth-context.jsx"
 import { useCharacter } from "../context/character-context.jsx"
+import { useI18n } from "../context/i18n-context.jsx"
 import {
   APP_ACCENT_OPTIONS,
   DEFAULT_APP_PREFERENCES,
@@ -14,27 +15,6 @@ import {
 } from "../services/app-preferences.js"
 import "../styles/configuracoes-page.css"
 
-const tabs = [
-  { key: "personagens", label: "Personagens" },
-  { key: "aparencia", label: "Aparência" },
-  { key: "preferencias", label: "Preferências" },
-]
-
-const startupOptions = [
-  { value: "/inicio", label: "Início" },
-  { value: "/tasks", label: "Tasks" },
-  { value: "/quests", label: "Quests" },
-  { value: "/configuracoes?aba=personagens", label: "Configurações" },
-]
-
-const saveStateLabels = {
-  saved: "Tema salvo",
-  reset: "Preferências restauradas",
-  imported: "Preferências importadas",
-  exported: "Backup exportado",
-  error: "Falha ao importar arquivo",
-}
-
 function getActiveTab(search) {
   const params = new URLSearchParams(search)
   const rawTab = params.get("aba")
@@ -43,7 +23,7 @@ function getActiveTab(search) {
     sessao: "preferencias",
   }
   const aba = legacyMap[rawTab] || rawTab
-  return tabs.some((tab) => tab.key === aba) ? aba : "personagens"
+  return ["personagens", "aparencia", "preferencias"].includes(aba) ? aba : "personagens"
 }
 
 function buildExportFile(preferences) {
@@ -58,23 +38,43 @@ function buildExportFile(preferences) {
   )
 }
 
-function getSaveStateMessage(saveState) {
-  return saveStateLabels[saveState] || ""
-}
-
 export default function ConfiguracoesPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { activeCharacter } = useCharacter()
+  const { t } = useI18n()
 
   const [preferences, setPreferences] = useState(DEFAULT_APP_PREFERENCES)
   const [saveState, setSaveState] = useState("idle")
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isPreferencesHydrated, setIsPreferencesHydrated] = useState(false)
 
+  const tabs = useMemo(
+    () => [
+      { key: "personagens", label: t("settings.tabs.characters") },
+      { key: "aparencia", label: t("settings.tabs.appearance") },
+      { key: "preferencias", label: t("settings.tabs.preferences") },
+    ],
+    [t],
+  )
+
+  const startupOptions = useMemo(
+    () => [
+      { value: "/inicio", label: t("settings.startup.home") },
+      { value: "/tasks", label: t("settings.startup.tasks") },
+      { value: "/quests", label: t("settings.startup.quests") },
+      { value: "/configuracoes?aba=personagens", label: t("settings.startup.settings") },
+    ],
+    [t],
+  )
+
+  const saveStateMessage = useMemo(() => {
+    if (saveState === "idle") return ""
+    return t(`settings.saveState.${saveState}`)
+  }, [saveState, t])
+
   const activeTab = useMemo(() => getActiveTab(location.search), [location.search])
-  const saveStateMessage = useMemo(() => getSaveStateMessage(saveState), [saveState])
   const selectedAccent = isPreferencesHydrated ? preferences.accent : null
 
   useLayoutEffect(() => {
@@ -161,7 +161,7 @@ export default function ConfiguracoesPage() {
       <section className="settings-page">
         <div className="settings-page__header">
           <div className="settings-page__headline">
-            <h2 className="settings-page__title">Configurações</h2>
+            <h2 className="settings-page__title">{t("settings.title")}</h2>
             {saveStateMessage ? (
               <span
                 className={
@@ -180,7 +180,7 @@ export default function ConfiguracoesPage() {
           <div
             className="settings-page__header-actions settings-page__tabs"
             role="tablist"
-            aria-label="Abas das configurações"
+            aria-label={t("settings.title")}
           >
             {tabs.map((tab) => (
               <button
@@ -188,7 +188,11 @@ export default function ConfiguracoesPage() {
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.key}
-                className={activeTab === tab.key ? "settings-page__tab settings-page__tab--active" : "settings-page__tab"}
+                className={
+                  activeTab === tab.key
+                    ? "settings-page__tab settings-page__tab--active"
+                    : "settings-page__tab"
+                }
                 onClick={() => handleTabChange(tab.key)}
               >
                 {tab.label}
@@ -209,10 +213,12 @@ export default function ConfiguracoesPage() {
               <section className="settings-panel">
                 <header className="settings-panel__header">
                   <div>
-                    <span className="settings-panel__eyebrow">Aparência</span>
-                    <h2 id="settings-accent-title" className="settings-panel__title">Paleta de cores</h2>
+                    <span className="settings-panel__eyebrow">{t("settings.appearanceEyebrow")}</span>
+                    <h2 id="settings-accent-title" className="settings-panel__title">
+                      {t("settings.colorPalette")}
+                    </h2>
                     <p className="settings-panel__description">
-                      Escolha o tom principal da interface.
+                      {t("settings.colorPaletteDescription")}
                     </p>
                   </div>
                 </header>
@@ -232,7 +238,11 @@ export default function ConfiguracoesPage() {
                         type="button"
                         role="radio"
                         aria-checked={isActive}
-                        className={isActive ? "settings-accent-card settings-accent-card--active" : "settings-accent-card"}
+                        className={
+                          isActive
+                            ? "settings-accent-card settings-accent-card--active"
+                            : "settings-accent-card"
+                        }
                         style={{
                           "--accent-card-primary": option.primary,
                           "--accent-card-strong": option.strong,
@@ -241,8 +251,14 @@ export default function ConfiguracoesPage() {
                         onClick={() => updatePreference("accent", option.value)}
                       >
                         <span className="settings-accent-card__preview">
-                          <span className={`settings-accent-card__swatch settings-accent-card__swatch--${option.value}`} />
-                          {isActive ? <span className="settings-accent-card__selected">Tema atual</span> : null}
+                          <span
+                            className={`settings-accent-card__swatch settings-accent-card__swatch--${option.value}`}
+                          />
+                          {isActive ? (
+                            <span className="settings-accent-card__selected">
+                              {t("common.themeCurrent")}
+                            </span>
+                          ) : null}
                         </span>
                         <strong>{option.label}</strong>
                         <small>{option.hint}</small>
@@ -259,26 +275,26 @@ export default function ConfiguracoesPage() {
               <section className="settings-panel">
                 <header className="settings-panel__header">
                   <div>
-                    <span className="settings-panel__eyebrow">Conta</span>
-                    <h2 className="settings-panel__title">Visão geral da sua conta</h2>
+                    <span className="settings-panel__eyebrow">{t("settings.accountEyebrow")}</span>
+                    <h2 className="settings-panel__title">{t("settings.accountOverview")}</h2>
                     <p className="settings-panel__description">
-                      Informações rápidas da sessão atual e gerenciamento dos seus personagens vinculados.
+                      {t("settings.accountOverviewDescription")}
                     </p>
                   </div>
                 </header>
 
                 <div className="settings-account-overview">
                   <div className="settings-account-overview__item">
-                    <span className="settings-account-overview__label">Usuário</span>
+                    <span className="settings-account-overview__label">{t("settings.user")}</span>
                     <strong>{user?.display_name || user?.displayName || "-"}</strong>
                   </div>
                   <div className="settings-account-overview__item">
-                    <span className="settings-account-overview__label">E-mail</span>
+                    <span className="settings-account-overview__label">{t("settings.email")}</span>
                     <strong>{user?.email || "-"}</strong>
                   </div>
                   <div className="settings-account-overview__item">
-                    <span className="settings-account-overview__label">Personagem ativo</span>
-                    <strong>{activeCharacter?.nome || activeCharacter?.name || "Nenhum"}</strong>
+                    <span className="settings-account-overview__label">{t("settings.activeCharacter")}</span>
+                    <strong>{activeCharacter?.nome || activeCharacter?.name || t("common.none")}</strong>
                   </div>
                 </div>
               </section>
@@ -286,17 +302,17 @@ export default function ConfiguracoesPage() {
               <section className="settings-panel">
                 <header className="settings-panel__header">
                   <div>
-                    <span className="settings-panel__eyebrow">Preferências</span>
-                    <h2 className="settings-panel__title">Comportamento do app</h2>
+                    <span className="settings-panel__eyebrow">{t("settings.preferencesEyebrow")}</span>
+                    <h2 className="settings-panel__title">{t("settings.appBehavior")}</h2>
                     <p className="settings-panel__description">
-                      Ajuste o que acontece ao entrar na conta, trocar personagem e executar ações sensíveis.
+                      {t("settings.appBehaviorDescription")}
                     </p>
                   </div>
                 </header>
 
                 <div className="settings-field-grid">
                   <label className="settings-field settings-field--full">
-                    <span className="settings-field__label">Página inicial após login</span>
+                    <span className="settings-field__label">{t("settings.startupPage")}</span>
                     <select
                       className="settings-select"
                       value={preferences.startupPage}
@@ -312,37 +328,43 @@ export default function ConfiguracoesPage() {
 
                   <label className="settings-toggle-card">
                     <div>
-                      <strong>Confirmar antes de remover</strong>
-                      <p>Mantém confirmações extras em exclusões e remoções importantes.</p>
+                      <strong>{t("settings.confirmBeforeRemoving")}</strong>
+                      <p>{t("settings.confirmBeforeRemovingHint")}</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={preferences.confirmBeforeRemoving}
-                      onChange={(event) => updatePreference("confirmBeforeRemoving", event.target.checked)}
+                      onChange={(event) =>
+                        updatePreference("confirmBeforeRemoving", event.target.checked)
+                      }
                     />
                   </label>
 
                   <label className="settings-toggle-card">
                     <div>
-                      <strong>Destacar concluídas</strong>
-                      <p>Preserva maior contraste visual para tasks e quests finalizadas.</p>
+                      <strong>{t("settings.highlightCompleted")}</strong>
+                      <p>{t("settings.highlightCompletedHint")}</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={preferences.highlightCompleted}
-                      onChange={(event) => updatePreference("highlightCompleted", event.target.checked)}
+                      onChange={(event) =>
+                        updatePreference("highlightCompleted", event.target.checked)
+                      }
                     />
                   </label>
 
                   <label className="settings-toggle-card settings-toggle-card--full">
                     <div>
-                      <strong>Voltar ao início após trocar personagem</strong>
-                      <p>Quando desativado, a troca mantém a página atual, sem forçar retorno ao dashboard.</p>
+                      <strong>{t("settings.returnHomeAfterSwitch")}</strong>
+                      <p>{t("settings.returnHomeAfterSwitchHint")}</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={preferences.openHomeAfterCharacterSwitch}
-                      onChange={(event) => updatePreference("openHomeAfterCharacterSwitch", event.target.checked)}
+                      onChange={(event) =>
+                        updatePreference("openHomeAfterCharacterSwitch", event.target.checked)
+                      }
                     />
                   </label>
                 </div>
@@ -351,44 +373,57 @@ export default function ConfiguracoesPage() {
               <section className="settings-panel">
                 <header className="settings-panel__header settings-panel__header--split">
                   <div>
-                    <span className="settings-panel__eyebrow">Sessão</span>
-                    <h2 className="settings-panel__title">Persistência e segurança</h2>
+                    <span className="settings-panel__eyebrow">{t("settings.sessionEyebrow")}</span>
+                    <h2 className="settings-panel__title">{t("settings.sessionSecurity")}</h2>
                     <p className="settings-panel__description">
-                      Faça backup das preferências locais, restaure o padrão e encerre a sessão atual.
+                      {t("settings.sessionSecurityDescription")}
                     </p>
                   </div>
                 </header>
 
                 <div className="settings-session-grid">
                   <article className="settings-session-card">
-                    <span className="settings-session-card__label">Conta ativa</span>
+                    <span className="settings-session-card__label">{t("settings.activeAccount")}</span>
                     <strong>{user?.email || "-"}</strong>
-                    <p>Seus tokens e preferências locais ficam vinculados a este navegador.</p>
+                    <p>{t("settings.accountHint")}</p>
                   </article>
                   <article className="settings-session-card">
-                    <span className="settings-session-card__label">Personagem em foco</span>
-                    <strong>{activeCharacter?.nome || activeCharacter?.name || "Nenhum"}</strong>
-                    <p>O último personagem escolhido fica salvo localmente para restauração automática.</p>
+                    <span className="settings-session-card__label">{t("settings.focusedCharacter")}</span>
+                    <strong>{activeCharacter?.nome || activeCharacter?.name || t("common.none")}</strong>
+                    <p>{t("settings.characterHint")}</p>
                   </article>
                   <article className="settings-session-card">
-                    <span className="settings-session-card__label">Preferências</span>
-                    <strong>Locais</strong>
-                    <p>As preferências desta página ficam salvas neste dispositivo.</p>
+                    <span className="settings-session-card__label">{t("settings.preferencesStorage")}</span>
+                    <strong>{t("settings.localStorage")}</strong>
+                    <p>{t("settings.localStorageHint")}</p>
                   </article>
                 </div>
 
                 <div className="settings-actions-row">
-                  <button type="button" className="settings-action-button" onClick={handleExportPreferences}>
-                    Exportar preferências
+                  <button
+                    type="button"
+                    className="settings-action-button"
+                    onClick={handleExportPreferences}
+                  >
+                    {t("settings.exportPreferences")}
                   </button>
 
                   <label className="settings-action-button settings-action-button--file">
-                    Importar preferências
-                    <input type="file" accept="application/json" onChange={handleImportPreferences} hidden />
+                    {t("settings.importPreferences")}
+                    <input
+                      type="file"
+                      accept="application/json"
+                      onChange={handleImportPreferences}
+                      hidden
+                    />
                   </label>
 
-                  <button type="button" className="settings-action-button" onClick={handleResetPreferences}>
-                    Restaurar padrão
+                  <button
+                    type="button"
+                    className="settings-action-button"
+                    onClick={handleResetPreferences}
+                  >
+                    {t("settings.resetDefault")}
                   </button>
 
                   <button
@@ -397,7 +432,7 @@ export default function ConfiguracoesPage() {
                     onClick={handleLogout}
                     disabled={isLoggingOut}
                   >
-                    {isLoggingOut ? "Encerrando..." : "Encerrar sessão"}
+                    {isLoggingOut ? t("settings.endingSession") : t("settings.endSession")}
                   </button>
                 </div>
               </section>

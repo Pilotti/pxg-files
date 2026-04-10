@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Bar,
   BarChart,
@@ -14,12 +14,39 @@ import {
 import AppShell from "../components/app-shell.jsx"
 import Topbar from "../components/topbar.jsx"
 import { useCharacter } from "../context/character-context.jsx"
+import { useI18n } from "../context/i18n-context.jsx"
 import { apiRequest } from "../services/api.js"
 import { API_URL, getAccessToken } from "../services/session-manager.js"
 import "../styles/hunts-page.css"
 
-function formatCompactNumber(value) {
-  return new Intl.NumberFormat("pt-BR").format(value)
+function formatCompactNumber(value, locale = "pt-BR") {
+  return new Intl.NumberFormat(locale).format(value)
+}
+
+function formatCompactValue(value, locale = "pt-BR") {
+  const numeric = Number(value || 0)
+  if (!Number.isFinite(numeric)) {
+    return "0"
+  }
+
+  const abs = Math.abs(numeric)
+  const formatShort = (val, suffix) => {
+    const formatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: val % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: 1,
+    }).format(val)
+    return `${formatted}${suffix}`
+  }
+
+  if (abs >= 1_000_000) {
+    return formatShort(numeric / 1_000_000, "kk")
+  }
+
+  if (abs >= 1_000) {
+    return formatShort(numeric / 1_000, "k")
+  }
+
+  return new Intl.NumberFormat(locale).format(numeric)
 }
 
 function formatHoursAndMinutes(totalMinutes) {
@@ -41,35 +68,29 @@ function parseDecimalInput(raw) {
   return value
 }
 
-function formatCompactDlValue(value) {
+function formatCompactDlValue(value, locale = "pt-BR") {
   const numeric = Number(value || 0)
   const floorToSingleDecimal = (amount) => Math.floor(amount * 10) / 10
 
   if (!Number.isFinite(numeric)) {
-    return "0 dl"
+    return "0"
   }
 
   const absolute = Math.abs(numeric)
-  if (absolute >= 1_000) {
-    const magnitude = Math.floor(Math.log10(absolute) / 3)
-    const divisor = 1000 ** magnitude
-    const compact = floorToSingleDecimal(numeric / divisor)
-    const suffix = "k".repeat(magnitude)
-    return `${String(compact).replace(/\.0$/, "")}${suffix}`
+  if (absolute >= 1_000_000) {
+    const compact = floorToSingleDecimal(numeric / 1_000_000)
+    return `${String(compact).replace(/\.0$/, "")}kk`
   }
 
-  const compact = Number.isInteger(numeric) ? String(numeric) : String(floorToSingleDecimal(numeric)).replace(/\.0$/, "")
-  return `${compact} dl`
+  if (absolute >= 1_000) {
+    const compact = floorToSingleDecimal(numeric / 1_000)
+    return `${String(compact).replace(/\.0$/, "")}k`
+  }
+
+  return new Intl.NumberFormat(locale).format(numeric)
 }
 
 const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png"])
-const OCR_EXAMPLE_RULES = [
-  "A tabela de drops precisa aparecer inteira e legível.",
-  "As colunas Item, Contagem e Valor devem estar visíveis.",
-  "Evite prints borradas, tremidas ou muito distantes.",
-  "Não corte o topo nem o rodapé da janela da tabela.",
-  "Prefira uma captura limpa, sem overlays cobrindo os drops.",
-]
 
 function isAcceptedImageFile(file) {
   const mimeType = String(file?.type || "").toLowerCase()
@@ -81,6 +102,7 @@ function isAcceptedImageFile(file) {
 
 export default function HuntsPage() {
   const { activeCharacter } = useCharacter()
+  const { locale, t } = useI18n()
   const [viewMode, setViewMode] = useState("overview")
   const [selectedFiles, setSelectedFiles] = useState([])
   const [previewFile, setPreviewFile] = useState(null)
@@ -92,17 +114,14 @@ export default function HuntsPage() {
   const [savingPriceMap, setSavingPriceMap] = useState({})
   const [dropsError, setDropsError] = useState("")
 
-  // Hunt metadata
   const [huntDuration, setHuntDuration] = useState("")
   const [huntNotes, setHuntNotes] = useState("")
 
-  // Enemies autocomplete
   const [allEnemies, setAllEnemies] = useState([])
   const [enemySearch, setEnemySearch] = useState("")
   const [enemyList, setEnemyList] = useState([])
   const [showEnemySuggestions, setShowEnemySuggestions] = useState(false)
 
-  // Consumables autocomplete
   const [allConsumables, setAllConsumables] = useState([])
   const [consumableSearch, setConsumableSearch] = useState("")
   const [consumableList, setConsumableList] = useState([])
@@ -110,28 +129,35 @@ export default function HuntsPage() {
   const [isConsumableModalOpen, setIsConsumableModalOpen] = useState(false)
   const [selectedConsumableCategory, setSelectedConsumableCategory] = useState("")
 
-  // Save / history
   const [isSavingHunt, setIsSavingHunt] = useState(false)
   const [huntSaveError, setHuntSaveError] = useState("")
   const [huntSaved, setHuntSaved] = useState(false)
   const [huntSessions, setHuntSessions] = useState([])
+  const [historyRange, setHistoryRange] = useState("all")
+  const [historyPage, setHistoryPage] = useState(1)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [expandedSessionId, setExpandedSessionId] = useState(null)
   const [sessionDetail, setSessionDetail] = useState(null)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
 
   const summary = useMemo(() => {
-    const totalHunts = huntSessions.length
-    const totalMinutes = huntSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0)
-    const totalNpcValue = huntSessions.reduce((acc, s) => acc + (s.total_npc_value || 0), 0)
-    const totalPlayerValue = huntSessions.reduce((acc, s) => acc + (s.total_player_value || 0), 0)
+    const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    const recentSessions = huntSessions.filter((s) => {
+      const sessionDate = new Date(s.hunt_date || "").getTime()
+      return Number.isFinite(sessionDate) && sessionDate >= cutoff
+    })
+
+    const totalHunts = recentSessions.length
+    const totalMinutes = recentSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0)
+    const totalNpcValue = recentSessions.reduce((acc, s) => acc + (s.total_npc_value || 0), 0)
+    const totalPlayerValue = recentSessions.reduce((acc, s) => acc + (s.total_player_value || 0), 0)
     const averageNpcPerHour = totalMinutes > 0 ? Math.round((totalNpcValue / totalMinutes) * 60) : 0
     const averagePlayerPerHour = totalMinutes > 0 ? Math.round((totalPlayerValue / totalMinutes) * 60) : 0
-    const expectedNpcProfit = huntSessions.reduce((acc, s) => {
+    const expectedNpcProfit = recentSessions.reduce((acc, s) => {
       const consumableCost = (s.consumables_json || []).reduce((cAcc, c) => cAcc + ((c.preco_npc || 0) * (c.quantity || 0)), 0)
       return acc + (s.total_npc_value || 0) - consumableCost
     }, 0)
-    const expectedPlayerProfit = huntSessions.reduce((acc, s) => {
+    const expectedPlayerProfit = recentSessions.reduce((acc, s) => {
       const playerValue = s.total_player_value || 0
       const npcValue = s.total_npc_value || 0
       const effectiveValue = playerValue > 0 ? playerValue : npcValue
@@ -141,53 +167,92 @@ export default function HuntsPage() {
     return { totalHunts, totalMinutes, averageNpcPerHour, averagePlayerPerHour, expectedNpcProfit, expectedPlayerProfit }
   }, [huntSessions])
 
+  const ocrExampleRules = useMemo(() => ([
+    t("hunts.example.rule1"),
+    t("hunts.example.rule2"),
+    t("hunts.example.rule3"),
+    t("hunts.example.rule4"),
+    t("hunts.example.rule5"),
+  ]), [t])
+
   const chartData = useMemo(() => {
     const sorted = [...huntSessions]
       .sort((a, b) => new Date(a.hunt_date) - new Date(b.hunt_date))
       .slice(-20)
     return sorted.map((s, index) => ({
-      label: new Date(s.hunt_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      label: new Date(s.hunt_date).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" }),
       index: index + 1,
       npc: Math.round(s.total_npc_value || 0),
       venda: Math.round(s.total_player_value || 0),
       duracao: s.duration_minutes || 0,
     }))
-  }, [huntSessions])
+  }, [huntSessions, locale])
 
-  const statCards = [
+  const filteredHistorySessions = useMemo(() => {
+    if (historyRange === "all") {
+      return [...huntSessions].sort((a, b) => new Date(b.hunt_date) - new Date(a.hunt_date))
+    }
+
+    const days = Number(historyRange)
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000)
+    return huntSessions
+      .filter((s) => {
+        const sessionDate = new Date(s.hunt_date || "").getTime()
+        return Number.isFinite(sessionDate) && sessionDate >= cutoff
+      })
+      .sort((a, b) => new Date(b.hunt_date) - new Date(a.hunt_date))
+  }, [historyRange, huntSessions])
+
+  const historyTotalPages = Math.max(1, Math.ceil(filteredHistorySessions.length / 6))
+  const pagedHistorySessions = useMemo(() => {
+    const start = (historyPage - 1) * 6
+    return filteredHistorySessions.slice(start, start + 6)
+  }, [filteredHistorySessions, historyPage])
+
+  useEffect(() => {
+    setHistoryPage(1)
+  }, [historyRange])
+
+  useEffect(() => {
+    if (historyPage > historyTotalPages) {
+      setHistoryPage(historyTotalPages)
+    }
+  }, [historyPage, historyTotalPages])
+
+  const statCards = useMemo(() => ([
     {
-      label: "Hunts",
-      value: formatCompactNumber(summary.totalHunts),
-      helper: "Sessões do personagem ativo.",
+      label: t("hunts.stats.sessions"),
+      value: formatCompactNumber(summary.totalHunts, locale),
+      helper: t("hunts.stats.sessionsHelper"),
     },
     {
-      label: "Horas caçadas",
+      label: t("hunts.stats.hoursHunted"),
       value: formatHoursAndMinutes(summary.totalMinutes),
-      helper: "Tempo total em hunts fechadas.",
+      helper: t("hunts.stats.hoursHuntedHelper"),
     },
     {
-      label: "Média por hora",
+      label: t("hunts.stats.averagePerHour"),
       value: (
         <div className="hunts-page__stat-split-value">
-          <span className="hunts-page__stat-split-line">npc: {formatCompactNumber(summary.averageNpcPerHour)} gp</span>
-          <span className="hunts-page__stat-split-line hunts-page__stat-split-line--player">player: {formatCompactNumber(summary.averagePlayerPerHour)} gp</span>
+          <span className="hunts-page__stat-split-line">{t("hunts.session.npc").toLowerCase()}: {formatCompactValue(summary.averageNpcPerHour, locale)}</span>
+          <span className="hunts-page__stat-split-line hunts-page__stat-split-line--player">{t("hunts.session.player").toLowerCase()}: {formatCompactValue(summary.averagePlayerPerHour, locale)}</span>
         </div>
       ),
-      helper: "Comparativo de npc e player.",
+      helper: t("hunts.stats.averagePerHourHelper"),
       valueClassName: "hunts-page__stat-value--split",
     },
     {
-      label: "Lucro esperado",
+      label: t("hunts.stats.expectedProfit"),
       value: (
         <div className="hunts-page__stat-split-value">
-          <span className="hunts-page__stat-split-line">npc: {formatCompactDlValue(summary.expectedNpcProfit)}</span>
-          <span className="hunts-page__stat-split-line hunts-page__stat-split-line--player">player: {formatCompactDlValue(summary.expectedPlayerProfit)}</span>
+          <span className="hunts-page__stat-split-line">{t("hunts.session.npc").toLowerCase()}: {formatCompactValue(summary.expectedNpcProfit, locale)}</span>
+          <span className="hunts-page__stat-split-line hunts-page__stat-split-line--player">{t("hunts.session.player").toLowerCase()}: {formatCompactValue(summary.expectedPlayerProfit, locale)}</span>
         </div>
       ),
-      helper: "Lucro NPC e player (descontado supply).",
+      helper: t("hunts.stats.expectedProfitHelper"),
       valueClassName: "hunts-page__stat-value--split",
     },
-  ]
+  ]), [locale, summary, t])
 
   const currentExpectedProfit = useMemo(() => {
     const consumableCost = consumableList.reduce((acc, c) => acc + ((c.preco_npc || 0) * (c.quantity || 0)), 0)
@@ -209,8 +274,8 @@ export default function HuntsPage() {
 
   const consumableCategories = useMemo(() => {
     const values = Array.from(new Set(allConsumables.map((item) => getConsumableCategory(item)).filter(Boolean)))
-    return values.sort((left, right) => left.localeCompare(right, "pt-BR"))
-  }, [allConsumables])
+    return values.sort((left, right) => left.localeCompare(right, locale))
+  }, [allConsumables, locale])
 
   const filteredConsumables = useMemo(() => {
     const query = consumableSearch.trim().toLowerCase()
@@ -253,22 +318,6 @@ export default function HuntsPage() {
     loadSessions()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCharacter?.id])
-
-  useEffect(() => {
-    if (!isNewHuntOpen) return undefined
-
-    const handleWindowPaste = (event) => {
-      const target = event.target
-      const isEditableTarget = target instanceof HTMLElement
-        && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
-
-      if (isEditableTarget) return
-      handlePasteImages(event)
-    }
-
-    window.addEventListener("paste", handleWindowPaste)
-    return () => window.removeEventListener("paste", handleWindowPaste)
-  }, [isNewHuntOpen])
 
   async function loadSessions() {
     setIsLoadingHistory(true)
@@ -395,7 +444,7 @@ export default function HuntsPage() {
       setHuntNotes("")
       await loadSessions()
     } catch (error) {
-      setHuntSaveError(error.message || "Erro ao salvar hunt.")
+      setHuntSaveError(error.message || t("hunts.errors.saveHunt"))
     } finally {
       setIsSavingHunt(false)
     }
@@ -428,7 +477,6 @@ export default function HuntsPage() {
         setSessionDetail(null)
       }
     } catch {
-      // ignored
     }
   }
 
@@ -440,7 +488,7 @@ export default function HuntsPage() {
     const rejectedCount = files.length - acceptedFiles.length
 
     if (!acceptedFiles.length) {
-      setDropsError("Envie apenas imagens JPG ou PNG.")
+      setDropsError(t("hunts.errors.invalidFiles"))
       event.target.value = ""
       return
     }
@@ -469,13 +517,13 @@ export default function HuntsPage() {
     })
 
     event.target.value = ""
-    setDropsError(rejectedCount > 0 ? "Alguns arquivos foram ignorados. Apenas JPG ou PNG sao permitidos." : "")
+    setDropsError(rejectedCount > 0 ? t("hunts.errors.ignoredFiles") : "")
     setDropsWarnings([])
     setDropsResult(null)
     setDropsRows([])
   }
 
-  function handlePasteImages(event) {
+  const handlePasteImages = useCallback((event) => {
     const clipboardItems = Array.from(event.clipboardData?.items || [])
     if (!clipboardItems.length) return
 
@@ -490,7 +538,7 @@ export default function HuntsPage() {
 
     const acceptedFiles = pastedFiles.filter(isAcceptedImageFile)
     if (!acceptedFiles.length) {
-      setDropsError("A colagem aceita apenas imagens JPG ou PNG.")
+      setDropsError(t("hunts.errors.pasteOnly"))
       return
     }
 
@@ -527,11 +575,27 @@ export default function HuntsPage() {
       return next
     })
 
-    setDropsError(acceptedFiles.length !== pastedFiles.length ? "Alguns itens colados foram ignorados. Apenas JPG ou PNG sao permitidos." : "")
+    setDropsError(acceptedFiles.length !== pastedFiles.length ? t("hunts.errors.ignoredPaste") : "")
     setDropsWarnings([])
     setDropsResult(null)
     setDropsRows([])
-  }
+  }, [t])
+
+  useEffect(() => {
+    if (!isNewHuntOpen) return undefined
+
+    const handleWindowPaste = (event) => {
+      const target = event.target
+      const isEditableTarget = target instanceof HTMLElement
+        && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+
+      if (isEditableTarget) return
+      handlePasteImages(event)
+    }
+
+    window.addEventListener("paste", handleWindowPaste)
+    return () => window.removeEventListener("paste", handleWindowPaste)
+  }, [handlePasteImages, isNewHuntOpen])
 
   function handleRemoveSelectedFile(fileId) {
     setSelectedFiles((current) => {
@@ -624,7 +688,7 @@ export default function HuntsPage() {
         }),
       })
     } catch (error) {
-      setDropsError(error.message || "Nao foi possivel salvar o preco de venda.")
+      setDropsError(error.message || t("hunts.errors.saveSalePrice"))
     } finally {
       setSavingPriceMap((prev) => {
         const next = { ...prev }
@@ -663,14 +727,14 @@ export default function HuntsPage() {
       const payload = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(payload?.detail || "Nao foi possivel processar os drops.")
+        throw new Error(payload?.detail || t("hunts.errors.processDrops"))
       }
 
       setDropsResult(payload)
       setDropsRows(normalizeRows(payload?.rows || []))
       setDropsWarnings(Array.isArray(payload?.warnings) ? payload.warnings : [])
     } catch (error) {
-      setDropsError(error.message || "Erro ao enviar imagens para OCR.")
+      setDropsError(error.message || t("hunts.errors.sendToOcr"))
       setDropsWarnings([])
     } finally {
       setIsUploadingDrops(false)
@@ -685,7 +749,7 @@ export default function HuntsPage() {
         <div className="hunts-page__shell">
           <div className="hunts-page__header">
             <div className="hunts-page__header-copy">
-              <h2 className="hunts-page__title">Hunts</h2>
+              <h2 className="hunts-page__title">{t("hunts.title")}</h2>
             </div>
 
             <div className="hunts-page__header-actions">
@@ -698,7 +762,7 @@ export default function HuntsPage() {
                 }
                 onClick={() => setViewMode("history")}
               >
-                Histórico
+                {t("hunts.tabs.history")}
               </button>
               <button
                 type="button"
@@ -709,7 +773,7 @@ export default function HuntsPage() {
                 }
                 onClick={() => setViewMode("new-hunt")}
               >
-                Nova Hunt
+                {t("hunts.tabs.new")}
               </button>
             </div>
           </div>
@@ -737,11 +801,12 @@ export default function HuntsPage() {
               </article>
             ))}
           </div>
+          <p className="hunts-page__stats-hint">{t("hunts.stats.last30Days")}</p>
 
           {!isCompactView && chartData.length >= 2 ? (
             <section className="hunts-page__charts-section">
               <div className="hunts-page__chart-card">
-                <strong className="hunts-page__chart-title">Lucro por sessão</strong>
+                <strong className="hunts-page__chart-title">{t("hunts.chart.profitPerSession")}</strong>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #2a2a3a)" />
@@ -752,7 +817,7 @@ export default function HuntsPage() {
                       axisLine={false}
                     />
                     <YAxis
-                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                      tickFormatter={(v) => formatCompactValue(v, locale)}
                       tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
                       tickLine={false}
                       axisLine={false}
@@ -760,8 +825,8 @@ export default function HuntsPage() {
                     />
                     <Tooltip
                       formatter={(value, name) => [
-                        new Intl.NumberFormat("pt-BR").format(value) + " gp",
-                        name === "npc" ? "NPC" : "Venda",
+                        formatCompactValue(value, locale),
+                        name === "npc" ? t("hunts.session.npc") : t("hunts.chart.sale"),
                       ]}
                       contentStyle={{
                         background: "var(--chart-tooltip-bg, #1a1a2e)",
@@ -790,13 +855,13 @@ export default function HuntsPage() {
                   </LineChart>
                 </ResponsiveContainer>
                 <div className="hunts-page__chart-legend">
-                  <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--npc">NPC</span>
-                  <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--venda">Venda</span>
+                  <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--npc">{t("hunts.session.npc")}</span>
+                  <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--venda">{t("hunts.chart.sale")}</span>
                 </div>
               </div>
 
               <div className="hunts-page__chart-card">
-                <strong className="hunts-page__chart-title">Duração por sessão (min)</strong>
+                <strong className="hunts-page__chart-title">{t("hunts.chart.durationPerSession")}</strong>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #2a2a3a)" vertical={false} />
@@ -814,7 +879,7 @@ export default function HuntsPage() {
                       width={36}
                     />
                     <Tooltip
-                      formatter={(value) => [`${value} min`, "Duração"]}
+                      formatter={(value) => [`${value} min`, t("hunts.chart.duration")]}
                       contentStyle={{
                         background: "var(--chart-tooltip-bg, #1a1a2e)",
                         border: "1px solid var(--chart-tooltip-border, #333)",
@@ -839,44 +904,59 @@ export default function HuntsPage() {
             <section className="hunts-page__history-panel">
               <div className="hunts-page__history-header">
                 <div>
-                  <h3 className="hunts-page__history-title">Histórico de hunts</h3>
+                  <h3 className="hunts-page__history-title">{t("hunts.history.title")}</h3>
                   <p className="hunts-page__history-subtitle">
-                    {huntSessions.length
-                      ? `${huntSessions.length} sessão(ões) registradas para o personagem ativo.`
-                      : "Nenhuma hunt registrada ainda."}
+                    {filteredHistorySessions.length
+                      ? t("hunts.history.subtitle", { count: formatCompactNumber(filteredHistorySessions.length, locale) })
+                      : t("hunts.history.empty")}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="hunts-page__ghost-button"
-                  onClick={loadSessions}
-                  disabled={isLoadingHistory}
-                >
-                  {isLoadingHistory ? "Carregando..." : "Atualizar"}
-                </button>
+                <div className="hunts-page__history-actions">
+                  <label className="hunts-page__history-filter">
+                    <span>{t("hunts.history.filterLabel")}</span>
+                    <select
+                      className="hunts-page__table-input"
+                      value={historyRange}
+                      onChange={(event) => setHistoryRange(event.target.value)}
+                    >
+                      <option value="all">{t("hunts.history.filterAll")}</option>
+                      <option value="7">{t("hunts.history.filter7")}</option>
+                      <option value="30">{t("hunts.history.filter30")}</option>
+                      <option value="90">{t("hunts.history.filter90")}</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="hunts-page__ghost-button"
+                    onClick={loadSessions}
+                    disabled={isLoadingHistory}
+                  >
+                    {isLoadingHistory ? t("common.loading") : t("hunts.history.refresh")}
+                  </button>
+                </div>
               </div>
 
               {isLoadingHistory && huntSessions.length === 0 ? (
                 <div className="hunts-page__history-placeholder">
-                  <p className="hunts-page__history-placeholder-copy">Carregando sessões...</p>
+                  <p className="hunts-page__history-placeholder-copy">{t("hunts.history.loadingSessions")}</p>
                 </div>
-              ) : huntSessions.length === 0 ? (
+              ) : filteredHistorySessions.length === 0 ? (
                 <div className="hunts-page__history-placeholder">
-                  <strong className="hunts-page__history-placeholder-title">Nenhuma hunt registrada</strong>
+                  <strong className="hunts-page__history-placeholder-title">{t("hunts.history.emptyTitle")}</strong>
                   <p className="hunts-page__history-placeholder-copy">
-                    Clique em Nova Hunt para registrar sua primeira sessão.
+                    {t("hunts.history.emptyDescription")}
                   </p>
                 </div>
               ) : (
                 <div className="hunts-page__session-list">
-                  {huntSessions.map((session) => {
+                  {pagedHistorySessions.map((session) => {
                     const isExpanded = expandedSessionId === session.id
                     return (
                       <article key={session.id} className="hunts-page__session-card">
                         <div className="hunts-page__session-row">
                           <div className="hunts-page__session-info">
                             <span className="hunts-page__session-date">
-                              {new Date(session.hunt_date).toLocaleDateString("pt-BR", {
+                              {new Date(session.hunt_date).toLocaleDateString(locale, {
                                 day: "2-digit", month: "2-digit", year: "numeric",
                                 hour: "2-digit", minute: "2-digit",
                               })}
@@ -888,21 +968,21 @@ export default function HuntsPage() {
                             ) : null}
                             {session.total_enemies > 0 ? (
                               <span className="hunts-page__session-badge hunts-page__session-badge--enemies">
-                                {formatCompactNumber(session.total_enemies)} inimigos
+                                {t("hunts.history.enemiesCount", { count: formatCompactNumber(session.total_enemies, locale) })}
                               </span>
                             ) : null}
                           </div>
                           <div className="hunts-page__session-values">
-                            <span className="hunts-page__session-label">NPC</span>
-                            <strong className="hunts-page__session-value">{formatCompactDlValue(session.total_npc_value)}</strong>
-                            <span className="hunts-page__session-label">Venda</span>
-                            <strong className="hunts-page__session-value hunts-page__session-value--player">{formatCompactDlValue(session.total_player_value)}</strong>
+                            <span className="hunts-page__session-label">{t("hunts.session.npc")}</span>
+                            <strong className="hunts-page__session-value">{formatCompactDlValue(session.total_npc_value, locale)}</strong>
+                            <span className="hunts-page__session-label">{t("hunts.session.sale")}</span>
+                            <strong className="hunts-page__session-value hunts-page__session-value--player">{formatCompactDlValue(session.total_player_value, locale)}</strong>
                             {(() => {
                               const consumableCost = (session.consumables_json || []).reduce((acc, c) => acc + ((c.preco_npc || 0) * (c.quantity || 0)), 0)
                               return consumableCost > 0 ? (
                                 <>
-                                  <span className="hunts-page__session-label">Supply</span>
-                                  <strong className="hunts-page__session-value hunts-page__session-value--negative">-{formatCompactDlValue(consumableCost)}</strong>
+                                  <span className="hunts-page__session-label">{t("hunts.session.supply")}</span>
+                                  <strong className="hunts-page__session-value hunts-page__session-value--negative">-{formatCompactDlValue(consumableCost, locale)}</strong>
                                 </>
                               ) : null
                             })()}
@@ -912,9 +992,9 @@ export default function HuntsPage() {
                               const netProfit = sessionProfit - consumableCost
                               return (
                                 <>
-                                  <span className="hunts-page__session-label">Lucro</span>
+                                  <span className="hunts-page__session-label">{t("hunts.session.profit")}</span>
                                   <strong className={netProfit >= 0 ? "hunts-page__session-value hunts-page__session-value--positive" : "hunts-page__session-value hunts-page__session-value--negative"}>
-                                    {netProfit >= 0 ? "+" : "-"}{formatCompactDlValue(Math.abs(netProfit))}
+                                    {netProfit >= 0 ? "+" : "-"}{formatCompactDlValue(Math.abs(netProfit), locale)}
                                   </strong>
                                 </>
                               )
@@ -926,13 +1006,13 @@ export default function HuntsPage() {
                               className="hunts-page__ghost-button hunts-page__session-action-btn"
                               onClick={() => loadSessionDetail(session.id)}
                             >
-                              {isExpanded ? "Ocultar" : "Detalhes"}
+                              {isExpanded ? t("hunts.history.hide") : t("hunts.history.details")}
                             </button>
                             <button
                               type="button"
                               className="hunts-page__session-delete-btn"
                               onClick={() => deleteSession(session.id)}
-                              title="Excluir hunt"
+                              title={t("hunts.history.delete")}
                             >
                               ×
                             </button>
@@ -942,7 +1022,7 @@ export default function HuntsPage() {
                         {isExpanded ? (
                           <div className="hunts-page__session-detail">
                             {isLoadingDetail && sessionDetail?.id !== session.id ? (
-                              <p className="hunts-page__history-subtitle">Carregando detalhes...</p>
+                              <p className="hunts-page__history-subtitle">{t("hunts.history.loadingDetails")}</p>
                             ) : sessionDetail?.id === session.id ? (
                               <>
                                 {sessionDetail.notes ? (
@@ -951,11 +1031,11 @@ export default function HuntsPage() {
 
                                 {sessionDetail.enemies_json?.length > 0 ? (
                                   <div className="hunts-page__session-detail-block">
-                                    <strong className="hunts-page__session-detail-title">Inimigos derrotados</strong>
+                                    <strong className="hunts-page__session-detail-title">{t("hunts.session.enemiesDefeated")}</strong>
                                     <div className="hunts-page__session-enemies-list">
                                       {sessionDetail.enemies_json.map((e, i) => (
                                         <span key={i} className="hunts-page__session-enemy-chip">
-                                          {e.name.replace(/^\d{4} - /, "")} × {formatCompactNumber(e.quantity)}
+                                          {e.name.replace(/^\d{4} - /, "")} &times; {formatCompactNumber(e.quantity, locale)}
                                         </span>
                                       ))}
                                     </div>
@@ -965,16 +1045,16 @@ export default function HuntsPage() {
 
                                 {sessionDetail.consumables_json?.length > 0 ? (
                                   <div className="hunts-page__session-detail-block">
-                                    <strong className="hunts-page__session-detail-title">Consumíveis</strong>
+                                    <strong className="hunts-page__session-detail-title">{t("hunts.session.consumables")}</strong>
                                     <ul className="hunts-page__enemy-list">
                                       {sessionDetail.consumables_json.map((c, i) => {
                                         const total = (c.preco_npc || 0) * (c.quantity || 0)
                                         return (
                                           <li key={i} className="hunts-page__enemy-row">
                                             <span className="hunts-page__enemy-name">{c.name}</span>
-                                            <span className="hunts-page__session-badge">× {formatCompactNumber(c.quantity)}</span>
+                                            <span className="hunts-page__session-badge">&times; {formatCompactNumber(c.quantity, locale)}</span>
                                             {total > 0 ? (
-                                              <span className="hunts-page__consumable-total">{formatCompactDlValue(total)}</span>
+                                              <span className="hunts-page__consumable-total">{formatCompactDlValue(total, locale)}</span>
                                             ) : null}
                                           </li>
                                         )
@@ -984,15 +1064,15 @@ export default function HuntsPage() {
                                 ) : null}
                                 {sessionDetail.drops_json?.length > 0 ? (
                                   <div className="hunts-page__session-detail-block">
-                                    <strong className="hunts-page__session-detail-title">Drops</strong>
+                                    <strong className="hunts-page__session-detail-title">{t("hunts.session.drops")}</strong>
                                     <div className="hunts-page__drops-table-wrap">
                                       <table className="hunts-page__drops-table">
                                         <thead>
                                           <tr>
-                                            <th>QTD x ITEM</th>
-                                            <th>TOTAL NPC</th>
-                                            <th>TOTAL VENDA</th>
-                                            <th>LUCRO ITEM</th>
+                                            <th>{t("hunts.table.qtyItem")}</th>
+                                            <th>{t("hunts.table.npcTotal")}</th>
+                                            <th>{t("hunts.table.saleTotal")}</th>
+                                            <th>{t("hunts.table.itemProfit")}</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1000,19 +1080,19 @@ export default function HuntsPage() {
                                             <tr key={i}>
                                               <td>
                                                 <span className="hunts-page__item-inline">
-                                                  <strong>{formatCompactNumber(d.quantity || 0)}x</strong>
+                                                  <strong>{formatCompactNumber(d.quantity || 0, locale)}x</strong>
                                                   <span className="hunts-page__item-name">{d.name || "?"}</span>
                                                 </span>
                                               </td>
-                                              <td>{d.npcTotalPrice ? formatCompactDlValue(d.npcTotalPrice) : <span className="hunts-page__no-price">—</span>}</td>
-                                              <td>{d.playerTotalPrice ? formatCompactDlValue(d.playerTotalPrice) : <span className="hunts-page__no-price">—</span>}</td>
+                                              <td>{d.npcTotalPrice ? formatCompactDlValue(d.npcTotalPrice, locale) : <span className="hunts-page__no-price">—</span>}</td>
+                                              <td>{d.playerTotalPrice ? formatCompactDlValue(d.playerTotalPrice, locale) : <span className="hunts-page__no-price">—</span>}</td>
                                               <td>
                                                 {(() => {
                                                   const itemProfit = Number(d.playerTotalPrice || 0) - Number(d.npcTotalPrice || 0)
                                                   return (
                                                     <span className={itemProfit >= 0 ? "hunts-page__delta-pill hunts-page__delta-pill--positive" : "hunts-page__delta-pill hunts-page__delta-pill--negative"}>
                                                       {itemProfit >= 0 ? "+" : "-"}
-                                                      {formatCompactDlValue(Math.abs(itemProfit))}
+                                                      {formatCompactDlValue(Math.abs(itemProfit), locale)}
                                                     </span>
                                                   )
                                                 })()}
@@ -1031,6 +1111,27 @@ export default function HuntsPage() {
                       </article>
                     )
                   })}
+                  <div className="hunts-page__history-pagination">
+                    <button
+                      type="button"
+                      className="hunts-page__ghost-button"
+                      onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))}
+                      disabled={historyPage <= 1}
+                    >
+                      {t("hunts.history.prev")}
+                    </button>
+                    <span className="hunts-page__history-page">
+                      {t("hunts.history.page", { page: historyPage, total: historyTotalPages })}
+                    </span>
+                    <button
+                      type="button"
+                      className="hunts-page__ghost-button"
+                      onClick={() => setHistoryPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                      disabled={historyPage >= historyTotalPages}
+                    >
+                      {t("hunts.history.next")}
+                    </button>
+                  </div>
                 </div>
               )}
             </section>
@@ -1040,14 +1141,14 @@ export default function HuntsPage() {
             <section className="hunts-page__history-panel" onPaste={handlePasteImages}>
               <div className="hunts-page__history-header">
                 <div>
-                  <h3 className="hunts-page__history-title">Nova hunt</h3>
+                  <h3 className="hunts-page__history-title">{t("hunts.new.title")}</h3>
                 </div>
               </div>
 
               <div className="hunts-page__upload-box">
                 <div className="hunts-page__upload-header">
                   <label className="hunts-page__upload-label" htmlFor="hunts-drops-upload">
-                    Upload de imagens de drops
+                    {t("hunts.new.uploadLabel")}
                   </label>
 
                   <button
@@ -1055,7 +1156,7 @@ export default function HuntsPage() {
                     className="hunts-page__ghost-button hunts-page__upload-example-button"
                     onClick={() => setIsExampleModalOpen(true)}
                   >
-                    Ver exemplo
+                    {t("hunts.new.viewExample")}
                   </button>
                 </div>
 
@@ -1071,24 +1172,24 @@ export default function HuntsPage() {
                 <label className="hunts-page__dropzone" htmlFor="hunts-drops-upload">
                   <span className="hunts-page__dropzone-icon" aria-hidden="true">↑</span>
                   <strong className="hunts-page__dropzone-title">
-                    Clique para selecionar as imagens
+                    {t("hunts.new.dropzoneTitle")}
                   </strong>
                   <span className="hunts-page__dropzone-copy">
-                    Apenas PNG e JPG. Voce pode enviar varias imagens de uma vez para a analise ou colar com Ctrl+V.
+                    {t("hunts.new.dropzoneCopy")}
                   </span>
-                  <span className="hunts-page__dropzone-action">Escolher arquivos</span>
+                  <span className="hunts-page__dropzone-action">{t("hunts.new.chooseFiles")}</span>
                 </label>
 
                 {selectedFiles.length ? (
                   <>
                     <div className="hunts-page__file-toolbar">
-                      <span className="hunts-page__file-toolbar-label">Pré-visualização das imagens</span>
+                      <span className="hunts-page__file-toolbar-label">{t("hunts.new.previews")}</span>
                       <button
                         type="button"
                         className="hunts-page__ghost-button hunts-page__file-clear"
                         onClick={handleClearSelectedFiles}
                       >
-                        Remover todas
+                        {t("hunts.new.removeAll")}
                       </button>
                     </div>
 
@@ -1099,7 +1200,7 @@ export default function HuntsPage() {
                             type="button"
                             className="hunts-page__file-preview"
                             onClick={() => setPreviewFile(entry)}
-                            title="Clique para pré-visualizar"
+                            title={t("hunts.new.previewHint")}
                           >
                             <Image
                               src={entry.previewUrl}
@@ -1119,7 +1220,7 @@ export default function HuntsPage() {
                               className="hunts-page__file-remove"
                               onClick={() => handleRemoveSelectedFile(entry.id)}
                             >
-                              Remover
+                              {t("common.remove")}
                             </button>
                           </div>
                         </article>
@@ -1135,7 +1236,7 @@ export default function HuntsPage() {
                     disabled={!selectedFiles.length || isUploadingDrops}
                     onClick={handleProcessDrops}
                   >
-                    {isUploadingDrops ? "Processando..." : "Processar drops"}
+                    {isUploadingDrops ? t("hunts.new.processing") : t("hunts.new.process")}
                   </button>
 
                   <button
@@ -1144,7 +1245,7 @@ export default function HuntsPage() {
                     disabled={isUploadingDrops || (!selectedFiles.length && !dropsResult && !dropsRows.length && !dropsWarnings.length && !dropsError)}
                     onClick={handleResetDropsWorkspace}
                   >
-                    Limpar
+                    {t("hunts.new.clear")}
                   </button>
                 </div>
 
@@ -1156,12 +1257,12 @@ export default function HuntsPage() {
 
                 {dropsResult?.summary ? (
                   <div className="hunts-page__ocr-summary">
-                    <strong className="hunts-page__ocr-summary-title">Resultado OCR</strong>
+                    <strong className="hunts-page__ocr-summary-title">{t("hunts.new.ocrResult")}</strong>
                     <div className="hunts-page__ocr-summary-grid">
-                      <span>Imagens: {dropsResult.summary.processed_images ?? 0}</span>
-                      <span>Linhas: {dropsResult.summary.recognized_lines ?? 0}</span>
-                      <span>Duplicadas: {dropsResult.summary.duplicates_ignored ?? 0}</span>
-                      <span>Drops finais: {dropsResult.summary.final_rows ?? 0}</span>
+                      <span>{t("hunts.new.summaryImages")}: {dropsResult.summary.processed_images ?? 0}</span>
+                      <span>{t("hunts.new.summaryLines")}: {dropsResult.summary.recognized_lines ?? 0}</span>
+                      <span>{t("hunts.new.summaryDuplicates")}: {dropsResult.summary.duplicates_ignored ?? 0}</span>
+                      <span>{t("hunts.new.summaryFinalDrops")}: {dropsResult.summary.final_rows ?? 0}</span>
                     </div>
                   </div>
                 ) : null}
@@ -1177,12 +1278,12 @@ export default function HuntsPage() {
                     <table className="hunts-page__drops-table">
                       <thead>
                         <tr>
-                          <th>QTD x ITEM</th>
-                          <th>PREÇO NPC</th>
-                          <th>PREÇO VENDA</th>
-                          <th>TOTAL NPC</th>
-                          <th>TOTAL VENDA</th>
-                          <th>LUCRO ITEM</th>
+                          <th>{t("hunts.table.qtyItem")}</th>
+                          <th>{t("hunts.table.npcPrice")}</th>
+                          <th>{t("hunts.table.salePrice")}</th>
+                          <th>{t("hunts.table.npcTotal")}</th>
+                          <th>{t("hunts.table.saleTotal")}</th>
+                          <th>{t("hunts.table.itemProfit")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1215,7 +1316,7 @@ export default function HuntsPage() {
                                   <span className="hunts-page__item-name">{row.name}</span>
                                 </div>
                               </td>
-                              <td>{row.npcUnitPrice ? formatCompactDlValue(row.npcUnitPrice) : <span className="hunts-page__no-price">—</span>}</td>
+                              <td>{row.npcUnitPrice ? formatCompactDlValue(row.npcUnitPrice, locale) : <span className="hunts-page__no-price">—</span>}</td>
                               <td>
                                 <input
                                   className="hunts-page__table-input"
@@ -1229,15 +1330,15 @@ export default function HuntsPage() {
                                   }}
                                   onBlur={() => savePlayerPriceForRow(index)}
                                 />
-                                {isSaving ? <span className="hunts-page__saving-pill">Salvando...</span> : null}
+                                {isSaving ? <span className="hunts-page__saving-pill">{t("tasks.saving")}</span> : null}
                               </td>
-                              <td>{row.npcTotalPrice ? formatCompactDlValue(row.npcTotalPrice) : <span className="hunts-page__no-price">—</span>}</td>
+                              <td>{row.npcTotalPrice ? formatCompactDlValue(row.npcTotalPrice, locale) : <span className="hunts-page__no-price">—</span>}</td>
                               <td>
                                 <div className="hunts-page__total-sale-cell">
-                                  <span>{formatCompactDlValue(effectivePlayerTotal)}</span>
+                                  <span>{formatCompactDlValue(effectivePlayerTotal, locale)}</span>
                                   {hasNpcReference ? (
                                     <span className={profitClassName}>
-                                      +{formatCompactDlValue(profitDelta)}
+                                      +{formatCompactDlValue(profitDelta, locale)}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1245,7 +1346,7 @@ export default function HuntsPage() {
                               <td>
                                 {hasNpcReference ? (
                                   <span className={profitClassName}>
-                                    +{formatCompactDlValue(profitDelta)}
+                                    +{formatCompactDlValue(profitDelta, locale)}
                                   </span>
                                 ) : <span className="hunts-page__no-price">—</span>}
                               </td>
@@ -1262,26 +1363,26 @@ export default function HuntsPage() {
                 <div className="hunts-page__hunt-meta">
                   <div className="hunts-page__hunt-meta-row">
                     <label className="hunts-page__upload-label" htmlFor="hunt-duration">
-                      Duração (minutos)
+                      {t("hunts.new.durationMinutes")}
                     </label>
                     <input
                       id="hunt-duration"
                       className="hunts-page__table-input"
                       type="number"
                       min="0"
-                      placeholder="ex: 60"
+                      placeholder={t("hunts.new.durationPlaceholder")}
                       value={huntDuration}
                       onChange={(e) => setHuntDuration(e.target.value)}
                     />
                   </div>
                   <div className="hunts-page__hunt-meta-row">
                     <label className="hunts-page__upload-label" htmlFor="hunt-notes">
-                      Anotações
+                      {t("hunts.new.notes")}
                     </label>
                     <textarea
                       id="hunt-notes"
                       className="hunts-page__hunt-notes-input"
-                      placeholder="Observações sobre a hunt..."
+                      placeholder={t("hunts.new.notesPlaceholder")}
                       value={huntNotes}
                       onChange={(e) => setHuntNotes(e.target.value)}
                       rows={3}
@@ -1290,12 +1391,12 @@ export default function HuntsPage() {
                 </div>
 
                 <div className="hunts-page__enemies-section">
-                  <strong className="hunts-page__upload-label">Inimigos derrotados</strong>
+                  <strong className="hunts-page__upload-label">{t("hunts.new.enemiesDefeated")}</strong>
                   <div className="hunts-page__enemy-search-wrap">
                     <input
                       className="hunts-page__table-input"
                       type="text"
-                      placeholder="Buscar Pokémon..."
+                      placeholder={t("hunts.new.enemySearch")}
                       value={enemySearch}
                       onChange={(e) => {
                         setEnemySearch(e.target.value)
@@ -1340,7 +1441,7 @@ export default function HuntsPage() {
                             type="button"
                             className="hunts-page__session-delete-btn"
                             onClick={() => removeEnemy(index)}
-                            title="Remover"
+                            title={t("common.remove")}
                           >
                             ×
                           </button>
@@ -1348,7 +1449,7 @@ export default function HuntsPage() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="hunts-page__enemy-empty">Nenhum inimigo adicionado ainda.</p>
+                    <p className="hunts-page__enemy-empty">{t("hunts.new.noEnemies")}</p>
                   )}
                 </div>
 
@@ -1360,7 +1461,7 @@ export default function HuntsPage() {
                       className="hunts-page__ghost-button"
                       onClick={() => setIsConsumableModalOpen(true)}
                     >
-                      Consumíveis
+                      {t("hunts.new.consumables")}
                       {consumableList.length > 0 ? (
                         <span className="hunts-page__consumable-badge"> ({consumableList.length})</span>
                       ) : null}
@@ -1369,7 +1470,7 @@ export default function HuntsPage() {
                       const totalCost = consumableList.reduce((acc, c) => acc + c.preco_npc * c.quantity, 0)
                       return totalCost > 0 ? (
                         <span className="hunts-page__consumable-summary-inline">
-                          Supply: <strong>{formatCompactDlValue(totalCost)}</strong>
+                          {t("hunts.session.supply")}: <strong>{formatCompactDlValue(totalCost, locale)}</strong>
                         </span>
                       ) : null
                     })() : null}
@@ -1377,17 +1478,17 @@ export default function HuntsPage() {
 
                   {dropsRows.length > 0 ? (
                     <div className="hunts-page__profit-row">
-                      <span className="hunts-page__upload-label">Lucro esperado:</span>
+                      <span className="hunts-page__upload-label">{t("hunts.new.expectedProfitLabel")}</span>
                       <span>
-                        <span className="hunts-page__profit-label">npc</span>
+                        <span className="hunts-page__profit-label">{t("hunts.session.npc").toLowerCase()}</span>
                         <strong className={currentExpectedProfit.npc >= 0 ? "hunts-page__profit-value hunts-page__profit-value--positive" : "hunts-page__profit-value hunts-page__profit-value--negative"}>
-                          {currentExpectedProfit.npc >= 0 ? "+" : "-"}{formatCompactDlValue(Math.abs(currentExpectedProfit.npc))}
+                          {currentExpectedProfit.npc >= 0 ? "+" : "-"}{formatCompactDlValue(Math.abs(currentExpectedProfit.npc), locale)}
                         </strong>
                       </span>
                       <span>
-                        <span className="hunts-page__profit-label">player</span>
+                        <span className="hunts-page__profit-label">{t("hunts.session.player").toLowerCase()}</span>
                         <strong className="hunts-page__profit-value hunts-page__profit-value--positive">
-                          +{formatCompactDlValue(currentExpectedProfit.player)}
+                          +{formatCompactDlValue(currentExpectedProfit.player, locale)}
                         </strong>
                       </span>
                     </div>
@@ -1397,7 +1498,7 @@ export default function HuntsPage() {
                   <p className="hunts-page__upload-error" role="alert">{huntSaveError}</p>
                 ) : null}
                 {huntSaved ? (
-                  <p className="hunts-page__hunt-saved-msg" role="status">Hunt salva com sucesso!</p>
+                  <p className="hunts-page__hunt-saved-msg" role="status">{t("hunts.new.huntSaved")}</p>
                 ) : null}
 
                 <button
@@ -1406,7 +1507,7 @@ export default function HuntsPage() {
                   onClick={saveHunt}
                   disabled={isSavingHunt}
                 >
-                  {isSavingHunt ? "Salvando..." : "Salvar Hunt"}
+                  {isSavingHunt ? t("tasks.saving") : t("hunts.new.saveHunt")}
                 </button>
               </div>
             </section>
@@ -1418,13 +1519,13 @@ export default function HuntsPage() {
         <div className="hunts-page__preview-backdrop" role="dialog" aria-modal="true" onClick={() => setIsConsumableModalOpen(false)}>
           <div className="hunts-page__preview-modal hunts-page__consumables-modal" onClick={(event) => event.stopPropagation()}>
             <div className="hunts-page__preview-header">
-              <strong className="hunts-page__preview-title">Consumíveis utilizados</strong>
+              <strong className="hunts-page__preview-title">{t("hunts.new.usedConsumables")}</strong>
               <button
                 type="button"
                 className="hunts-page__ghost-button hunts-page__preview-close"
                 onClick={() => setIsConsumableModalOpen(false)}
               >
-                Fechar
+                {t("common.close")}
               </button>
             </div>
 
@@ -1434,7 +1535,7 @@ export default function HuntsPage() {
                 value={selectedConsumableCategory}
                 onChange={(event) => setSelectedConsumableCategory(event.target.value)}
               >
-                <option value="">Todas as categorias</option>
+                <option value="">{t("hunts.new.allCategories")}</option>
                 {consumableCategories.map((category) => (
                   <option key={category} value={category}>{category}</option>
                 ))}
@@ -1445,7 +1546,7 @@ export default function HuntsPage() {
                   className="hunts-page__ghost-button"
                   onClick={() => setSelectedConsumableCategory("")}
                 >
-                  Limpar filtro
+                  {t("hunts.new.clearFilter")}
                 </button>
               ) : null}
             </div>
@@ -1454,7 +1555,7 @@ export default function HuntsPage() {
               <input
                 className="hunts-page__table-input"
                 type="text"
-                placeholder="Buscar item consumível..."
+                placeholder={t("hunts.new.consumableSearch")}
                 value={consumableSearch}
                 onChange={(e) => {
                   setConsumableSearch(e.target.value)
@@ -1478,7 +1579,7 @@ export default function HuntsPage() {
                 }}
                 disabled={!filteredConsumables.length}
               >
-                Adicionar
+                {t("hunts.new.addConsumable")}
               </button>
               {showConsumableSuggestions && filteredConsumables.length > 0 ? (
                 <ul className="hunts-page__enemy-suggestions">
@@ -1497,7 +1598,7 @@ export default function HuntsPage() {
                               <span className="hunts-page__consumable-chip">{getConsumableCategory(item)}</span>
                             ) : null}
                           </span>
-                          {item.preco_npc > 0 ? <span className="hunts-page__consumable-price">{formatCompactDlValue(item.preco_npc)} / un</span> : null}
+                          {item.preco_npc > 0 ? <span className="hunts-page__consumable-price">{formatCompactDlValue(item.preco_npc, locale)} / {t("hunts.new.unitShort")}</span> : null}
                         </button>
                       </li>
                     )
@@ -1525,13 +1626,13 @@ export default function HuntsPage() {
                         onChange={(e) => updateConsumableQty(index, e.target.value)}
                       />
                       {item.preco_npc > 0 ? (
-                        <span className="hunts-page__consumable-total">={formatCompactDlValue(totalCost)}</span>
+                        <span className="hunts-page__consumable-total">={formatCompactDlValue(totalCost, locale)}</span>
                       ) : null}
                       <button
                         type="button"
                         className="hunts-page__session-delete-btn"
                         onClick={() => removeConsumable(index)}
-                        title="Remover"
+                        title={t("common.remove")}
                       >
                         ×
                       </button>
@@ -1540,7 +1641,7 @@ export default function HuntsPage() {
                 })}
               </ul>
             ) : (
-              <p className="hunts-page__enemy-empty">Nenhum consumível adicionado ainda.</p>
+              <p className="hunts-page__enemy-empty">{t("hunts.new.noConsumables")}</p>
             )}
           </div>
         </div>
@@ -1558,13 +1659,13 @@ export default function HuntsPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="hunts-page__preview-header">
-              <strong className="hunts-page__preview-title">Exemplo de print ideal</strong>
+              <strong className="hunts-page__preview-title">{t("hunts.example.title")}</strong>
               <button
                 type="button"
                 className="hunts-page__ghost-button hunts-page__preview-close"
                 onClick={() => setIsExampleModalOpen(false)}
               >
-                Fechar
+                {t("common.close")}
               </button>
             </div>
 
@@ -1572,14 +1673,14 @@ export default function HuntsPage() {
               <Image
                 className="hunts-page__example-image"
                 src="/hunt-ocr-example.svg"
-                alt="Exemplo de print ideal para o OCR de hunts"
+                alt={t("hunts.example.alt")}
                 width={1280}
                 height={720}
                 unoptimized
               />
 
               <ul className="hunts-page__example-rules">
-                {OCR_EXAMPLE_RULES.map((rule) => (
+                {ocrExampleRules.map((rule) => (
                   <li key={rule} className="hunts-page__example-rule">
                     <span className="hunts-page__example-check" aria-hidden="true">✓</span>
                     <span>{rule}</span>
@@ -1609,13 +1710,13 @@ export default function HuntsPage() {
                 className="hunts-page__ghost-button hunts-page__preview-close"
                 onClick={() => setPreviewFile(null)}
               >
-                Fechar
+                {t("common.close")}
               </button>
             </div>
             <Image
               className="hunts-page__preview-image"
               src={previewFile.previewUrl}
-              alt={`Pré-visualização de ${previewFile.file.name}`}
+              alt={t("hunts.preview.alt", { name: previewFile.file.name })}
               width={1600}
               height={1000}
               unoptimized
@@ -1626,3 +1727,4 @@ export default function HuntsPage() {
     </AppShell>
   )
 }
+

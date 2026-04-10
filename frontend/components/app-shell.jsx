@@ -46,7 +46,6 @@ export default function AppShell({ children }) {
           setMenuItems(normalized)
         }
       } catch {
-        // fallback já cobre o caso de erro
       }
     }
 

@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "@/lib/react-router-compat"
+import LanguageSelector from "@/components/language-selector.jsx"
+import { useI18n } from "@/context/i18n-context.jsx"
 import { useAuth } from "../context/auth-context.jsx"
 import { useUI } from "../context/ui-context.jsx"
 import "../styles/auth-page.css"
@@ -8,6 +10,7 @@ export default function CadastroPage() {
   const navigate = useNavigate()
   const { register } = useAuth()
   const { runBlockingTask, showError } = useUI()
+  const { t } = useI18n()
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -23,27 +26,27 @@ export default function CadastroPage() {
     const confirmPassword = String(formData.get("confirmPassword") || "")
 
     if (!displayName) {
-      setError("Informe como deseja ser chamado")
+      setError(t("auth.errors.missingDisplayName"))
       return
     }
 
     if (!email) {
-      setError("Informe o e-mail")
+      setError(t("auth.errors.missingEmail"))
       return
     }
 
     if (!password) {
-      setError("Informe a senha")
+      setError(t("auth.errors.missingPassword"))
       return
     }
 
     if (!confirmPassword) {
-      setError("Confirme a senha")
+      setError(t("auth.errors.missingConfirmPassword"))
       return
     }
 
     if (password !== confirmPassword) {
-      setError("As senhas não coincidem")
+      setError(t("auth.errors.passwordMismatch"))
       return
     }
 
@@ -54,12 +57,12 @@ export default function CadastroPage() {
         await register({ displayName, email, password })
         navigate("/inicio", { replace: true })
       }, {
-        title: "Aguarde um instante",
-        text: "Criando sua conta e preparando o acesso...",
+        title: t("auth.waitTitle"),
+        text: t("auth.registerWait"),
         minDuration: 1000,
       })
     } catch (err) {
-      const message = err.message || "Não foi possível criar a conta"
+      const message = err.message || t("auth.errors.registerFailed")
       setError(message)
       showError(message)
       setIsSubmitting(false)
@@ -72,25 +75,26 @@ export default function CadastroPage() {
         <div className="auth-page__layout">
           <section className="auth-page__hero">
             <div className="auth-page__hero-content">
-              <h1 className="auth-page__title">Crie sua conta</h1>
+              <LanguageSelector className="auth-page__language-selector" />
+              <h1 className="auth-page__title">{t("auth.registerTitle")}</h1>
               <p className="auth-page__description">
-                Configure seu acesso e escolha como deseja ser chamado dentro do sistema.
+                {t("auth.registerDescription")}
               </p>
             </div>
           </section>
 
           <section className="auth-page__card">
             <div className="auth-page__card-header">
-              <h2 className="auth-page__card-title">Cadastro</h2>
+              <h2 className="auth-page__card-title">{t("auth.registerCardTitle")}</h2>
               <p className="auth-page__card-description">
-                Preencha os dados para começar a usar sua conta.
+                {t("auth.registerCardDescription")}
               </p>
             </div>
 
             <form className="auth-form" onSubmit={handleSubmit} noValidate>
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="displayName">
-                  Como deseja ser chamado
+                  {t("auth.displayName")}
                 </label>
                 <input
                   id="displayName"
@@ -105,7 +109,7 @@ export default function CadastroPage() {
 
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="email">
-                  E-mail
+                  {t("auth.email")}
                 </label>
                 <input
                   id="email"
@@ -120,7 +124,7 @@ export default function CadastroPage() {
 
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="password">
-                  Senha
+                  {t("auth.password")}
                 </label>
                 <input
                   id="password"
@@ -135,7 +139,7 @@ export default function CadastroPage() {
 
               <div className="auth-form__field">
                 <label className="auth-form__label" htmlFor="confirmPassword">
-                  Confirmar senha
+                  {t("auth.confirmPassword")}
                 </label>
                 <input
                   id="confirmPassword"
@@ -155,12 +159,12 @@ export default function CadastroPage() {
                 className="auth-form__submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Criando..." : "Criar conta"}
+                {isSubmitting ? t("auth.creating") : t("auth.createAccount")}
               </button>
             </form>
 
             <p className="auth-page__footer">
-              Já tem conta? <Link to="/login">Entrar</Link>
+              {t("auth.alreadyAccount")} <Link to="/login">{t("auth.enter")}</Link>
             </p>
           </section>
         </div>

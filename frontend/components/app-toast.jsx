@@ -1,4 +1,5 @@
 import "../styles/app-toast.css"
+import { useI18n } from "@/context/i18n-context.jsx"
 
 function ToastIcon({ type }) {
   if (type === "success") {
@@ -17,13 +18,14 @@ function ToastIcon({ type }) {
 }
 
 const TYPE_TITLES = {
-  success: "Sucesso",
-  error: "Erro",
-  warning: "Atenção",
-  info: "Informação",
+  success: "common.success",
+  error: "common.error",
+  warning: "common.warning",
+  info: "common.info",
 }
 
 export default function AppToast({ toast, onClose }) {
+  const { t } = useI18n()
   if (!toast) {
     return null
   }
@@ -32,7 +34,7 @@ export default function AppToast({ toast, onClose }) {
     ? toast.type
     : "info"
 
-  const title = toast.title || TYPE_TITLES[type]
+  const title = toast.title || t(TYPE_TITLES[type])
   const progressStyle = toast.duration > 0 ? { animationDuration: `${toast.duration}ms` } : undefined
 
   return (
@@ -52,7 +54,7 @@ export default function AppToast({ toast, onClose }) {
         type="button"
         className="app-toast__close"
         onClick={onClose}
-        aria-label="Fechar aviso"
+        aria-label={t("common.closeNotification")}
       >
         ✕
       </button>

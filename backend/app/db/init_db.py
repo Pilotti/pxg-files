@@ -76,6 +76,15 @@ def init_db() -> None:
                 "ADD COLUMN IF NOT EXISTS city VARCHAR(80)"
             ))
             conn.execute(text(
+                "ALTER TABLE users "
+                "ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(8) NOT NULL DEFAULT 'pt'"
+            ))
+            conn.execute(text(
+                "UPDATE users "
+                "SET preferred_language = 'pt' "
+                "WHERE preferred_language IS NULL OR preferred_language = ''"
+            ))
+            conn.execute(text(
                 "UPDATE task_templates "
                 "SET continent = 'nightmare_world' "
                 "WHERE continent = 'nightmare'"

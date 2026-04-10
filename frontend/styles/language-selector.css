@@ -1,0 +1,26 @@
+.language-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-selector__label {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.language-selector__select {
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-menu-border, var(--border));
+  background: color-mix(in srgb, var(--theme-menu-surface, rgba(255,255,255,0.06)) 84%, transparent);
+  color: var(--theme-menu-text, var(--text));
+  padding: 0 12px;
+  font-weight: 600;
+}
+
+.language-selector__select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--theme-menu-border, var(--border)));
+}

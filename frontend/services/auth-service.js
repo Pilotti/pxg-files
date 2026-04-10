@@ -6,6 +6,15 @@ export const authService = {
     return apiRequest("/auth/me")
   },
 
+  async updatePreferences({ preferredLanguage }) {
+    return apiRequest("/auth/preferences", {
+      method: "PATCH",
+      body: JSON.stringify({
+        preferred_language: preferredLanguage,
+      }),
+    })
+  },
+
   async login({ email, password }) {
     const response = await apiRequest("/auth/login", {
       method: "POST",
@@ -44,7 +53,6 @@ export const authService = {
           body: JSON.stringify({ refresh_token: refreshToken }),
         })
       } catch {
-        // limpeza local continua mesmo se falhar remotamente
       }
     }
 
