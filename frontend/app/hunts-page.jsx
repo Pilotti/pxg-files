@@ -845,9 +845,7 @@ export default function HuntsPage() {
                 <div>
                   <h3 className="hunts-page__history-title">{t("hunts.history.title")}</h3>
                   <p className="hunts-page__history-subtitle">
-                    {filteredHistorySessions.length
-                      ? t("hunts.history.subtitle", { count: formatCompactNumber(filteredHistorySessions.length, locale) })
-                      : t("hunts.history.empty")}
+                    {t("hunts.stats.last30Days")}
                   </p>
                 </div>
                 <div className="hunts-page__history-actions">
@@ -893,7 +891,6 @@ export default function HuntsPage() {
                   </article>
                 ))}
               </div>
-              <p className="hunts-page__stats-hint hunts-page__stats-hint--history">{t("hunts.stats.last30Days")}</p>
 
               {chartData.length > 0 ? (
                 <section className="hunts-page__charts-section hunts-page__charts-section--history">

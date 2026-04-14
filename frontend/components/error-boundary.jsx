@@ -14,7 +14,7 @@ export default class ErrorBoundary extends Component {
     return { hasError: true }
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch() {
   }
 
   handleReload = () => {

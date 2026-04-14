@@ -253,7 +253,7 @@ export default function AccountCharactersSection() {
 
     try {
       await setFavorite(characterId)
-    } catch (err) {
+    } catch {
     } finally {
       setFavoriteLoadingId(null)
     }
