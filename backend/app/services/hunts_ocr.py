@@ -402,12 +402,12 @@ def _detect_close_button_visual(image: Image.Image) -> tuple[int, int] | None:
     search_x_start = int(width * 0.70)
     search_y_end = int(height * 0.15)
     
-    # Red pixels: R >= 180, G <= 100, B <= 100
+    # Red pixels: R >= 160, G <= 130, B <= 130
     red_points: list[tuple[int, int]] = []
     for y in range(0, search_y_end):
         for x in range(search_x_start, width):
             r, g, b = pixels[x, y][:3] if len(pixels[x, y]) >= 3 else (pixels[x, y][0], pixels[x, y][1], pixels[x, y][2])
-            if r >= 180 and g <= 100 and b <= 100:
+            if r >= 160 and g <= 130 and b <= 130:
                 red_points.append((x, y))
     
     if not red_points:
@@ -432,16 +432,16 @@ def _detect_blue_header_bar_visual(image: Image.Image) -> int | None:
     # Search in top 20% of image
     search_height = int(height * 0.20)
     
-    # Blue pixels: R <= 100, G <= 150, B >= 180
+    # Blue pixels: R <= 120, G <= 170, B >= 160
     for y in range(0, search_height):
         blue_count = 0
         for x in range(0, width):
             r, g, b = pixels[x, y][:3] if len(pixels[x, y]) >= 3 else (pixels[x, y][0], pixels[x, y][1], pixels[x, y][2])
-            if r <= 100 and g <= 150 and b >= 180:
+            if r <= 120 and g <= 170 and b >= 160:
                 blue_count += 1
         
-        # If more than 20% of the row is blue, we found the bar
-        if blue_count > width * 0.20:
+        # If more than 10% of the row is blue, we found the bar
+        if blue_count > width * 0.10:
             return y
     
     return None
@@ -458,16 +458,16 @@ def _detect_redefinir_button_visual(image: Image.Image) -> tuple[int, int] | Non
     pixels = image.load()
     width, height = image.size
     
-    # Search in bottom-right quadrant (right 40% x bottom 15%)
-    search_x_start = int(width * 0.60)
-    search_y_start = int(height * 0.85)
+    # Search in bottom-right quadrant (right 50% x bottom 25%)
+    search_x_start = int(width * 0.50)
+    search_y_start = int(height * 0.75)
     
-    # Red pixels: R >= 180, G <= 100, B <= 100
+    # Red pixels: R >= 160, G <= 130, B <= 130
     red_points: list[tuple[int, int]] = []
     for y in range(search_y_start, height):
         for x in range(search_x_start, width):
             r, g, b = pixels[x, y][:3] if len(pixels[x, y]) >= 3 else (pixels[x, y][0], pixels[x, y][1], pixels[x, y][2])
-            if r >= 180 and g <= 100 and b <= 100:
+            if r >= 160 and g <= 130 and b <= 130:
                 red_points.append((x, y))
     
     if not red_points:
@@ -488,26 +488,36 @@ def _detect_party_window_region_visual(image: Image.Image) -> Image.Image | None
     blue_bar_y = _detect_blue_header_bar_visual(image)
     redefinir_button = _detect_redefinir_button_visual(image)
     
-    if close_button is None or blue_bar_y is None or redefinir_button is None:
+    if blue_bar_y is None:
         return None
     
     width, height = image.size
-    close_x, close_y = close_button
-    redefinir_x, redefinir_y = redefinir_button
+    close_x = close_button[0] if close_button is not None else None
+    redefinir_x, redefinir_y = redefinir_button if redefinir_button is not None else (None, None)
     
     # Top: use blue_bar_y with margin
     top = max(0, blue_bar_y - max(5, int(height * 0.01)))
     
-    # Right: use close button x-coordinate with margin
-    right = min(width, close_x + max(10, int(width * 0.02)))
-    
-    # Bottom: use redefinir button y-coordinate with margin
-    bottom = min(height, redefinir_y + max(8, int(height * 0.02)))
+    right = None
+    if close_x is not None:
+        right = min(width, close_x + max(10, int(width * 0.02)))
+    elif redefinir_x is not None:
+        right = min(width, redefinir_x + max(10, int(width * 0.02)))
+
+    bottom = None
+    if redefinir_y is not None:
+        bottom = min(height, redefinir_y + max(8, int(height * 0.02)))
     
     # Left: derive from typical window width (estimate from top, close button, and bottom positions)
     # Typical party window is about 360-400px wide
-    estimated_width = max(360, int(close_x * 0.9))
+    if right is None:
+        right = min(width, int(width * 0.92))
+
+    estimated_width = max(360, int(right * 0.9))
     left = max(0, right - estimated_width)
+    if bottom is None:
+        estimated_height = max(260, int(estimated_width * 0.72))
+        bottom = min(height, top + estimated_height)
     
     crop_width = right - left
     crop_height = bottom - top

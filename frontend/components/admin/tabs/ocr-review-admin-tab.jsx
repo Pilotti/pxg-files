@@ -29,6 +29,10 @@ export default function OcrReviewAdminTab({ showError }) {
 
   const handleOpenImage = useCallback(async (filename) => {
     try {
+      const popup = window.open("", "_blank", "noopener")
+      if (!popup) {
+        throw new Error("Pop-up bloqueado pelo navegador")
+      }
       const token = getAdminToken()
       const response = await fetch(`${API_URL}/admin/ocr-review/${encodeURIComponent(filename)}`, {
         headers: {
@@ -36,11 +40,12 @@ export default function OcrReviewAdminTab({ showError }) {
         },
       })
       if (!response.ok) {
+        popup.close()
         throw new Error("Falha ao abrir a imagem")
       }
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
-      window.open(url, "_blank", "noopener")
+      popup.location.href = url
       setTimeout(() => URL.revokeObjectURL(url), 60000)
     } catch (error) {
       showError(error?.message || "Falha ao abrir a imagem")
