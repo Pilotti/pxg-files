@@ -801,6 +801,12 @@
   border: 1px solid rgba(255, 160, 160, 0.18);
 }
 
+.admin-page__status--pending {
+  background: rgba(120, 180, 255, 0.14);
+  color: #b8d6ff;
+  border: 1px solid rgba(120, 180, 255, 0.2);
+}
+
 .admin-page__tile-actions {
   display: flex;
   flex-direction: column;

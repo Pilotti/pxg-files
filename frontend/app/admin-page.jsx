@@ -7,6 +7,7 @@ import AdminToast from "@/components/admin/admin-toast.jsx"
 import AliasesAdminTab from "@/components/admin/tabs/aliases-admin-tab.jsx"
 import ConsumablesAdminTab from "@/components/admin/tabs/consumables-admin-tab.jsx"
 import NpcPricesAdminTab from "@/components/admin/tabs/npc-prices-admin-tab.jsx"
+import OcrReviewAdminTab from "@/components/admin/tabs/ocr-review-admin-tab.jsx"
 import PokemonAdminTab from "@/components/admin/tabs/pokemon-admin-tab.jsx"
 import QuestsAdminTab from "@/components/admin/tabs/quests-admin-tab.jsx"
 import SidebarAdminTab from "@/components/admin/tabs/sidebar-admin-tab.jsx"
@@ -93,6 +94,8 @@ export default function AdminPage() {
         )
       case "aliases":
         return <AliasesAdminTab showError={showError} showSuccess={showSuccess} />
+      case "ocr-review":
+        return <OcrReviewAdminTab showError={showError} showSuccess={showSuccess} />
       case "npc-prices":
         return <NpcPricesAdminTab showError={showError} showSuccess={showSuccess} />
       case "consumables":

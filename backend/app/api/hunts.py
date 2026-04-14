@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import uuid
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -47,6 +50,23 @@ router = APIRouter(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _save_ocr_review_image(content: bytes, file_name: str, user_id: int) -> str:
+    review_dir = Path(settings.ocr_review_dir)
+    review_dir.mkdir(parents=True, exist_ok=True)
+
+    base_name = Path(file_name or "imagem").name
+    safe_base = re.sub(r"[^a-zA-Z0-9._-]+", "-", base_name).strip("-")
+    if not safe_base or safe_base in {".", ".."}:
+        safe_base = "imagem"
+
+    ext = Path(safe_base).suffix or ".png"
+    timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    unique = uuid.uuid4().hex[:8]
+    stored_name = f"{timestamp}-user{user_id}-{unique}{ext}"
+    (review_dir / stored_name).write_bytes(content)
+    return stored_name
 
 
 class SavePlayerPricePayload(BaseModel):
@@ -111,6 +131,7 @@ async def process_drops_ocr(
                 logger.info("Hunt OCR did not recognize any drop lines for '%s'.", file_name)
                 warnings.append(f"Nenhum drop reconhecido na imagem: {file_name}")
         except OcrTableNotFound:
+            _save_ocr_review_image(content, file_name, current_user.id)
             warnings.append(
                 f"Tabela de drops não detectada na imagem: {file_name}. "
                 "Envie um print apenas da janela do grupo."

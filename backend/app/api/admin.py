@@ -1,8 +1,11 @@
 import json
+import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.admin_security import (
@@ -10,6 +13,7 @@ from app.core.admin_security import (
     decode_admin_token,
     verify_admin_credentials,
 )
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.tasks import (
     CharacterQuest,
@@ -58,6 +62,9 @@ from app.schemas.admin import (
     AdminConsumableListResponse,
     AdminConsumableCreateRequest,
     AdminConsumableUpdateRequest,
+    AdminOcrReviewItem,
+    AdminOcrReviewListResponse,
+    AdminOcrReviewUpdateRequest,
 )
 from app.services.consumables import (
     create_consumable,
@@ -966,3 +973,95 @@ def admin_delete_pokemon(
         raise HTTPException(status_code=404, detail="Pokémon não encontrado.")
     _save_inimigos(names)
     return ActionResponse(detail="Pokémon removido da lista.")
+
+
+def _get_ocr_review_dir() -> Path:
+    review_dir = Path(settings.ocr_review_dir)
+    review_dir.mkdir(parents=True, exist_ok=True)
+    return review_dir
+
+
+def _get_ocr_review_index_path() -> Path:
+    return _get_ocr_review_dir() / "index.json"
+
+
+def _load_ocr_review_index() -> dict:
+    index_path = _get_ocr_review_index_path()
+    if not index_path.exists():
+        return {}
+    try:
+        return json.loads(index_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_ocr_review_index(data: dict) -> None:
+    index_path = _get_ocr_review_index_path()
+    index_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+@router.get("/ocr-review", response_model=AdminOcrReviewListResponse)
+def admin_list_ocr_review(_: dict = Depends(get_current_admin)):
+    review_dir = _get_ocr_review_dir()
+    index = _load_ocr_review_index()
+    items: list[AdminOcrReviewItem] = []
+    for file_path in sorted(review_dir.glob("*"), key=lambda item: item.stat().st_mtime, reverse=True):
+        if not file_path.is_file():
+            continue
+        if file_path.name == "index.json":
+            continue
+        stat = file_path.stat()
+        meta = index.get(file_path.name, {})
+        items.append(
+            AdminOcrReviewItem(
+                filename=file_path.name,
+                size_bytes=stat.st_size,
+                created_at=datetime.fromtimestamp(stat.st_mtime),
+                status=str(meta.get("status") or "pending"),
+                notes=meta.get("notes"),
+            )
+        )
+    return AdminOcrReviewListResponse(items=items, total=len(items))
+
+
+@router.get("/ocr-review/{filename}")
+def admin_get_ocr_review_file(
+    filename: str,
+    _: dict = Depends(get_current_admin),
+):
+    review_dir = _get_ocr_review_dir()
+    safe_name = Path(filename).name
+    file_path = (review_dir / safe_name).resolve()
+    if review_dir not in file_path.parents:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    return FileResponse(file_path)
+
+
+@router.put("/ocr-review/{filename}")
+def admin_update_ocr_review(
+    filename: str,
+    payload: AdminOcrReviewUpdateRequest,
+    _: dict = Depends(get_current_admin),
+):
+    review_dir = _get_ocr_review_dir()
+    safe_name = Path(filename).name
+    file_path = (review_dir / safe_name).resolve()
+    if review_dir not in file_path.parents:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+
+    normalized_status = payload.status.strip().lower()
+    if normalized_status not in {"pending", "approved", "ignored"}:
+        raise HTTPException(status_code=400, detail="Status inválido.")
+
+    index = _load_ocr_review_index()
+    index[safe_name] = {
+        "status": normalized_status,
+        "notes": payload.notes.strip() if payload.notes else None,
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+    _save_ocr_review_index(index)
+    return {"ok": True}

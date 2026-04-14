@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     OCR_IMAGE_TIMEOUT_SECONDS: int = 15
     OCR_TESSERACT_LANG: str = "eng"
     OCR_TESSERACT_OEM: int = 1
+    OCR_REVIEW_DIR: str = "backend/app/data/ocr_review"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -91,6 +92,10 @@ class Settings(BaseSettings):
         if value < 0 or value > 3:
             return 1
         return value
+
+    @property
+    def ocr_review_dir(self) -> str:
+        return str(self.OCR_REVIEW_DIR or "backend/app/data/ocr_review").strip() or "backend/app/data/ocr_review"
 
 
 settings = Settings()

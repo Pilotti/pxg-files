@@ -202,6 +202,24 @@ class AdminConsumableListResponse(BaseModel):
     total_pages: int
 
 
+class AdminOcrReviewItem(BaseModel):
+    filename: str
+    size_bytes: int
+    created_at: datetime
+    status: str = "pending"
+    notes: str | None = None
+
+
+class AdminOcrReviewListResponse(BaseModel):
+    items: list[AdminOcrReviewItem]
+    total: int
+
+
+class AdminOcrReviewUpdateRequest(BaseModel):
+    status: str = Field(min_length=1, max_length=32)
+    notes: str | None = Field(default=None, max_length=400)
+
+
 class AdminConsumableCreateRequest(BaseModel):
     nome: str = Field(min_length=1)
     preco_npc: float = Field(ge=0)

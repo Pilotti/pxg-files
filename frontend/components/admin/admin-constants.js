@@ -2,6 +2,7 @@ export const ADMIN_TABS = [
   ["tasks", "Tasks"],
   ["quests", "Quests"],
   ["aliases", "Itens OCR"],
+  ["ocr-review", "OCR Revisões"],
   ["npc-prices", "Preços NPC"],
   ["consumables", "Consumíveis"],
   ["users", "Usuários"],
