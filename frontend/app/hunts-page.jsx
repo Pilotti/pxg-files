@@ -1138,7 +1138,7 @@ export default function HuntsPage() {
           ) : null}
 
           {isNewHuntOpen ? (
-            <section className="hunts-page__history-panel" onPaste={handlePasteImages}>
+            <section className="hunts-page__history-panel">
               <div className="hunts-page__history-header">
                 <div>
                   <h3 className="hunts-page__history-title">{t("hunts.new.title")}</h3>

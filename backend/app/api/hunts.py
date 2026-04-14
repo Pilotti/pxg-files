@@ -32,6 +32,7 @@ from app.services.hunt_npc_prices import get_npc_unit_price_from_ocr_context
 from app.services.hunts_ocr import (
     deduplicate_drop_lines,
     extract_drop_lines_from_image,
+    OcrTableNotFound,
     refresh_approved_aliases_cache,
 )
 from app.services.hunts_prices import (
@@ -109,6 +110,11 @@ async def process_drops_ocr(
             if len(recognized_lines) == before_lines:
                 logger.info("Hunt OCR did not recognize any drop lines for '%s'.", file_name)
                 warnings.append(f"Nenhum drop reconhecido na imagem: {file_name}")
+        except OcrTableNotFound:
+            warnings.append(
+                f"Tabela de drops não detectada na imagem: {file_name}. "
+                "Envie um print apenas da janela do grupo."
+            )
         except TimeoutError:
             logger.warning(
                 "Hunt OCR timed out for '%s' after %s seconds.",

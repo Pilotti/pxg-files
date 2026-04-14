@@ -16,6 +16,10 @@ from PIL import Image, ImageFilter, ImageOps
 logger = logging.getLogger(__name__)
 
 
+class OcrTableNotFound(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class ParsedDropLine:
     name_display: str
@@ -1140,12 +1144,15 @@ def extract_drop_lines_from_image(
     original_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
     # Detect and crop the table on the original RGB image so UI color anchors remain intact.
-    detected_table_raw, _ = _detect_table_region_and_strategy(
+    detected_table_raw, crop_strategy = _detect_table_region_and_strategy(
         original_image,
         lang=ocr_lang,
         oem=ocr_oem,
         visual_image=original_image,
-    )
+    )
+
+    if crop_strategy == "full-image":
+        raise OcrTableNotFound("Table region not detected")
 
     detected_table = ImageOps.autocontrast(detected_table_raw)
 
