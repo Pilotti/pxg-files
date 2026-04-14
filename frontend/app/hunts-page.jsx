@@ -13,6 +13,7 @@ import {
 } from "recharts"
 import AppShell from "../components/app-shell.jsx"
 import AppSelect from "../components/app-select.jsx"
+import ConfirmActionModal from "../components/confirm-action-modal.jsx"
 import Topbar from "../components/topbar.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { useI18n } from "../context/i18n-context.jsx"
@@ -141,6 +142,8 @@ export default function HuntsPage() {
   const [expandedSessionId, setExpandedSessionId] = useState(null)
   const [sessionDetail, setSessionDetail] = useState(null)
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+  const [deleteSessionConfirm, setDeleteSessionConfirm] = useState(null)
+  const [deletingSessionId, setDeletingSessionId] = useState(null)
 
   const summary = useMemo(() => {
     const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000)
@@ -493,14 +496,18 @@ export default function HuntsPage() {
   }
 
   async function deleteSession(id) {
+    setDeletingSessionId(id)
     try {
       await apiRequest(`/hunts/sessions/${id}`, { method: "DELETE" })
       setHuntSessions((prev) => prev.filter((s) => s.id !== id))
+      setDeleteSessionConfirm(null)
       if (expandedSessionId === id) {
         setExpandedSessionId(null)
         setSessionDetail(null)
       }
     } catch {
+    } finally {
+      setDeletingSessionId(null)
     }
   }
 
@@ -767,6 +774,36 @@ export default function HuntsPage() {
 
   return (
     <AppShell>
+      <ConfirmActionModal
+        open={Boolean(deleteSessionConfirm)}
+        title={t("hunts.history.deleteConfirmTitle")}
+        description={
+          deleteSessionConfirm
+            ? t("hunts.history.deleteConfirmDescription", {
+                date: new Date(deleteSessionConfirm.hunt_date).toLocaleDateString(locale, {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })
+            : ""
+        }
+        confirmLabel={t("hunts.history.deleteConfirmButton")}
+        cancelLabel={t("common.cancel")}
+        confirmTone="danger"
+        isLoading={Boolean(deletingSessionId)}
+        onCancel={() => {
+          if (deletingSessionId) return
+          setDeleteSessionConfirm(null)
+        }}
+        onConfirm={() => {
+          if (!deleteSessionConfirm) return
+          deleteSession(deleteSessionConfirm.id)
+        }}
+      />
+
       <Topbar />
 
       <section className="hunts-page">
@@ -858,7 +895,7 @@ export default function HuntsPage() {
               </div>
               <p className="hunts-page__stats-hint hunts-page__stats-hint--history">{t("hunts.stats.last30Days")}</p>
 
-              {chartData.length >= 2 ? (
+              {chartData.length > 0 ? (
                 <section className="hunts-page__charts-section hunts-page__charts-section--history">
                   <div className="hunts-page__charts-toolbar">
                     <span className="hunts-page__charts-toolbar-label">{t("hunts.chart.groupBy")}</span>
@@ -1053,7 +1090,8 @@ export default function HuntsPage() {
                             <button
                               type="button"
                               className="hunts-page__session-delete-btn"
-                              onClick={() => deleteSession(session.id)}
+                              onClick={() => setDeleteSessionConfirm(session)}
+                              disabled={deletingSessionId === session.id}
                               title={t("hunts.history.delete")}
                             >
                               ×
