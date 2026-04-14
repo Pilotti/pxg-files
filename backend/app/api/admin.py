@@ -884,12 +884,16 @@ _POKEMON_RE = re.compile(r"^(\d{4}) - (.+)$")
 
 
 def _load_inimigos() -> list[str]:
+    _INIMIGOS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not _INIMIGOS_PATH.exists():
+        _save_inimigos([])
     with open(_INIMIGOS_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
     return [entry["nome"] for entry in data]
 
 
 def _save_inimigos(names: list[str]) -> None:
+    _INIMIGOS_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(_INIMIGOS_PATH, "w", encoding="utf-8") as f:
         json.dump([{"nome": n} for n in names], f, ensure_ascii=False, indent=2)
 
