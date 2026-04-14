@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import useStableScroll from "../hooks/use-stable-scroll.js"
 import AppShell from "../components/app-shell.jsx"
+import AppSelect from "../components/app-select.jsx"
 import Topbar from "../components/topbar.jsx"
 import ConfirmActionModal from "../components/confirm-action-modal.jsx"
 import { useCharacter } from "../context/character-context.jsx"
@@ -498,46 +499,39 @@ export default function QuestsPage() {
               }
             />
 
-            <select
-              className="quests-page__input"
+            <AppSelect
+              className="quests-page__select"
               value={listFilters.status}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, status: e.target.value }))
+              options={[
+                { value: "", label: t("quests.allStatus") },
+                { value: "pending", label: t("quests.pending") },
+                { value: "completed", label: t("quests.status.completed") },
+              ]}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, status: value }))
               }
-            >
-              <option value="">{t("quests.allStatus")}</option>
-              <option value="pending">{t("quests.pending")}</option>
-              <option value="completed">{t("quests.status.completed")}</option>
-            </select>
+            />
 
-            <select
-              className="quests-page__input"
+            <AppSelect
+              className="quests-page__select"
               value={listFilters.continent}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, continent: e.target.value, city: "" }))
+              options={continents}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, continent: value, city: "" }))
               }
-            >
-              {continents.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
-              className="quests-page__input"
+            <AppSelect
+              className="quests-page__select"
               value={listFilters.city}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, city: e.target.value }))
+              options={[
+                { value: "", label: t("quests.allCities") },
+                ...cityOptions,
+              ]}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, city: value }))
               }
-            >
-              <option value="">{t("quests.allCities")}</option>
-              {cityOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
 
@@ -675,34 +669,26 @@ export default function QuestsPage() {
                 }
               />
 
-              <select
-                className="quests-page__input"
+              <AppSelect
+                className="quests-page__select"
                 value={catalogFilters.continent}
-                onChange={(e) =>
-                  setCatalogFilters((prev) => ({ ...prev, continent: e.target.value, city: "" }))
+                options={continents}
+                onChange={(value) =>
+                  setCatalogFilters((prev) => ({ ...prev, continent: value, city: "" }))
                 }
-              >
-                {continents.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+              />
 
-              <select
-                className="quests-page__input"
+              <AppSelect
+                className="quests-page__select"
                 value={catalogFilters.city}
-                onChange={(e) =>
-                  setCatalogFilters((prev) => ({ ...prev, city: e.target.value }))
+                options={[
+                  { value: "", label: t("quests.allCities") },
+                  ...catalogCityOptions,
+                ]}
+                onChange={(value) =>
+                  setCatalogFilters((prev) => ({ ...prev, city: value }))
                 }
-              >
-                <option value="">{t("quests.allCities")}</option>
-                {catalogCityOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+              />
 
               <input
                 className="quests-page__input"

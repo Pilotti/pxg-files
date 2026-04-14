@@ -104,6 +104,11 @@
   transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+.character-modal__select .app-select__button {
+  min-height: 46px;
+  border-radius: 14px;
+}
+
 .character-modal__input:focus {
   outline: none;
   border-color: rgba(79, 140, 255, 0.42);

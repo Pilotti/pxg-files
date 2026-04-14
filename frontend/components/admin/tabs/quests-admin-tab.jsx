@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { adminRequest } from "@/services/admin-api.js"
+import AppSelect from "@/components/app-select.jsx"
 import { CONTINENTS, QUEST_INITIAL_FORM } from "../admin-constants.js"
 import { buildQuery, formatCity, formatContinent, normalizeMinLevelInput } from "../admin-utils.js"
 import { useDebouncedValue } from "../use-debounced-value.js"
@@ -183,21 +184,12 @@ export default function QuestsAdminTab({ confirmBeforeRemoving, showError, showS
         <div className="admin-page__filters-card">
           <div className="admin-page__filters-grid admin-page__filters-grid--quests">
             <input className="admin-page__input" placeholder="Buscar por nome" value={questFilters.search} onChange={(event) => setQuestFilters((prev) => ({ ...prev, search: event.target.value }))} />
-            <select className="admin-page__input" value={questFilters.continent} onChange={(event) => setQuestFilters((prev) => ({ ...prev, continent: event.target.value, city: "", nw_level: event.target.value === "nightmare_world" ? prev.nw_level : "" }))}>
-              {CONTINENTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
+            <AppSelect className="admin-page__select" value={questFilters.continent} options={CONTINENTS} onChange={(value) => setQuestFilters((prev) => ({ ...prev, continent: value, city: "", nw_level: value === "nightmare_world" ? prev.nw_level : "" }))} />
             {questFilters.continent === "nightmare_world" ? <input className="admin-page__input" type="number" min="1" max="999" placeholder="NW Level" value={questFilters.nw_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, nw_level: event.target.value }))} /> : null}
-            <select className="admin-page__input" value={questFilters.city} onChange={(event) => setQuestFilters((prev) => ({ ...prev, city: event.target.value }))}>
-              <option value="">Todas as cidades</option>
-              {questCityOptions.map((city) => <option key={city.value} value={city.value}>{city.label}</option>)}
-            </select>
+            <AppSelect className="admin-page__select" value={questFilters.city} options={[{ value: "", label: "Todas as cidades" }, ...questCityOptions]} onChange={(value) => setQuestFilters((prev) => ({ ...prev, city: value }))} />
             <input className="admin-page__input" type="number" placeholder="Nível mín." value={questFilters.min_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, min_level: event.target.value }))} />
             <input className="admin-page__input" type="number" placeholder="Nível máx." value={questFilters.max_level} onChange={(event) => setQuestFilters((prev) => ({ ...prev, max_level: event.target.value }))} />
-            <select className="admin-page__input" value={questFilters.is_active} onChange={(event) => setQuestFilters((prev) => ({ ...prev, is_active: event.target.value }))}>
-              <option value="">Todos os status</option>
-              <option value="true">Ativas</option>
-              <option value="false">Inativas</option>
-            </select>
+            <AppSelect className="admin-page__select" value={questFilters.is_active} options={[{ value: "", label: "Todos os status" }, { value: "true", label: "Ativas" }, { value: "false", label: "Inativas" }]} onChange={(value) => setQuestFilters((prev) => ({ ...prev, is_active: value }))} />
           </div>
         </div>
 
@@ -246,12 +238,12 @@ export default function QuestsAdminTab({ confirmBeforeRemoving, showError, showS
             <form onSubmit={handleSubmitQuest}>
               <div className="character-modal__field"><label>Nome</label><input className="character-modal__input" value={questForm.name} onChange={(event) => setQuestForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Descrição</label><input className="character-modal__input" value={questForm.description} onChange={(event) => setQuestForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Continente</label><select className="character-modal__input" value={questForm.continent} onChange={(event) => setQuestForm((prev) => ({ ...prev, continent: event.target.value }))}>{CONTINENTS.filter((item) => item.value).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+              <div className="character-modal__field"><label>Continente</label><AppSelect className="character-modal__select" value={questForm.continent} options={CONTINENTS.filter((item) => item.value)} onChange={(value) => setQuestForm((prev) => ({ ...prev, continent: value }))} /></div>
               <div className="character-modal__field"><label>Cidade</label><input className="character-modal__input" required value={questForm.city} onChange={(event) => setQuestForm((prev) => ({ ...prev, city: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Nível mínimo</label><input className="character-modal__input" type="number" min="0" max="625" value={questForm.min_level} onChange={(event) => setQuestForm((prev) => ({ ...prev, min_level: event.target.value }))} /></div>
               {questForm.continent === "nightmare_world" ? <div className="character-modal__field"><label>Nightmare Level (NW Level)</label><input className="character-modal__input" type="number" min="1" max="999" value={questForm.nw_level} onChange={(event) => setQuestForm((prev) => ({ ...prev, nw_level: event.target.value }))} /></div> : null}
               <div className="character-modal__field"><label>Recompensa</label><input className="character-modal__input" value={questForm.reward_text} onChange={(event) => setQuestForm((prev) => ({ ...prev, reward_text: event.target.value }))} /></div>
-              <div className="character-modal__field"><label>Ativa</label><select className="character-modal__input" value={String(questForm.is_active)} onChange={(event) => setQuestForm((prev) => ({ ...prev, is_active: event.target.value === "true" }))}><option value="true">Sim</option><option value="false">Não</option></select></div>
+              <div className="character-modal__field"><label>Ativa</label><AppSelect className="character-modal__select" value={String(questForm.is_active)} options={[{ value: "true", label: "Sim" }, { value: "false", label: "Não" }]} onChange={(value) => setQuestForm((prev) => ({ ...prev, is_active: value === "true" }))} /></div>
               <div className="character-modal__actions"><button type="button" className="character-modal__button" onClick={() => setQuestModal(null)} disabled={isSubmittingQuest}>Cancelar</button><button type="submit" className="character-modal__button character-modal__button--primary" disabled={isSubmittingQuest}>{isSubmittingQuest ? "Salvando..." : "Salvar"}</button></div>
             </form>
           </div>

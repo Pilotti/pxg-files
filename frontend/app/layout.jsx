@@ -14,6 +14,7 @@ import '@/styles/app-toast.css'
 import '@/styles/status-overlay.css'
 import '@/styles/error-boundary.css'
 import '@/styles/language-selector.css'
+import '@/styles/app-select.css'
 
 const APP_PREFERENCES_BOOTSTRAP_SCRIPT = getAppPreferencesBootstrapScript()
 

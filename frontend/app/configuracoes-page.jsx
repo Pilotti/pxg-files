@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "@/lib/react-router-compat"
 import AppShell from "../components/app-shell.jsx"
+import AppSelect from "../components/app-select.jsx"
 import Topbar from "../components/topbar.jsx"
 import AccountCharactersSection from "../components/account-characters-section.jsx"
 import { useAuth } from "../context/auth-context.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { useI18n } from "../context/i18n-context.jsx"
+import { FALLBACK_SIDEBAR_MENU_ITEMS } from "../constants/sidebar-menu-fallback.js"
+import { apiRequest } from "../services/api.js"
 import {
   APP_ACCENT_OPTIONS,
   DEFAULT_APP_PREFERENCES,
@@ -43,9 +46,10 @@ export default function ConfiguracoesPage() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { activeCharacter } = useCharacter()
-  const { t } = useI18n()
+  const { t, translateMenuLabel } = useI18n()
 
   const [preferences, setPreferences] = useState(DEFAULT_APP_PREFERENCES)
+  const [sidebarMenus, setSidebarMenus] = useState(FALLBACK_SIDEBAR_MENU_ITEMS)
   const [saveState, setSaveState] = useState("idle")
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isPreferencesHydrated, setIsPreferencesHydrated] = useState(false)
@@ -60,13 +64,32 @@ export default function ConfiguracoesPage() {
   )
 
   const startupOptions = useMemo(
-    () => [
-      { value: "/inicio", label: t("settings.startup.home") },
-      { value: "/tasks", label: t("settings.startup.tasks") },
-      { value: "/quests", label: t("settings.startup.quests") },
-      { value: "/configuracoes?aba=personagens", label: t("settings.startup.settings") },
-    ],
-    [t],
+    () => {
+      const menuOptions = sidebarMenus
+        .filter((item) => item?.is_enabled && item?.path && !String(item.path).startsWith("/configuracoes"))
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((item) => ({
+          value: item.path,
+          label: translateMenuLabel(item.menu_key, item.label),
+        }))
+
+      const hasCurrentPreference = menuOptions.some((option) => option.value === preferences.startupPage)
+      const extraOptions = [
+        { value: "/configuracoes?aba=personagens", label: t("settings.startup.settings") },
+      ]
+
+      const hasExtraPreference = extraOptions.some((option) => option.value === preferences.startupPage)
+
+      if (!hasCurrentPreference && !hasExtraPreference && preferences.startupPage) {
+        extraOptions.unshift({
+          value: preferences.startupPage,
+          label: preferences.startupPage,
+        })
+      }
+
+      return [...menuOptions, ...extraOptions]
+    },
+    [preferences.startupPage, sidebarMenus, t, translateMenuLabel],
   )
 
   const saveStateMessage = useMemo(() => {
@@ -80,6 +103,29 @@ export default function ConfiguracoesPage() {
   useLayoutEffect(() => {
     setPreferences(readAppPreferences())
     setIsPreferencesHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadSidebarMenus() {
+      try {
+        const data = await apiRequest("/ui/sidebar-menus")
+        if (!Array.isArray(data) || !isMounted) return
+
+        const enabledMenus = data.filter((item) => item?.path)
+        if (enabledMenus.length > 0) {
+          setSidebarMenus(enabledMenus)
+        }
+      } catch {
+      }
+    }
+
+    loadSidebarMenus()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {
@@ -313,17 +359,12 @@ export default function ConfiguracoesPage() {
                 <div className="settings-field-grid">
                   <label className="settings-field settings-field--full">
                     <span className="settings-field__label">{t("settings.startupPage")}</span>
-                    <select
-                      className="settings-select"
+                    <AppSelect
                       value={preferences.startupPage}
-                      onChange={(event) => updatePreference("startupPage", event.target.value)}
-                    >
-                      {startupOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                      options={startupOptions}
+                      ariaLabel={t("settings.startupPage")}
+                      onChange={(nextValue) => updatePreference("startupPage", nextValue)}
+                    />
                   </label>
 
                   <label className="settings-toggle-card">

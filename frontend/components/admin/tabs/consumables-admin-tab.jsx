@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { adminRequest } from "@/services/admin-api.js"
+import AppSelect from "@/components/app-select.jsx"
 import { CONSUMABLE_INITIAL_FORM, CONSUMABLE_PAGE_SIZE } from "../admin-constants.js"
 import { buildQuery } from "../admin-utils.js"
 import { useDebouncedValue } from "../use-debounced-value.js"
@@ -132,16 +133,15 @@ export default function ConsumablesAdminTab({ showError, showSuccess }) {
               value={consumableFilters.search}
               onChange={(event) => updateConsumableFilters({ search: event.target.value })}
             />
-            <select
-              className="admin-page__input"
+            <AppSelect
+              className="admin-page__select"
               value={consumableFilters.category}
-              onChange={(event) => updateConsumableFilters({ category: event.target.value })}
-            >
-              <option value="">Todas as categorias</option>
-              {consumableCategories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Todas as categorias" },
+                ...consumableCategories.map((category) => ({ value: category, label: category })),
+              ]}
+              onChange={(value) => updateConsumableFilters({ category: value })}
+            />
           </div>
         </div>
 

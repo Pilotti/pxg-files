@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts"
 import AppShell from "../components/app-shell.jsx"
+import AppSelect from "../components/app-select.jsx"
 import Topbar from "../components/topbar.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { useI18n } from "../context/i18n-context.jsx"
@@ -103,7 +104,7 @@ function isAcceptedImageFile(file) {
 export default function HuntsPage() {
   const { activeCharacter } = useCharacter()
   const { locale, t } = useI18n()
-  const [viewMode, setViewMode] = useState("overview")
+  const [viewMode, setViewMode] = useState("history")
   const [selectedFiles, setSelectedFiles] = useState([])
   const [previewFile, setPreviewFile] = useState(null)
   const [isExampleModalOpen, setIsExampleModalOpen] = useState(false)
@@ -135,6 +136,7 @@ export default function HuntsPage() {
   const [huntSessions, setHuntSessions] = useState([])
   const [historyRange, setHistoryRange] = useState("all")
   const [historyPage, setHistoryPage] = useState(1)
+  const [chartMode, setChartMode] = useState("day")
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [expandedSessionId, setExpandedSessionId] = useState(null)
   const [sessionDetail, setSessionDetail] = useState(null)
@@ -175,19 +177,6 @@ export default function HuntsPage() {
     t("hunts.example.rule5"),
   ]), [t])
 
-  const chartData = useMemo(() => {
-    const sorted = [...huntSessions]
-      .sort((a, b) => new Date(a.hunt_date) - new Date(b.hunt_date))
-      .slice(-20)
-    return sorted.map((s, index) => ({
-      label: new Date(s.hunt_date).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" }),
-      index: index + 1,
-      npc: Math.round(s.total_npc_value || 0),
-      venda: Math.round(s.total_player_value || 0),
-      duracao: s.duration_minutes || 0,
-    }))
-  }, [huntSessions, locale])
-
   const filteredHistorySessions = useMemo(() => {
     if (historyRange === "all") {
       return [...huntSessions].sort((a, b) => new Date(b.hunt_date) - new Date(a.hunt_date))
@@ -202,6 +191,42 @@ export default function HuntsPage() {
       })
       .sort((a, b) => new Date(b.hunt_date) - new Date(a.hunt_date))
   }, [historyRange, huntSessions])
+
+  const chartData = useMemo(() => {
+    const sortedSessions = [...filteredHistorySessions]
+      .sort((a, b) => new Date(a.hunt_date) - new Date(b.hunt_date))
+
+    if (chartMode === "day") {
+      const groupedByDay = new Map()
+
+      for (const session of sortedSessions) {
+        const date = new Date(session.hunt_date)
+        if (Number.isNaN(date.getTime())) continue
+
+        const key = date.toISOString().slice(0, 10)
+        const current = groupedByDay.get(key) || {
+          label: date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" }),
+          npc: 0,
+          venda: 0,
+          duracao: 0,
+        }
+
+        current.npc += Math.round(session.total_npc_value || 0)
+        current.venda += Math.round(session.total_player_value || 0)
+        current.duracao += session.duration_minutes || 0
+        groupedByDay.set(key, current)
+      }
+
+      return Array.from(groupedByDay.values()).slice(-20)
+    }
+
+    return sortedSessions.slice(-20).map((s) => ({
+      label: new Date(s.hunt_date).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" }),
+      npc: Math.round(s.total_npc_value || 0),
+      venda: Math.round(s.total_player_value || 0),
+      duracao: s.duration_minutes || 0,
+    }))
+  }, [chartMode, filteredHistorySessions, locale])
 
   const historyTotalPages = Math.max(1, Math.ceil(filteredHistorySessions.length / 6))
   const pagedHistorySessions = useMemo(() => {
@@ -291,7 +316,6 @@ export default function HuntsPage() {
 
   const isHistoryOpen = viewMode === "history"
   const isNewHuntOpen = viewMode === "new-hunt"
-  const isCompactView = viewMode !== "overview"
 
   useEffect(() => {
     return () => {
@@ -778,128 +802,6 @@ export default function HuntsPage() {
             </div>
           </div>
 
-          <div
-            className={
-              isCompactView
-                ? "hunts-page__stats-grid hunts-page__stats-grid--history"
-                : "hunts-page__stats-grid"
-            }
-          >
-            {statCards.map((card, index) => (
-              <article
-                key={card.label}
-                className={
-                  [
-                    "hunts-page__stat-card",
-                    index === statCards.length - 1 ? "hunts-page__stat-card--success" : "",
-                    isCompactView ? "hunts-page__stat-card--compact" : "",
-                  ].filter(Boolean).join(" ")
-                }
-              >
-                <span className="hunts-page__stat-label">{card.label}</span>
-                <strong className={card.valueClassName ? `hunts-page__stat-value ${card.valueClassName}` : "hunts-page__stat-value"}>{card.value}</strong>
-              </article>
-            ))}
-          </div>
-          <p className="hunts-page__stats-hint">{t("hunts.stats.last30Days")}</p>
-
-          {!isCompactView && chartData.length >= 2 ? (
-            <section className="hunts-page__charts-section">
-              <div className="hunts-page__chart-card">
-                <strong className="hunts-page__chart-title">{t("hunts.chart.profitPerSession")}</strong>
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #2a2a3a)" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tickFormatter={(v) => formatCompactValue(v, locale)}
-                      tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={44}
-                    />
-                    <Tooltip
-                      formatter={(value, name) => [
-                        formatCompactValue(value, locale),
-                        name === "npc" ? t("hunts.session.npc") : t("hunts.chart.sale"),
-                      ]}
-                      contentStyle={{
-                        background: "var(--chart-tooltip-bg, #1a1a2e)",
-                        border: "1px solid var(--chart-tooltip-border, #333)",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                      labelStyle={{ color: "var(--chart-axis, #888)", marginBottom: 4 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="npc"
-                      stroke="var(--chart-line-npc, #7c6af5)"
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: "var(--chart-line-npc, #7c6af5)" }}
-                      activeDot={{ r: 5 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="venda"
-                      stroke="var(--chart-line-venda, #3ec97c)"
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: "var(--chart-line-venda, #3ec97c)" }}
-                      activeDot={{ r: 5 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                <div className="hunts-page__chart-legend">
-                  <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--npc">{t("hunts.session.npc")}</span>
-                  <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--venda">{t("hunts.chart.sale")}</span>
-                </div>
-              </div>
-
-              <div className="hunts-page__chart-card">
-                <strong className="hunts-page__chart-title">{t("hunts.chart.durationPerSession")}</strong>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #2a2a3a)" vertical={false} />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tickFormatter={(v) => `${v}m`}
-                      tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={36}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`${value} min`, t("hunts.chart.duration")]}
-                      contentStyle={{
-                        background: "var(--chart-tooltip-bg, #1a1a2e)",
-                        border: "1px solid var(--chart-tooltip-border, #333)",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                      labelStyle={{ color: "var(--chart-axis, #888)", marginBottom: 4 }}
-                    />
-                    <Bar
-                      dataKey="duracao"
-                      fill="var(--chart-bar, #7c6af5)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-          ) : null}
-
           {isHistoryOpen ? (
             <section className="hunts-page__history-panel">
               <div className="hunts-page__history-header">
@@ -914,16 +816,17 @@ export default function HuntsPage() {
                 <div className="hunts-page__history-actions">
                   <label className="hunts-page__history-filter">
                     <span>{t("hunts.history.filterLabel")}</span>
-                    <select
-                      className="hunts-page__table-input"
+                    <AppSelect
+                      className="hunts-page__history-select"
                       value={historyRange}
-                      onChange={(event) => setHistoryRange(event.target.value)}
-                    >
-                      <option value="all">{t("hunts.history.filterAll")}</option>
-                      <option value="7">{t("hunts.history.filter7")}</option>
-                      <option value="30">{t("hunts.history.filter30")}</option>
-                      <option value="90">{t("hunts.history.filter90")}</option>
-                    </select>
+                      options={[
+                        { value: "all", label: t("hunts.history.filterAll") },
+                        { value: "7", label: t("hunts.history.filter7") },
+                        { value: "30", label: t("hunts.history.filter30") },
+                        { value: "90", label: t("hunts.history.filter90") },
+                      ]}
+                      onChange={setHistoryRange}
+                    />
                   </label>
                   <button
                     type="button"
@@ -935,6 +838,145 @@ export default function HuntsPage() {
                   </button>
                 </div>
               </div>
+
+              <div className="hunts-page__stats-grid hunts-page__stats-grid--history">
+                {statCards.map((card, index) => (
+                  <article
+                    key={card.label}
+                    className={
+                      [
+                        "hunts-page__stat-card",
+                        "hunts-page__stat-card--compact",
+                        index === statCards.length - 1 ? "hunts-page__stat-card--success" : "",
+                      ].filter(Boolean).join(" ")
+                    }
+                  >
+                    <span className="hunts-page__stat-label">{card.label}</span>
+                    <strong className={card.valueClassName ? `hunts-page__stat-value ${card.valueClassName}` : "hunts-page__stat-value"}>{card.value}</strong>
+                  </article>
+                ))}
+              </div>
+              <p className="hunts-page__stats-hint hunts-page__stats-hint--history">{t("hunts.stats.last30Days")}</p>
+
+              {chartData.length >= 2 ? (
+                <section className="hunts-page__charts-section hunts-page__charts-section--history">
+                  <div className="hunts-page__charts-toolbar">
+                    <span className="hunts-page__charts-toolbar-label">{t("hunts.chart.groupBy")}</span>
+                    <div className="hunts-page__chart-switch" role="group" aria-label={t("hunts.chart.groupBy")}>
+                      <button
+                        type="button"
+                        className={chartMode === "day" ? "hunts-page__chart-switch-button hunts-page__chart-switch-button--active" : "hunts-page__chart-switch-button"}
+                        onClick={() => setChartMode("day")}
+                      >
+                        {t("hunts.chart.byDay")}
+                      </button>
+                      <button
+                        type="button"
+                        className={chartMode === "hunt" ? "hunts-page__chart-switch-button hunts-page__chart-switch-button--active" : "hunts-page__chart-switch-button"}
+                        onClick={() => setChartMode("hunt")}
+                      >
+                        {t("hunts.chart.byHunt")}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="hunts-page__chart-card">
+                    <strong className="hunts-page__chart-title">
+                      {chartMode === "day" ? t("hunts.chart.profitPerDay") : t("hunts.chart.profitPerHunt")}
+                    </strong>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #2a2a3a)" />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          tickFormatter={(v) => formatCompactValue(v, locale)}
+                          tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={44}
+                        />
+                        <Tooltip
+                          formatter={(value, name) => [
+                            formatCompactValue(value, locale),
+                            name === "npc" ? t("hunts.session.npc") : t("hunts.chart.sale"),
+                          ]}
+                          contentStyle={{
+                            background: "var(--chart-tooltip-bg, #1a1a2e)",
+                            border: "1px solid var(--chart-tooltip-border, #333)",
+                            borderRadius: 8,
+                            fontSize: 12,
+                          }}
+                          labelStyle={{ color: "var(--chart-axis, #888)", marginBottom: 4 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="npc"
+                          stroke="var(--chart-line-npc, #7c6af5)"
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: "var(--chart-line-npc, #7c6af5)" }}
+                          activeDot={{ r: 5 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="venda"
+                          stroke="var(--chart-line-venda, #3ec97c)"
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: "var(--chart-line-venda, #3ec97c)" }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div className="hunts-page__chart-legend">
+                      <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--npc">{t("hunts.session.npc")}</span>
+                      <span className="hunts-page__chart-legend-item hunts-page__chart-legend-item--venda">{t("hunts.chart.sale")}</span>
+                    </div>
+                  </div>
+
+                  <div className="hunts-page__chart-card">
+                    <strong className="hunts-page__chart-title">
+                      {chartMode === "day" ? t("hunts.chart.durationPerDay") : t("hunts.chart.durationPerHunt")}
+                    </strong>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #2a2a3a)" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          tickFormatter={(v) => `${v}m`}
+                          tick={{ fontSize: 11, fill: "var(--chart-axis, #888)" }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={36}
+                        />
+                        <Tooltip
+                          formatter={(value) => [`${value} min`, t("hunts.chart.duration")]}
+                          contentStyle={{
+                            background: "var(--chart-tooltip-bg, #1a1a2e)",
+                            border: "1px solid var(--chart-tooltip-border, #333)",
+                            borderRadius: 8,
+                            fontSize: 12,
+                          }}
+                          labelStyle={{ color: "var(--chart-axis, #888)", marginBottom: 4 }}
+                        />
+                        <Bar
+                          dataKey="duracao"
+                          fill="var(--chart-bar, #7c6af5)"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={40}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </section>
+              ) : null}
 
               {isLoadingHistory && huntSessions.length === 0 ? (
                 <div className="hunts-page__history-placeholder">
@@ -1530,16 +1572,15 @@ export default function HuntsPage() {
             </div>
 
             <div className="hunts-page__consumables-toolbar">
-              <select
-                className="hunts-page__table-input hunts-page__consumables-select"
+              <AppSelect
+                className="hunts-page__consumables-select"
                 value={selectedConsumableCategory}
-                onChange={(event) => setSelectedConsumableCategory(event.target.value)}
-              >
-                <option value="">{t("hunts.new.allCategories")}</option>
-                {consumableCategories.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: t("hunts.new.allCategories") },
+                  ...consumableCategories.map((category) => ({ value: category, label: category })),
+                ]}
+                onChange={setSelectedConsumableCategory}
+              />
               {selectedConsumableCategory ? (
                 <button
                   type="button"

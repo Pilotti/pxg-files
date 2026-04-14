@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { adminRequest } from "@/services/admin-api.js"
+import AppSelect from "@/components/app-select.jsx"
 import { buildQuery } from "../admin-utils.js"
 import { useDebouncedValue } from "../use-debounced-value.js"
 
@@ -110,15 +111,16 @@ export default function AliasesAdminTab({ showError, showSuccess }) {
             value={aliasFilters.search}
             onChange={(event) => setAliasFilters((prev) => ({ ...prev, search: event.target.value }))}
           />
-          <select
-            className="admin-page__input"
+          <AppSelect
+            className="admin-page__select"
             value={aliasFilters.status}
-            onChange={(event) => setAliasFilters((prev) => ({ ...prev, status: event.target.value }))}
-          >
-            <option value="pending">Pendentes</option>
-            <option value="approved">Aprovados</option>
-            <option value="all">Todos</option>
-          </select>
+            options={[
+              { value: "pending", label: "Pendentes" },
+              { value: "approved", label: "Aprovados" },
+              { value: "all", label: "Todos" },
+            ]}
+            onChange={(value) => setAliasFilters((prev) => ({ ...prev, status: value }))}
+          />
         </div>
       </div>
 

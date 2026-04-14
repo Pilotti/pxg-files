@@ -396,6 +396,10 @@
   box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.08);
 }
 
+.quests-page__select .app-select__button {
+  min-height: 46px;
+}
+
 .quests-catalog-modal__backdrop {
   position: fixed;
   inset: 0;

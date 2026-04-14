@@ -111,7 +111,8 @@
   padding-bottom: 4px;
 }
 
-.tasks-page__filters-grid > .tasks-page__input {
+.tasks-page__filters-grid > .tasks-page__input,
+.tasks-page__filters-grid > .tasks-page__select {
   flex: 0 0 180px;
 }
 
@@ -530,6 +531,10 @@
   box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.08);
 }
 
+.tasks-page__select .app-select__button {
+  min-height: 46px;
+}
+
 .tasks-catalog-modal__backdrop {
   position: fixed;
   inset: 0;
@@ -594,7 +599,8 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.tasks-catalog-modal__filters > .tasks-page__input {
+.tasks-catalog-modal__filters > .tasks-page__input,
+.tasks-catalog-modal__filters > .tasks-page__select {
   flex: 0 0 170px;
 }
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { adminRequest } from "@/services/admin-api.js"
+import AppSelect from "@/components/app-select.jsx"
 import { CONTINENTS, TASK_INITIAL_FORM, TASK_PAGE_SIZE, TASK_TYPES } from "../admin-constants.js"
 import { buildQuery, formatCity, formatContinent, formatTaskType, normalizeCoordinateInput, normalizeMinLevelInput } from "../admin-utils.js"
 import { useDebouncedValue } from "../use-debounced-value.js"
@@ -227,24 +228,13 @@ export default function TasksAdminTab({ confirmBeforeRemoving, showError, showSu
         <div className="admin-page__filters-card">
           <div className="admin-page__filters-grid admin-page__filters-grid--tasks">
             <input className="admin-page__input" placeholder="Buscar por nome" value={taskFilters.search} onChange={(event) => updateTaskFilters({ search: event.target.value })} />
-            <select className="admin-page__input" value={taskFilters.task_type} onChange={(event) => updateTaskFilters({ task_type: event.target.value })}>
-              {TASK_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
-            <select className="admin-page__input" value={taskFilters.continent} onChange={(event) => updateTaskFilters((prev) => ({ ...prev, continent: event.target.value, city: "", nw_level: event.target.value === "nightmare_world" ? prev.nw_level : "" }))}>
-              {CONTINENTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
+            <AppSelect className="admin-page__select" value={taskFilters.task_type} options={TASK_TYPES} onChange={(value) => updateTaskFilters({ task_type: value })} />
+            <AppSelect className="admin-page__select" value={taskFilters.continent} options={CONTINENTS} onChange={(value) => updateTaskFilters((prev) => ({ ...prev, continent: value, city: "", nw_level: value === "nightmare_world" ? prev.nw_level : "" }))} />
             {taskFilters.continent === "nightmare_world" ? <input className="admin-page__input" type="number" min="1" max="999" placeholder="NW Level" value={taskFilters.nw_level} onChange={(event) => updateTaskFilters({ nw_level: event.target.value })} /> : null}
-            <select className="admin-page__input" value={taskFilters.city} onChange={(event) => updateTaskFilters({ city: event.target.value })}>
-              <option value="">Todas as cidades</option>
-              {taskCityOptions.map((city) => <option key={city.value} value={city.value}>{city.label}</option>)}
-            </select>
+            <AppSelect className="admin-page__select" value={taskFilters.city} options={[{ value: "", label: "Todas as cidades" }, ...taskCityOptions]} onChange={(value) => updateTaskFilters({ city: value })} />
             <input className="admin-page__input" type="number" placeholder="Nível mín." value={taskFilters.min_level} onChange={(event) => updateTaskFilters({ min_level: event.target.value })} />
             <input className="admin-page__input" type="number" placeholder="Nível máx." value={taskFilters.max_level} onChange={(event) => updateTaskFilters({ max_level: event.target.value })} />
-            <select className="admin-page__input" value={taskFilters.is_active} onChange={(event) => updateTaskFilters({ is_active: event.target.value })}>
-              <option value="">Todos os status</option>
-              <option value="true">Ativas</option>
-              <option value="false">Inativas</option>
-            </select>
+            <AppSelect className="admin-page__select" value={taskFilters.is_active} options={[{ value: "", label: "Todos os status" }, { value: "true", label: "Ativas" }, { value: "false", label: "Inativas" }]} onChange={(value) => updateTaskFilters({ is_active: value })} />
           </div>
         </div>
 
@@ -301,7 +291,7 @@ export default function TasksAdminTab({ confirmBeforeRemoving, showError, showSu
               <div className="character-modal__field"><label>Nome do NPC</label><input className="character-modal__input" value={taskForm.name} onChange={(event) => setTaskForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
               <div className="character-modal__field"><label>O que deve fazer</label><input className="character-modal__input" required value={taskForm.description} onChange={(event) => setTaskForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
               <div className="character-modal__field"><label>Tipo (selecione um ou mais)</label><div className="character-modal__checkboxes">{TASK_TYPES.filter((item) => item.value).map((item) => <label key={item.value} className="character-modal__checkbox"><input type="checkbox" checked={taskForm.task_type.includes(item.value)} onChange={(event) => { if (!event.target.checked && taskForm.task_type.length === 1) { showError("Selecione ao menos um tipo de task"); return } setTaskForm((prev) => ({ ...prev, task_type: event.target.checked ? [...prev.task_type, item.value] : prev.task_type.filter((type) => type !== item.value) })) }} /><span>{item.label}</span></label>)}</div></div>
-              <div className="character-modal__field"><label>Continente</label><select className="character-modal__input" value={taskForm.continent} onChange={(event) => setTaskForm((prev) => ({ ...prev, continent: event.target.value, nw_level: event.target.value === "nightmare_world" ? prev.nw_level : "" }))}>{CONTINENTS.filter((item) => item.value).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+              <div className="character-modal__field"><label>Continente</label><AppSelect className="character-modal__select" value={taskForm.continent} options={CONTINENTS.filter((item) => item.value)} onChange={(value) => setTaskForm((prev) => ({ ...prev, continent: value, nw_level: value === "nightmare_world" ? prev.nw_level : "" }))} /></div>
               <div className="character-modal__field"><label>Nível mínimo <span style={{ color: "#999", fontSize: "0.85em" }}>(vazio = 5)</span></label><input className="character-modal__input" type="number" min="0" max="625" value={taskForm.min_level} onChange={(event) => setTaskForm((prev) => ({ ...prev, min_level: event.target.value }))} /></div>
               {taskForm.continent === "nightmare_world" ? <div className="character-modal__field"><label>Nightmare Level (NW Level)</label><input className="character-modal__input" type="number" min="1" max="999" value={taskForm.nw_level} onChange={(event) => setTaskForm((prev) => ({ ...prev, nw_level: event.target.value }))} /></div> : null}
               <div className="character-modal__field"><label>Recompensa</label><input className="character-modal__input" required value={taskForm.reward_text} onChange={(event) => setTaskForm((prev) => ({ ...prev, reward_text: event.target.value }))} /></div>

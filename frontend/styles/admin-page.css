@@ -310,6 +310,10 @@
   box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.08);
 }
 
+.admin-page__select .app-select__button {
+  min-height: 44px;
+}
+
 .admin-page__primary-button,
 .admin-page__ghost-button,
 .admin-page__danger-button {

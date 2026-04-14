@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Navigate, useNavigate } from "@/lib/react-router-compat"
 import LanguageSelector from "@/components/language-selector.jsx"
+import AppSelect from "@/components/app-select.jsx"
 import { useI18n } from "@/context/i18n-context.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { clans } from "../data/clans.js"
@@ -94,7 +95,7 @@ export default function FirstCharacterPage() {
               <div className="auth-form__field">
                 <label>{t("auth.characterName")}</label>
                 <input
-                  className="auth-form__input"
+                  className="auth-form__select"
                   value={form.nome}
                   onChange={(event) => setForm((prev) => ({ ...prev, nome: event.target.value }))}
                   disabled={isSubmitting}
@@ -103,18 +104,13 @@ export default function FirstCharacterPage() {
 
               <div className="auth-form__field">
                 <label>{t("auth.clan")}</label>
-                <select
+                <AppSelect
                   className="auth-form__input"
                   value={form.cla}
-                  onChange={(event) => setForm((prev) => ({ ...prev, cla: event.target.value }))}
+                  options={clans.map((clan) => ({ value: clan, label: clan }))}
+                  onChange={(value) => setForm((prev) => ({ ...prev, cla: value }))}
                   disabled={isSubmitting}
-                >
-                  {clans.map((clan) => (
-                    <option key={clan} value={clan}>
-                      {clan}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div className="auth-form__field">

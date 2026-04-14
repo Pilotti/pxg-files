@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@/lib/react-router-compat"
 import { useI18n } from "@/context/i18n-context.jsx"
+import AppSelect from "./app-select.jsx"
 import { useCharacter } from "../context/character-context.jsx"
 import { clans } from "../data/clans.js"
 import CharacterSwitchOverlay from "./character-switch-overlay.jsx"
@@ -506,21 +507,17 @@ export default function AccountCharactersSection() {
 
                 <div className="character-modal__field">
                   <label htmlFor="character-clan">{t("auth.clan")}</label>
-                  <select
+                  <AppSelect
                     id="character-clan"
-                    className="character-modal__input"
+                    className="character-modal__select"
                     value={form.cla}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, cla: event.target.value }))
+                    options={clans.map((cla) => ({ value: cla, label: cla }))}
+                    onChange={(value) =>
+                      setForm((prev) => ({ ...prev, cla: value }))
                     }
                     disabled={isSubmitting}
-                  >
-                    {clans.map((cla) => (
-                      <option key={cla} value={cla}>
-                        {cla}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel={t("auth.clan")}
+                  />
                 </div>
 
                 <div className="character-modal__field">

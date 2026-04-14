@@ -129,6 +129,12 @@
 
 .hunts-page__stats-grid--history {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+  margin-bottom: 10px;
+}
+
+.hunts-page__stats-hint--history {
+  margin-bottom: 20px;
 }
 
 .hunts-page__stat-label {
@@ -225,6 +231,10 @@
   gap: 8px;
   color: rgba(226, 232, 255, 0.65);
   font-size: 0.82rem;
+}
+
+.hunts-page__history-select {
+  min-width: 170px;
 }
 
 .hunts-page__history-pagination {
@@ -1044,6 +1054,11 @@
   max-width: 260px;
 }
 
+.hunts-page__history-select .app-select__button,
+.hunts-page__consumables-select .app-select__button {
+  min-height: 44px;
+}
+
 .hunts-page__consumable-add-btn {
   margin-top: 8px;
   min-height: 34px;
@@ -1267,6 +1282,54 @@
   margin-bottom: 8px;
 }
 
+.hunts-page__charts-section--history {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.hunts-page__charts-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.hunts-page__charts-toolbar-label {
+  color: rgba(226, 232, 255, 0.62);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hunts-page__chart-switch {
+  display: inline-flex;
+  padding: 4px;
+  border: 1px solid var(--theme-field-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--theme-panel-surface) 72%, transparent);
+}
+
+.hunts-page__chart-switch-button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(226, 232, 255, 0.68);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hunts-page__chart-switch-button--active {
+  background: var(--theme-primary);
+  color: var(--theme-on-primary);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--theme-primary) 26%, transparent);
+}
+
 .hunts-page__chart-card {
   background: color-mix(in srgb, var(--theme-panel-surface) 80%, transparent);
   border: 1px solid var(--theme-field-border);
@@ -1317,5 +1380,10 @@
 @media (max-width: 768px) {
   .hunts-page__charts-section {
     grid-template-columns: 1fr;
+  }
+
+  .hunts-page__charts-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import useStableScroll from "../hooks/use-stable-scroll.js"
 import AppShell from "../components/app-shell.jsx"
+import AppSelect from "../components/app-select.jsx"
 import Topbar from "../components/topbar.jsx"
 import ConfirmActionModal from "../components/confirm-action-modal.jsx"
 import { useCharacter } from "../context/character-context.jsx"
@@ -714,60 +715,48 @@ export default function TasksPage() {
               }
             />
 
-            <select
-              className="tasks-page__input"
+            <AppSelect
+              className="tasks-page__select"
               value={listFilters.status}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, status: e.target.value }))
+              options={[
+                { value: "", label: t("tasks.allStatus") },
+                { value: "pending", label: t("tasks.status.pending") },
+                { value: "completed", label: t("tasks.status.completed") },
+              ]}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, status: value }))
               }
-            >
-              <option value="">{t("tasks.allStatus")}</option>
-              <option value="pending">{t("tasks.status.pending")}</option>
-              <option value="completed">{t("tasks.status.completed")}</option>
-            </select>
+            />
 
-            <select
-              className="tasks-page__input"
+            <AppSelect
+              className="tasks-page__select"
               value={listFilters.task_type}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, task_type: e.target.value }))
+              options={taskTypes}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, task_type: value }))
               }
-            >
-              {taskTypes.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
-              className="tasks-page__input"
+            <AppSelect
+              className="tasks-page__select"
               value={listFilters.continent}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, continent: e.target.value }))
+              options={continents}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, continent: value }))
               }
-            >
-              {continents.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
-              className="tasks-page__input"
+            <AppSelect
+              className="tasks-page__select"
               value={listFilters.city}
-              onChange={(e) =>
-                setListFilters((prev) => ({ ...prev, city: e.target.value }))
+              options={[
+                { value: "", label: t("tasks.allCities") },
+                ...activeCitiesOptions,
+              ]}
+              onChange={(value) =>
+                setListFilters((prev) => ({ ...prev, city: value }))
               }
-            >
-              <option value="">{t("tasks.allCities")}</option>
-              {activeCitiesOptions.map((city) => (
-                <option key={city.value} value={city.value}>
-                  {city.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
 
@@ -970,48 +959,35 @@ export default function TasksPage() {
                 }
               />
 
-              <select
-                className="tasks-page__input"
+              <AppSelect
+                className="tasks-page__select"
                 value={catalogFilters.task_type}
-                onChange={(e) =>
-                  updateCatalogFilters({ task_type: e.target.value })
+                options={taskTypes}
+                onChange={(value) =>
+                  updateCatalogFilters({ task_type: value })
                 }
-              >
-                {taskTypes.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+              />
 
-              <select
-                className="tasks-page__input"
+              <AppSelect
+                className="tasks-page__select"
                 value={catalogFilters.continent}
-                onChange={(e) =>
-                  updateCatalogFilters((prev) => ({ ...prev, continent: e.target.value, city: "" }))
+                options={continents}
+                onChange={(value) =>
+                  updateCatalogFilters((prev) => ({ ...prev, continent: value, city: "" }))
                 }
-              >
-                {continents.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+              />
 
-              <select
-                className="tasks-page__input"
+              <AppSelect
+                className="tasks-page__select"
                 value={catalogFilters.city}
-                onChange={(e) =>
-                  updateCatalogFilters({ city: e.target.value })
+                options={[
+                  { value: "", label: t("tasks.allCities") },
+                  ...catalogCityOptions,
+                ]}
+                onChange={(value) =>
+                  updateCatalogFilters({ city: value })
                 }
-              >
-                <option value="">{t("tasks.allCities")}</option>
-                {catalogCityOptions.map((city) => (
-                  <option key={city.value} value={city.value}>
-                    {city.label}
-                  </option>
-                ))}
-              </select>
+              />
 
               <input
                 className="tasks-page__input"
