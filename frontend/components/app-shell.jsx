@@ -41,7 +41,10 @@ export default function AppShell({ children }) {
         const data = await apiRequest("/ui/sidebar-menus")
         if (!Array.isArray(data) || !isMounted) return
 
-        const normalized = [...data].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        const missingFallbackItems = FALLBACK_SIDEBAR_MENU_ITEMS.filter((fallbackItem) => (
+          !data.some((item) => item?.menu_key === fallbackItem.menu_key)
+        ))
+        const normalized = [...data, ...missingFallbackItems].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
         if (normalized.length) {
           setMenuItems(normalized)
         }

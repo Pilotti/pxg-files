@@ -1,0 +1,13 @@
+.rainbow-orbs-page {
+  min-height: calc(100vh - 110px);
+}
+
+.rainbow-orbs-page__map-stage {
+  min-height: calc(100vh - 140px);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 34%),
+    color-mix(in srgb, var(--theme-panel-surface, rgba(10, 18, 34, 0.76)) 90%, transparent);
+  box-shadow: var(--shadow);
+}

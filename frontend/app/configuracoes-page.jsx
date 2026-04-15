@@ -113,7 +113,10 @@ export default function ConfiguracoesPage() {
         const data = await apiRequest("/ui/sidebar-menus")
         if (!Array.isArray(data) || !isMounted) return
 
-        const enabledMenus = data.filter((item) => item?.path)
+        const missingFallbackItems = FALLBACK_SIDEBAR_MENU_ITEMS.filter((fallbackItem) => (
+          !data.some((item) => item?.menu_key === fallbackItem.menu_key)
+        ))
+        const enabledMenus = [...data, ...missingFallbackItems].filter((item) => item?.path)
         if (enabledMenus.length > 0) {
           setSidebarMenus(enabledMenus)
         }
