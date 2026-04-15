@@ -59,6 +59,14 @@ function getOutcomeChip(item) {
   return null
 }
 
+function formatCompactValue(value, locale = "pt-BR") {
+  const numeric = Number(value || 0)
+  if (!Number.isFinite(numeric)) {
+    return "0"
+  }
+  return new Intl.NumberFormat(locale).format(numeric)
+}
+
 export default function OcrReviewAdminTab({ showError }) {
   const [items, setItems] = useState([])
   const [drafts, setDrafts] = useState({})
@@ -233,6 +241,7 @@ export default function OcrReviewAdminTab({ showError }) {
                 last_reprocess_rows: payload.recognized_rows,
                 last_reprocess_duplicates: payload.duplicates_ignored,
                 last_reprocess_message: payload.detail,
+                last_reprocess_preview: Array.isArray(payload.preview_rows) ? payload.preview_rows : [],
               }
             : item
         ))
@@ -360,6 +369,24 @@ export default function OcrReviewAdminTab({ showError }) {
 
                     {item.last_reprocess_message ? (
                       <p className="admin-page__ocr-review-message">{item.last_reprocess_message}</p>
+                    ) : null}
+
+                    {item.last_reprocess_preview?.length ? (
+                      <div className="admin-page__ocr-review-result">
+                        <strong className="admin-page__ocr-review-result-title">Último reprocessamento</strong>
+                        <ul className="admin-page__ocr-review-result-list">
+                          {item.last_reprocess_preview.map((row, index) => (
+                            <li key={`${item.filename}-${row.name}-${index}`} className="admin-page__ocr-review-result-row">
+                              <span className="admin-page__ocr-review-result-name">
+                                {row.quantity}x {row.name}
+                              </span>
+                              <span className="admin-page__ocr-review-result-value">
+                                {formatCompactValue(row.npc_total_price)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ) : null}
                   </div>
                 </div>

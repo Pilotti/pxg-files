@@ -220,6 +220,7 @@ class AdminOcrReviewItem(BaseModel):
     last_reprocess_rows: int | None = None
     last_reprocess_duplicates: int | None = None
     last_reprocess_message: str | None = None
+    last_reprocess_preview: list[dict] = []
 
 
 class AdminOcrReviewListResponse(BaseModel):
@@ -238,6 +239,7 @@ class AdminOcrReviewReprocessResponse(BaseModel):
     outcome: str
     recognized_rows: int = 0
     duplicates_ignored: int = 0
+    preview_rows: list[dict] = []
 
 
 class AdminConsumableCreateRequest(BaseModel):

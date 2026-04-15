@@ -1160,6 +1160,7 @@ def admin_list_ocr_review(_: dict = Depends(get_current_admin)):
                 last_reprocess_rows=meta.get("last_reprocess_rows"),
                 last_reprocess_duplicates=meta.get("last_reprocess_duplicates"),
                 last_reprocess_message=meta.get("last_reprocess_message"),
+                last_reprocess_preview=meta.get("last_reprocess_preview") or [],
             )
         )
     return AdminOcrReviewListResponse(items=items, total=len(items))
@@ -1233,6 +1234,7 @@ def admin_save_ocr_review_decision(
         "last_reprocess_rows": previous.get("last_reprocess_rows"),
         "last_reprocess_duplicates": previous.get("last_reprocess_duplicates"),
         "last_reprocess_message": previous.get("last_reprocess_message"),
+        "last_reprocess_preview": previous.get("last_reprocess_preview") or [],
     }
     _save_ocr_review_index(index)
     return {"ok": True}
@@ -1253,6 +1255,7 @@ async def admin_reprocess_ocr_review(
     detail = "Falha ao reprocessar a imagem."
     recognized_rows = 0
     duplicates_ignored = 0
+    preview_rows: list[dict] = []
 
     try:
         parsed_lines = await asyncio.to_thread(
@@ -1263,6 +1266,15 @@ async def admin_reprocess_ocr_review(
         )
         unique_lines, duplicates_ignored = deduplicate_drop_lines(parsed_lines)
         recognized_rows = len(unique_lines)
+        preview_rows = [
+            {
+                "name": line.name_display,
+                "quantity": int(line.quantity),
+                "npc_total_price": round(float(line.npc_total_price), 2),
+                "npc_unit_price": round(float(line.npc_unit_price), 2),
+            }
+            for line in unique_lines[:12]
+        ]
         outcome = "success" if recognized_rows > 0 else "empty"
         detail = (
             f"Reprocessamento concluído com {recognized_rows} linha(s) reconhecida(s)."
@@ -1288,6 +1300,7 @@ async def admin_reprocess_ocr_review(
         "last_reprocess_rows": recognized_rows,
         "last_reprocess_duplicates": duplicates_ignored,
         "last_reprocess_message": detail,
+        "last_reprocess_preview": preview_rows,
     })
     index[safe_name] = current
     _save_ocr_review_index(index)
@@ -1297,4 +1310,5 @@ async def admin_reprocess_ocr_review(
         outcome=outcome,
         recognized_rows=recognized_rows,
         duplicates_ignored=duplicates_ignored,
+        preview_rows=preview_rows,
     )
