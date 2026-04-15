@@ -10,6 +10,7 @@ from app.schemas.admin import AdminQuestCreateRequest
 
 
 QUEST_JSON_DIR = Path(__file__).resolve().parents[1] / "data" / "quests"
+QUEST_SEED_JSON_DIR = Path(__file__).resolve().parents[1] / "seed_data" / "quests"
 CONTINENT_FILE_NAMES = {
     "kanto": "kanto.json",
     "johto": "johto.json",
@@ -20,11 +21,11 @@ CONTINENT_FILE_NAMES = {
 }
 
 
-def ensure_quest_json_files() -> None:
-    QUEST_JSON_DIR.mkdir(parents=True, exist_ok=True)
+def ensure_quest_json_files(json_dir: Path = QUEST_JSON_DIR) -> None:
+    json_dir.mkdir(parents=True, exist_ok=True)
 
     for file_name in CONTINENT_FILE_NAMES.values():
-        file_path = QUEST_JSON_DIR / file_name
+        file_path = json_dir / file_name
         if not file_path.exists():
             file_path.write_text("[]\n", encoding="utf-8")
 
@@ -67,13 +68,18 @@ def export_quest_templates_to_json_files(db: Session) -> None:
         )
 
 
-def import_quest_templates_from_json_files(db: Session, *, prune_missing: bool = False) -> int:
-    ensure_quest_json_files()
+def import_quest_templates_from_json_files(
+    db: Session,
+    *,
+    prune_missing: bool = False,
+    json_dir: Path = QUEST_JSON_DIR,
+) -> int:
+    ensure_quest_json_files(json_dir)
 
     desired_payloads: dict[tuple[str, str], AdminQuestCreateRequest] = {}
 
     for continent, file_name in CONTINENT_FILE_NAMES.items():
-        file_path = QUEST_JSON_DIR / file_name
+        file_path = json_dir / file_name
         raw_content = file_path.read_text(encoding="utf-8").strip()
         entries = [] if not raw_content else json.loads(raw_content)
 

@@ -15,8 +15,16 @@ from app.models.hunt_item_alias import HuntItemAlias
 from app.models.hunt_session import HuntSession
 from app.models.sidebar_menu import SidebarMenuSetting
 from app.services.catalog_seed import seed_database_catalogs_if_empty
-from app.services.task_json_storage import ensure_task_json_files, import_task_templates_from_json_files
-from app.services.quest_json_storage import ensure_quest_json_files, import_quest_templates_from_json_files
+from app.services.task_json_storage import (
+    TASK_SEED_JSON_DIR,
+    ensure_task_json_files,
+    import_task_templates_from_json_files,
+)
+from app.services.quest_json_storage import (
+    QUEST_SEED_JSON_DIR,
+    ensure_quest_json_files,
+    import_quest_templates_from_json_files,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -161,7 +169,7 @@ def init_db() -> None:
         if settings.use_database_catalog:
             seed_database_catalogs_if_empty(db)
             if db.query(TaskTemplate.id).first() is None:
-                import_task_templates_from_json_files(db)
+                import_task_templates_from_json_files(db, json_dir=TASK_SEED_JSON_DIR)
         else:
             import_task_templates_from_json_files(db)
     except Exception as exc:
@@ -174,7 +182,7 @@ def init_db() -> None:
     try:
         if settings.use_database_catalog:
             if db.query(QuestTemplate.id).first() is None:
-                import_quest_templates_from_json_files(db)
+                import_quest_templates_from_json_files(db, json_dir=QUEST_SEED_JSON_DIR)
         else:
             import_quest_templates_from_json_files(db)
     except Exception as exc:

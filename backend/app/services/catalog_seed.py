@@ -14,7 +14,7 @@ from app.services.consumables import (
 from app.services.hunt_npc_prices import normalize_item_name
 
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+SEED_DATA_DIR = Path(__file__).resolve().parent.parent / "seed_data"
 _POKEMON_RE = re.compile(r"^(\d{4}) - (.+)$")
 
 
@@ -42,7 +42,7 @@ def seed_database_catalogs_if_empty(db: Session) -> dict[str, int]:
     }
 
     if db.query(PokemonEntry.id).first() is None:
-        raw_pokemon = _read_json(DATA_DIR / "inimigos.json", [])
+        raw_pokemon = _read_json(SEED_DATA_DIR / "inimigos.json", [])
         for entry in raw_pokemon if isinstance(raw_pokemon, list) else []:
             full_name = str(entry.get("nome") if isinstance(entry, dict) else entry or "").strip()
             if not full_name:
@@ -52,7 +52,7 @@ def seed_database_catalogs_if_empty(db: Session) -> dict[str, int]:
             seeded["pokemon"] += 1
 
     if db.query(HuntNpcPrice.id).first() is None:
-        raw_prices = _read_json(DATA_DIR / "hunts_npc_prices.json", {})
+        raw_prices = _read_json(SEED_DATA_DIR / "hunts_npc_prices.json", {})
         if isinstance(raw_prices, dict):
             for name, value in raw_prices.items():
                 normalized_name = normalize_item_name(str(name))
@@ -66,7 +66,7 @@ def seed_database_catalogs_if_empty(db: Session) -> dict[str, int]:
                 seeded["hunt_npc_prices"] += 1
 
     if db.query(ConsumableCatalogItem.id).first() is None:
-        raw_consumables = _read_json(DATA_DIR / "itens_consumivel.json", [])
+        raw_consumables = _read_json(SEED_DATA_DIR / "itens_consumivel.json", [])
         for entry in raw_consumables if isinstance(raw_consumables, list) else []:
             if isinstance(entry, str):
                 nome = entry.strip()

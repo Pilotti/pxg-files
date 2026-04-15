@@ -15,7 +15,7 @@ backend/htmlcov/
 backend/ocr_debug/
 backend/app/data/ocr_debug/
 backend/app/data/ocr_review/
-backend/app/data/hunts_player_prices.json
+backend/app/data/**/*.json
 backend/tasks.db
 
 # Node/frontend

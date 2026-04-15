@@ -10,6 +10,7 @@ from app.schemas.admin import AdminTaskCreateRequest
 
 
 TASK_JSON_DIR = Path(__file__).resolve().parents[1] / "data" / "tasks"
+TASK_SEED_JSON_DIR = Path(__file__).resolve().parents[1] / "seed_data" / "tasks"
 CONTINENT_FILE_NAMES = {
     "kanto": "kanto.json",
     "johto": "johto.json",
@@ -42,11 +43,11 @@ def _normalize_task_types(value) -> list[str]:
     return [text]
 
 
-def ensure_task_json_files() -> None:
-    TASK_JSON_DIR.mkdir(parents=True, exist_ok=True)
+def ensure_task_json_files(json_dir: Path = TASK_JSON_DIR) -> None:
+    json_dir.mkdir(parents=True, exist_ok=True)
 
     for file_name in CONTINENT_FILE_NAMES.values():
-        file_path = TASK_JSON_DIR / file_name
+        file_path = json_dir / file_name
         if not file_path.exists():
             file_path.write_text("[]\n", encoding="utf-8")
 
@@ -92,13 +93,18 @@ def export_task_templates_to_json_files(db: Session) -> None:
         )
 
 
-def import_task_templates_from_json_files(db: Session, *, prune_missing: bool = False) -> int:
-    ensure_task_json_files()
+def import_task_templates_from_json_files(
+    db: Session,
+    *,
+    prune_missing: bool = False,
+    json_dir: Path = TASK_JSON_DIR,
+) -> int:
+    ensure_task_json_files(json_dir)
 
     desired_payloads: dict[tuple[str, str], AdminTaskCreateRequest] = {}
 
     for continent, file_name in CONTINENT_FILE_NAMES.items():
-        file_path = TASK_JSON_DIR / file_name
+        file_path = json_dir / file_name
         raw_content = file_path.read_text(encoding="utf-8").strip()
         entries = [] if not raw_content else json.loads(raw_content)
 
