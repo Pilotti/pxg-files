@@ -1,0 +1,19 @@
+[
+  {
+    "name": "NPC 1",
+    "description": "Matar 2 balao",
+    "task_type": [
+      "item_delivery",
+      "defeat",
+      "capture",
+      "outro"
+    ],
+    "continent": "johto",
+    "min_level": 51,
+    "nw_level": null,
+    "reward_text": "123123",
+    "coordinate": "123,123,123",
+    "city": "Teste",
+    "is_active": true
+  }
+]

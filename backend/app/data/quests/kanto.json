@@ -1,0 +1,12 @@
+[
+  {
+    "name": "asd",
+    "description": "asd",
+    "continent": "kanto",
+    "city": "asd",
+    "min_level": 123,
+    "nw_level": null,
+    "reward_text": "123",
+    "is_active": true
+  }
+]
