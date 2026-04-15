@@ -1,10 +1,15 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.rate_limit import (
+    clear_login_attempts,
+    ensure_login_not_rate_limited,
+    record_failed_login_attempt,
+)
 from app.core.security import hash_password, verify_password, hash_token
 from app.core.tokens import (
     create_access_token,
@@ -22,6 +27,11 @@ from app.schemas.user import UserLogin, UserPreferencesUpdate, UserRegister, Use
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _login_rate_limit_key(request: Request, identifier: str) -> str:
+    client_host = request.client.host if request.client else "unknown"
+    return f"{client_host}:{identifier.strip().lower()}"
+
+
 @router.post("/register", response_model=UserResponse)
 def register_user(data: UserRegister, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.email == data.email).first()
@@ -29,7 +39,7 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email já cadastrado")
 
     new_user = User(
-        display_name=data.display_name,
+        display_name=data.display_name.strip(),
         email=data.email,
         password_hash=hash_password(data.password),
     )
@@ -42,11 +52,17 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login_user(data: UserLogin, db: Session = Depends(get_db)):
+def login_user(data: UserLogin, request: Request, db: Session = Depends(get_db)):
+    rate_limit_key = _login_rate_limit_key(request, data.email)
+    ensure_login_not_rate_limited(rate_limit_key)
+
     user = db.query(User).filter(User.email == data.email).first()
 
     if not user or not verify_password(data.password, user.password_hash):
+        record_failed_login_attempt(rate_limit_key)
         raise HTTPException(status_code=401, detail="Email ou senha inválidos")
+
+    clear_login_attempts(rate_limit_key)
 
     access_token = create_access_token(str(user.id))
     refresh_token, expires_at = create_refresh_token(str(user.id))
@@ -81,6 +97,7 @@ def refresh_user_token(data: RefreshRequest, db: Session = Depends(get_db)):
     token_record = (
         db.query(RefreshToken)
         .filter(RefreshToken.token_hash == token_hash)
+        .with_for_update()
         .first()
     )
 

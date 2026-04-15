@@ -57,7 +57,7 @@ export default function UsersAdminTab({ showError, showSuccess }) {
         <div className="admin-page__section-header">
           <div>
             <h2 className="admin-page__section-title">Usuários cadastrados</h2>
-            <p className="admin-page__section-subtitle">Visualize ID e usuário sem expor dados sensíveis.</p>
+            <p className="admin-page__section-subtitle">Visualize ID, usuário e email para suporte administrativo.</p>
           </div>
           <button type="button" className="admin-page__ghost-button" onClick={() => loadUsers(debouncedUserFilters)}>
             Atualizar

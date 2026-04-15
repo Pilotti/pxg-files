@@ -1,10 +1,9 @@
 import json
-import json
 import re
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -14,6 +13,11 @@ from app.core.admin_security import (
     verify_admin_credentials,
 )
 from app.core.config import settings
+from app.core.rate_limit import (
+    clear_login_attempts,
+    ensure_login_not_rate_limited,
+    record_failed_login_attempt,
+)
 from app.db.session import get_db
 from app.models.tasks import (
     CharacterQuest,
@@ -129,13 +133,26 @@ def get_current_admin(authorization: str | None = Header(None)) -> dict:
 
     token = authorization.replace("Bearer ", "", 1).strip()
     return decode_admin_token(token)
+
+
+def _admin_login_rate_limit_key(request: Request, username: str) -> str:
+    client_host = request.client.host if request.client else "unknown"
+    return f"admin:{client_host}:{username.strip().lower()}"
+
+
 @router.post("/login", response_model=AdminLoginResponse)
-def admin_login(data: AdminLoginRequest):
+def admin_login(data: AdminLoginRequest, request: Request):
+    rate_limit_key = _admin_login_rate_limit_key(request, data.username)
+    ensure_login_not_rate_limited(rate_limit_key, max_attempts=5)
+
     if not verify_admin_credentials(data.username.strip(), data.password):
+        record_failed_login_attempt(rate_limit_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais admin inválidas",
         )
+
+    clear_login_attempts(rate_limit_key)
 
     token = create_admin_token()
     return AdminLoginResponse(access_token=token)
@@ -980,7 +997,7 @@ def admin_delete_pokemon(
 
 
 def _get_ocr_review_dir() -> Path:
-    review_dir = Path(settings.ocr_review_dir)
+    review_dir = Path(settings.ocr_review_dir).resolve()
     review_dir.mkdir(parents=True, exist_ok=True)
     return review_dir
 

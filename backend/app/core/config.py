@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,9 +9,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_MINUTES: int
 
-    ADMIN_USERNAME: str = "admin"
-    ADMIN_PASSWORD: str = "admin123"
-    ADMIN_SECRET_KEY: str = "change-this-admin-secret"
+    ADMIN_USERNAME: str
+    ADMIN_PASSWORD: str
+    ADMIN_SECRET_KEY: str
     ADMIN_TOKEN_TTL_SECONDS: int = 43200
     CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:8000,http://127.0.0.1:8000,http://localhost,http://127.0.0.1"
     OCR_MAX_FILES: int = 10
@@ -24,6 +25,28 @@ class Settings(BaseSettings):
         env_file=".env",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def reject_unsafe_admin_defaults(self):
+        unsafe_values = {
+            "ADMIN_PASSWORD": {"admin", "admin123", "password", "change-me"},
+            "ADMIN_SECRET_KEY": {"change-this-admin-secret", "change-me", "secret"},
+        }
+
+        if not str(self.ADMIN_USERNAME or "").strip():
+            raise ValueError("ADMIN_USERNAME deve ser configurado.")
+
+        if str(self.CORS_ALLOWED_ORIGINS or "").strip() == "*":
+            raise ValueError("CORS_ALLOWED_ORIGINS nao pode ser '*' com credenciais habilitadas.")
+
+        for field_name, blocked_values in unsafe_values.items():
+            value = str(getattr(self, field_name, "") or "").strip()
+            if not value:
+                raise ValueError(f"{field_name} deve ser configurado.")
+            if value.lower() in blocked_values:
+                raise ValueError(f"{field_name} usa valor inseguro de exemplo.")
+
+        return self
 
     @property
     def database_url(self) -> str:

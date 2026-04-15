@@ -7,13 +7,14 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_enabled_menu
 from app.core.config import settings
 from app.db.session import get_db
+from app.models.character import Character
 from app.models.hunt_session import HuntSession
 from app.models.user import User
 from app.schemas.hunts import (
@@ -70,8 +71,8 @@ def _save_ocr_review_image(content: bytes, file_name: str, user_id: int) -> str:
 
 
 class SavePlayerPricePayload(BaseModel):
-    item_name: str
-    player_unit_price: float
+    item_name: str = Field(min_length=1, max_length=160)
+    player_unit_price: float = Field(ge=0, le=1_000_000_000)
 
 
 @router.post("/ocr/drops", response_model=HuntDropsOcrResponse)
@@ -228,8 +229,29 @@ async def save_hunt_session(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> HuntSessionListItem:
-    total_npc = sum(float(d.get("npcTotalPrice", 0)) for d in payload.drops)
-    total_player = sum(float(d.get("playerTotalPrice", 0)) for d in payload.drops)
+    if payload.character_id is not None:
+        owned_character = (
+            db.query(Character)
+            .filter(
+                Character.id == payload.character_id,
+                Character.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not owned_character:
+            raise HTTPException(status_code=404, detail="Personagem nao encontrado.")
+
+    if (
+        not payload.drops
+        and not payload.enemies
+        and not payload.consumables
+        and not payload.duration_minutes
+        and not payload.notes
+    ):
+        raise HTTPException(status_code=400, detail="Informe ao menos um dado da hunt.")
+
+    total_npc = sum(float(drop.npc_total_price) for drop in payload.drops)
+    total_player = sum(float(drop.player_total_price) for drop in payload.drops)
     total_enemies = sum(int(e.quantity) for e in payload.enemies)
 
     session = HuntSession(
@@ -238,7 +260,7 @@ async def save_hunt_session(
         duration_minutes=payload.duration_minutes,
         notes=payload.notes,
         hunt_date=payload.hunt_date or datetime.utcnow(),
-        drops_json=[d for d in payload.drops],
+        drops_json=[drop.to_storage_dict() for drop in payload.drops],
         enemies_json=[e.model_dump() for e in payload.enemies],
         consumables_json=[c.model_dump() for c in payload.consumables],
         total_npc_value=total_npc,
@@ -257,8 +279,8 @@ async def save_hunt_session(
 @router.get("/sessions", response_model=list[HuntSessionListItem])
 async def list_hunt_sessions(
     character_id: int | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[HuntSessionListItem]:

@@ -1,12 +1,16 @@
 from datetime import datetime
 
+from typing import Annotated
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+
+
+TrimmedText100 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
 class UserRegister(BaseModel):
-    display_name: str = Field(min_length=1, max_length=100)
+    display_name: TrimmedText100
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
 

@@ -433,14 +433,29 @@ export default function HuntsPage() {
   }
   async function saveHunt() {
     if (isSavingHunt) return
+    const parsedDuration = huntDuration ? parseInt(huntDuration, 10) : null
+    const hasUsefulHuntData = (
+      dropsRows.length > 0
+      || enemyList.length > 0
+      || consumableList.length > 0
+      || (Number.isFinite(parsedDuration) && parsedDuration > 0)
+      || huntNotes.trim().length > 0
+    )
+
+    if (!hasUsefulHuntData) {
+      setHuntSaved(false)
+      setHuntSaveError("Informe ao menos um drop, inimigo, consumivel, duracao ou anotacao antes de salvar.")
+      return
+    }
+
     setIsSavingHunt(true)
     setHuntSaveError("")
     setHuntSaved(false)
     try {
       const body = {
         character_id: activeCharacter?.id || null,
-        duration_minutes: huntDuration ? parseInt(huntDuration, 10) : null,
-        notes: huntNotes || null,
+        duration_minutes: Number.isFinite(parsedDuration) ? parsedDuration : null,
+        notes: huntNotes.trim() || null,
         drops: dropsRows.map((row) => {
           const effectivePlayerUnit = Number(row.playerUnitPrice || 0) > 0 ? row.playerUnitPrice : row.npcUnitPrice
           return {

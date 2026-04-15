@@ -1,11 +1,16 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+
+TrimmedText100 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 
 
 class CharacterBase(BaseModel):
-    nome: str = Field(min_length=1, max_length=100)
-    cla: str = Field(min_length=1, max_length=100)
+    nome: TrimmedText100
+    cla: TrimmedText100
     nivel: int = Field(ge=1, le=10000)
 
 

@@ -1,12 +1,17 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Annotated
+
+from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 from datetime import datetime
 import re
 
 from app.schemas.tasks import Continent, TaskType
 
 
+TrimmedText160 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
+
+
 class AdminLoginRequest(BaseModel):
-    username: str = Field(min_length=1)
+    username: TrimmedText160
     password: str = Field(min_length=1)
 
 
