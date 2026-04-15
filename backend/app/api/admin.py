@@ -1,5 +1,6 @@
 import json
 import re
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
@@ -69,6 +70,7 @@ from app.schemas.admin import (
     AdminConsumableUpdateRequest,
     AdminOcrReviewItem,
     AdminOcrReviewListResponse,
+    AdminOcrReviewReprocessResponse,
     AdminOcrReviewUpdateRequest,
 )
 from app.services.consumables import (
@@ -80,6 +82,12 @@ from app.services.consumables import (
     update_consumable,
 )
 from app.services.hunt_npc_prices import has_npc_price_item, list_npc_prices, update_npc_price
+from app.services.hunts_ocr import (
+    OcrTableNotFound,
+    deduplicate_drop_lines,
+    extract_drop_lines_from_image,
+    refresh_approved_aliases_cache,
+)
 from app.services.task_json_storage import export_task_templates_to_json_files
 from app.services.quest_json_storage import export_quest_templates_to_json_files
 
@@ -1106,6 +1114,26 @@ def _save_ocr_review_index(data: dict) -> None:
     index_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _normalize_ocr_review_status(value: str | None) -> str:
+    normalized = str(value or "pending").strip().lower()
+    if normalized == "ignored":
+        return "rejected"
+    if normalized in {"pending", "approved", "rejected"}:
+        return normalized
+    return "pending"
+
+
+def _get_ocr_review_file_path(filename: str) -> Path:
+    review_dir = _get_ocr_review_dir()
+    safe_name = Path(filename).name
+    file_path = (review_dir / safe_name).resolve()
+    if review_dir not in file_path.parents:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+    return file_path
+
+
 @router.get("/ocr-review", response_model=AdminOcrReviewListResponse)
 def admin_list_ocr_review(_: dict = Depends(get_current_admin)):
     review_dir = _get_ocr_review_dir()
@@ -1123,8 +1151,15 @@ def admin_list_ocr_review(_: dict = Depends(get_current_admin)):
                 filename=file_path.name,
                 size_bytes=stat.st_size,
                 created_at=datetime.fromtimestamp(stat.st_mtime),
-                status=str(meta.get("status") or "pending"),
+                status=_normalize_ocr_review_status(meta.get("status")),
                 notes=meta.get("notes"),
+                include_in_training=bool(meta.get("include_in_training")),
+                updated_at=datetime.fromisoformat(meta["updated_at"]) if meta.get("updated_at") else None,
+                last_reprocessed_at=datetime.fromisoformat(meta["last_reprocessed_at"]) if meta.get("last_reprocessed_at") else None,
+                last_reprocess_outcome=meta.get("last_reprocess_outcome"),
+                last_reprocess_rows=meta.get("last_reprocess_rows"),
+                last_reprocess_duplicates=meta.get("last_reprocess_duplicates"),
+                last_reprocess_message=meta.get("last_reprocess_message"),
             )
         )
     return AdminOcrReviewListResponse(items=items, total=len(items))
@@ -1171,3 +1206,95 @@ def admin_update_ocr_review(
     }
     _save_ocr_review_index(index)
     return {"ok": True}
+
+
+@router.put("/ocr-review/{filename}/decision")
+def admin_save_ocr_review_decision(
+    filename: str,
+    payload: AdminOcrReviewUpdateRequest,
+    _: dict = Depends(get_current_admin),
+):
+    file_path = _get_ocr_review_file_path(filename)
+    safe_name = file_path.name
+
+    normalized_status = _normalize_ocr_review_status(payload.status)
+    if normalized_status not in {"pending", "approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="Status inválido.")
+
+    index = _load_ocr_review_index()
+    previous = index.get(safe_name, {})
+    index[safe_name] = {
+        "status": normalized_status,
+        "notes": payload.notes.strip() if payload.notes else None,
+        "include_in_training": bool(payload.include_in_training),
+        "updated_at": datetime.utcnow().isoformat(),
+        "last_reprocessed_at": previous.get("last_reprocessed_at"),
+        "last_reprocess_outcome": previous.get("last_reprocess_outcome"),
+        "last_reprocess_rows": previous.get("last_reprocess_rows"),
+        "last_reprocess_duplicates": previous.get("last_reprocess_duplicates"),
+        "last_reprocess_message": previous.get("last_reprocess_message"),
+    }
+    _save_ocr_review_index(index)
+    return {"ok": True}
+
+
+@router.post("/ocr-review/{filename}/reprocess", response_model=AdminOcrReviewReprocessResponse)
+async def admin_reprocess_ocr_review(
+    filename: str,
+    _: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    file_path = _get_ocr_review_file_path(filename)
+    safe_name = file_path.name
+    refresh_approved_aliases_cache(db)
+    content = file_path.read_bytes()
+
+    outcome = "error"
+    detail = "Falha ao reprocessar a imagem."
+    recognized_rows = 0
+    duplicates_ignored = 0
+
+    try:
+        parsed_lines = await asyncio.to_thread(
+            extract_drop_lines_from_image,
+            content,
+            settings.ocr_tesseract_lang,
+            settings.ocr_tesseract_oem,
+        )
+        unique_lines, duplicates_ignored = deduplicate_drop_lines(parsed_lines)
+        recognized_rows = len(unique_lines)
+        outcome = "success" if recognized_rows > 0 else "empty"
+        detail = (
+            f"Reprocessamento concluído com {recognized_rows} linha(s) reconhecida(s)."
+            if recognized_rows > 0
+            else "Reprocessamento concluído, mas nenhum drop foi reconhecido."
+        )
+    except OcrTableNotFound:
+        outcome = "table_not_found"
+        detail = "A tabela de drops ainda não foi detectada nessa imagem."
+    except Exception:
+        outcome = "error"
+        detail = "Falha ao reprocessar a imagem."
+
+    index = _load_ocr_review_index()
+    current = index.get(safe_name, {})
+    current.update({
+        "status": _normalize_ocr_review_status(current.get("status")),
+        "notes": current.get("notes"),
+        "include_in_training": bool(current.get("include_in_training")),
+        "updated_at": current.get("updated_at"),
+        "last_reprocessed_at": datetime.utcnow().isoformat(),
+        "last_reprocess_outcome": outcome,
+        "last_reprocess_rows": recognized_rows,
+        "last_reprocess_duplicates": duplicates_ignored,
+        "last_reprocess_message": detail,
+    })
+    index[safe_name] = current
+    _save_ocr_review_index(index)
+
+    return AdminOcrReviewReprocessResponse(
+        detail=detail,
+        outcome=outcome,
+        recognized_rows=recognized_rows,
+        duplicates_ignored=duplicates_ignored,
+    )

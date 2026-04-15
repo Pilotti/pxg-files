@@ -145,6 +145,23 @@ export default function HuntsPage() {
   const [deleteSessionConfirm, setDeleteSessionConfirm] = useState(null)
   const [deletingSessionId, setDeletingSessionId] = useState(null)
 
+  const flaggedFileIds = useMemo(() => {
+    if (!dropsWarnings.length || !selectedFiles.length) {
+      return new Set()
+    }
+
+    const flaggedIds = new Set()
+    const warningsText = dropsWarnings.join(" ").toLowerCase()
+
+    for (const entry of selectedFiles) {
+      if (warningsText.includes(entry.file.name.toLowerCase())) {
+        flaggedIds.add(entry.id)
+      }
+    }
+
+    return flaggedIds
+  }, [dropsWarnings, selectedFiles])
+
   const summary = useMemo(() => {
     const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000)
     const recentSessions = huntSessions.filter((s) => {
@@ -1286,8 +1303,13 @@ export default function HuntsPage() {
                     </div>
 
                     <div className="hunts-page__file-grid" role="status" aria-live="polite">
-                      {selectedFiles.map((entry) => (
-                        <article key={entry.id} className="hunts-page__file-card">
+                      {selectedFiles.map((entry) => {
+                        const isFlagged = flaggedFileIds.has(entry.id)
+                        return (
+                        <article
+                          key={entry.id}
+                          className={`hunts-page__file-card${isFlagged ? " hunts-page__file-card--warning" : ""}`}
+                        >
                           <button
                             type="button"
                             className="hunts-page__file-preview"
@@ -1306,7 +1328,14 @@ export default function HuntsPage() {
                           </button>
 
                           <div className="hunts-page__file-meta">
-                            <span className="hunts-page__file-name" title={entry.file.name}>{entry.file.name}</span>
+                            <div className="hunts-page__file-meta-main">
+                              <span className="hunts-page__file-name" title={entry.file.name}>{entry.file.name}</span>
+                              {isFlagged ? (
+                                <span className="hunts-page__file-badge" role="status">
+                                  Revisar OCR
+                                </span>
+                              ) : null}
+                            </div>
                             <button
                               type="button"
                               className="hunts-page__file-remove"
@@ -1316,7 +1345,7 @@ export default function HuntsPage() {
                             </button>
                           </div>
                         </article>
-                      ))}
+                      )})}
                     </div>
                   </>
                 ) : null}

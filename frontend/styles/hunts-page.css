@@ -440,6 +440,15 @@
   display: block;
 }
 
+.hunts-page__file-card--warning {
+  border-color: rgba(255, 152, 80, 0.58);
+  box-shadow: 0 0 0 1px rgba(255, 152, 80, 0.22);
+}
+
+.hunts-page__file-card--warning .hunts-page__file-preview {
+  background: rgba(255, 152, 80, 0.08);
+}
+
 .hunts-page__file-meta {
   display: flex;
   align-items: center;
@@ -448,12 +457,31 @@
   padding: 8px;
 }
 
+.hunts-page__file-meta-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .hunts-page__file-name {
   font-size: 0.78rem;
   color: #d9e5ff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hunts-page__file-badge {
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 152, 80, 0.36);
+  background: rgba(255, 152, 80, 0.14);
+  color: #ffd7b8;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .hunts-page__file-remove {

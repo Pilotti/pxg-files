@@ -256,6 +256,10 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.admin-page__filters-grid--ocr-review {
+  grid-template-columns: minmax(280px, 1.4fr) minmax(180px, 0.8fr) minmax(210px, 0.9fr) auto;
+}
+
 .admin-page__input,
 .admin-page__textarea {
   width: 100%;
@@ -420,6 +424,10 @@
 
 .admin-page__tile--sidebar-menu {
   min-height: 200px;
+}
+
+.admin-page__tile--ocr-review {
+  min-height: 0;
 }
 
 .admin-page__debug-list {
@@ -756,6 +764,39 @@
   color: #ffd697;
 }
 
+.admin-page__ocr-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-page__ocr-review-notes {
+  min-height: 120px;
+}
+
+.admin-page__ocr-training-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #e6eeff;
+  font-size: 0.92rem;
+}
+
+.admin-page__ocr-training-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-page__ocr-review-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(226, 232, 255, 0.82);
+  line-height: 1.5;
+}
+
 .admin-page__alias-input-row {
   display: grid;
 }
@@ -1008,6 +1049,10 @@
   padding: 24px;
 }
 
+.admin-modal--image {
+  width: min(100%, 1080px);
+}
+
 .admin-modal--danger {
   width: min(100%, 520px);
 }
@@ -1156,6 +1201,24 @@
 
 .admin-delete-preview span {
   color: rgba(226, 232, 255, 0.68);
+}
+
+.admin-page__ocr-preview-wrap {
+  margin-top: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(5, 10, 22, 0.8);
+  padding: 12px;
+  max-height: min(72vh, 900px);
+  overflow: auto;
+}
+
+.admin-page__ocr-preview-full {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .admin-toast {

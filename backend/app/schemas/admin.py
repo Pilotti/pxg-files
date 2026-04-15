@@ -213,6 +213,13 @@ class AdminOcrReviewItem(BaseModel):
     created_at: datetime
     status: str = "pending"
     notes: str | None = None
+    include_in_training: bool = False
+    updated_at: datetime | None = None
+    last_reprocessed_at: datetime | None = None
+    last_reprocess_outcome: str | None = None
+    last_reprocess_rows: int | None = None
+    last_reprocess_duplicates: int | None = None
+    last_reprocess_message: str | None = None
 
 
 class AdminOcrReviewListResponse(BaseModel):
@@ -223,6 +230,14 @@ class AdminOcrReviewListResponse(BaseModel):
 class AdminOcrReviewUpdateRequest(BaseModel):
     status: str = Field(min_length=1, max_length=32)
     notes: str | None = Field(default=None, max_length=400)
+    include_in_training: bool = False
+
+
+class AdminOcrReviewReprocessResponse(BaseModel):
+    detail: str
+    outcome: str
+    recognized_rows: int = 0
+    duplicates_ignored: int = 0
 
 
 class AdminConsumableCreateRequest(BaseModel):
