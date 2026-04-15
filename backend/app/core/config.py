@@ -1,4 +1,6 @@
 from pydantic import model_validator
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +28,10 @@ class Settings(BaseSettings):
         env_file=".env",
         extra="ignore",
     )
+
+    @property
+    def _repo_root(self) -> Path:
+        return Path(__file__).resolve().parents[3]
 
     @model_validator(mode="after")
     def reject_unsafe_admin_defaults(self):
@@ -119,7 +125,11 @@ class Settings(BaseSettings):
 
     @property
     def ocr_review_dir(self) -> str:
-        return str(self.OCR_REVIEW_DIR or "backend/app/data/ocr_review").strip() or "backend/app/data/ocr_review"
+        raw_value = str(self.OCR_REVIEW_DIR or "backend/app/data/ocr_review").strip() or "backend/app/data/ocr_review"
+        review_dir = Path(raw_value)
+        if not review_dir.is_absolute():
+            review_dir = (self._repo_root / review_dir).resolve()
+        return str(review_dir)
 
     @property
     def catalog_storage(self) -> str:

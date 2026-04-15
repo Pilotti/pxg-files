@@ -15,6 +15,7 @@ backend/htmlcov/
 backend/ocr_debug/
 backend/app/data/ocr_debug/
 backend/app/data/ocr_review/
+backend/backend/app/data/ocr_review/
 backend/app/data/**/*.json
 backend/tasks.db
 
