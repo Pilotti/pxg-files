@@ -13,6 +13,8 @@ import unicodedata
 import pytesseract
 from PIL import Image, ImageFilter, ImageOps
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,6 +67,9 @@ def _get_known_items() -> dict[str, str]:
     """
     global _KNOWN_ITEMS_CACHE, _KNOWN_ITEMS_MTIME
 
+    if settings.use_database_catalog:
+        return _KNOWN_ITEMS_CACHE or {}
+
     data_file = Path(__file__).resolve().parent.parent / "data" / "hunts_npc_prices.json"
     try:
         current_mtime = data_file.stat().st_mtime
@@ -98,9 +103,10 @@ def refresh_approved_aliases_cache(db: object) -> int:
     Returns the number of aliases loaded.
     """
     global _APPROVED_ALIASES_CACHE
+    global _KNOWN_ITEMS_CACHE
     try:
         from app.models.hunt_item_alias import HuntItemAlias  # avoid circular at module level
-        from sqlalchemy.orm import Session as _Session
+        from app.services.hunt_npc_prices import get_known_item_display_map
 
         rows = (
             db.query(HuntItemAlias)  # type: ignore[attr-defined]
@@ -117,6 +123,11 @@ def refresh_approved_aliases_cache(db: object) -> int:
             if obs_norm and canonical:
                 mapping[obs_norm] = canonical
         _APPROVED_ALIASES_CACHE = mapping
+        if settings.use_database_catalog:
+            _KNOWN_ITEMS_CACHE = {
+                _normalize_for_cache(display): display
+                for display in get_known_item_display_map(db).values()
+            }
         return len(mapping)
     except Exception:
         logger.exception("Failed to refresh approved hunt item aliases cache for OCR.")

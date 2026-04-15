@@ -27,7 +27,7 @@ def register_observed_item(db: Session, observed_name: str) -> HuntItemAlias | N
     if not normalized:
         return None
 
-    auto_approve = has_npc_price_item(observed)
+    auto_approve = has_npc_price_item(observed, db=db)
 
     alias = (
         db.query(HuntItemAlias)

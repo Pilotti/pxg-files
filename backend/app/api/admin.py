@@ -26,6 +26,7 @@ from app.models.tasks import (
     TaskTemplate,
 )
 from app.models.character import Character
+from app.models.catalog import PokemonEntry
 from app.models.hunt_session import HuntSession
 from app.models.refresh_token import RefreshToken
 from app.models.sidebar_menu import SidebarMenuSetting
@@ -326,7 +327,8 @@ def admin_create_task(
     db.add(item)
     db.commit()
     db.refresh(item)
-    export_task_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_task_templates_to_json_files(db)
 
     return TaskCatalogResponse(
         id=item.id,
@@ -371,7 +373,8 @@ def admin_update_task(
 
     db.commit()
     db.refresh(item)
-    export_task_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_task_templates_to_json_files(db)
 
     return TaskCatalogResponse(
         id=item.id,
@@ -403,7 +406,8 @@ def admin_toggle_task_active(
 
     item.is_active = not item.is_active
     db.commit()
-    export_task_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_task_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Task ativada com sucesso" if item.is_active else "Task desativada com sucesso"
@@ -426,7 +430,8 @@ def admin_delete_task(
     )
     db.delete(item)
     db.commit()
-    export_task_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_task_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Task removida permanentemente do sistema e das listas dos personagens"
@@ -507,7 +512,8 @@ def admin_create_quest(
     db.add(item)
     db.commit()
     db.refresh(item)
-    export_quest_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_quest_templates_to_json_files(db)
 
     return QuestCatalogResponse(
         id=item.id,
@@ -546,7 +552,8 @@ def admin_update_quest(
 
     db.commit()
     db.refresh(item)
-    export_quest_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_quest_templates_to_json_files(db)
 
     return QuestCatalogResponse(
         id=item.id,
@@ -575,7 +582,8 @@ def admin_toggle_quest_active(
 
     item.is_active = not item.is_active
     db.commit()
-    export_quest_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_quest_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Quest ativada com sucesso" if item.is_active else "Quest desativada com sucesso"
@@ -598,7 +606,8 @@ def admin_delete_quest(
     )
     db.delete(item)
     db.commit()
-    export_quest_templates_to_json_files(db)
+    if not settings.use_database_catalog:
+        export_quest_templates_to_json_files(db)
 
     return ActionResponse(
         detail="Quest removida permanentemente do sistema e das listas dos personagens"
@@ -639,7 +648,7 @@ def admin_update_hunt_item_alias(
 ):
     # When approving, canonical_name must exist in the known NPC price items.
     if payload.is_approved and payload.canonical_name:
-        if not has_npc_price_item(payload.canonical_name):
+        if not has_npc_price_item(payload.canonical_name, db=db):
             raise HTTPException(
                 status_code=422,
                 detail=f"Nome canônico '{payload.canonical_name}' não encontrado na lista de itens NPC.",
@@ -700,10 +709,11 @@ def admin_create_manual_hunt_item_alias(
 
 @router.get("/hunt-npc-prices/names", response_model=list[str])
 def admin_list_hunt_npc_price_names(
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
-    """Return all known item names from hunts_npc_prices.json as a plain list."""
-    items = list_npc_prices()
+    """Return all known item names as a plain list."""
+    items = list_npc_prices(db=db)
     return sorted(str(item["name"]) for item in items)
 
 
@@ -715,7 +725,7 @@ def admin_list_hunt_npc_prices(
     db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
-    items = list_npc_prices(search=search)
+    items = list_npc_prices(search=search, db=db)
     total = len(items)
     offset = (page - 1) * page_size
     paged_items = items[offset: offset + page_size]
@@ -746,6 +756,7 @@ def admin_update_hunt_npc_price(
         previous_name=payload.previous_name,
         new_name=payload.name,
         unit_price=payload.unit_price,
+        db=db,
     )
     sync_aliases_for_canonical_name(
         db,
@@ -767,7 +778,7 @@ def admin_create_hunt_npc_price(
 ):
     """Create a new NPC price item. Raises 409 if the name already exists."""
     from app.services.hunt_npc_prices import has_npc_price_item
-    if has_npc_price_item(payload.name):
+    if has_npc_price_item(payload.name, db=db):
         raise HTTPException(
             status_code=409,
             detail=f"Item '{payload.name}' já existe na tabela de preços NPC.",
@@ -776,6 +787,7 @@ def admin_create_hunt_npc_price(
         previous_name="",
         new_name=payload.name,
         unit_price=payload.unit_price,
+        db=db,
     )
     db.commit()
     return AdminNpcPriceResponse(
@@ -790,16 +802,17 @@ def admin_list_consumables(
     category: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
-    items = list_consumables_service(search=search, category=category)
+    items = list_consumables_service(search=search, category=category, db=db)
     total = len(items)
     offset = (page - 1) * page_size
     paged = items[offset: offset + page_size]
     total_pages = max(1, (total + page_size - 1) // page_size)
     return AdminConsumableListResponse(
         items=[AdminConsumableResponse(**item) for item in paged],
-        available_categories=list_consumable_categories(),
+        available_categories=list_consumable_categories(db=db),
         total=total,
         page=page,
         page_size=page_size,
@@ -810,21 +823,23 @@ def admin_list_consumables(
 @router.post("/consumables", response_model=AdminConsumableResponse, status_code=201)
 def admin_create_consumable(
     payload: AdminConsumableCreateRequest,
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
-    if has_consumable(payload.nome):
+    if has_consumable(payload.nome, db=db):
         raise HTTPException(status_code=409, detail=f"Consumível '{payload.nome}' já existe.")
-    created = create_consumable(payload.nome, payload.preco_npc, payload.categoria)
+    created = create_consumable(payload.nome, payload.preco_npc, payload.categoria, db=db)
     return AdminConsumableResponse(**created)
 
 
 @router.put("/consumables", response_model=AdminConsumableResponse)
 def admin_update_consumable(
     payload: AdminConsumableUpdateRequest,
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
     try:
-        updated = update_consumable(payload.previous_nome, payload.nome, payload.preco_npc, payload.categoria)
+        updated = update_consumable(payload.previous_nome, payload.nome, payload.preco_npc, payload.categoria, db=db)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return AdminConsumableResponse(**updated)
@@ -833,10 +848,11 @@ def admin_update_consumable(
 @router.delete("/consumables/{nome}", status_code=204)
 def admin_delete_consumable(
     nome: str,
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
     try:
-        delete_consumable(nome)
+        delete_consumable(nome, db=db)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -922,13 +938,46 @@ def _parse_entry(nome: str) -> AdminPokemonEntry:
     return AdminPokemonEntry(dex_id="", name=nome, full_name=nome)
 
 
+def _pokemon_entry_from_model(item: PokemonEntry) -> AdminPokemonEntry:
+    return AdminPokemonEntry(
+        dex_id=item.dex_id or "",
+        name=item.name,
+        full_name=item.full_name,
+    )
+
+
 @router.get("/pokemon", response_model=AdminPokemonListResponse)
 def admin_list_pokemon(
     search: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(30, ge=1, le=200),
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
+    if settings.use_database_catalog:
+        query = db.query(PokemonEntry)
+        if search:
+            term = f"%{search.strip()}%"
+            query = query.filter(PokemonEntry.full_name.ilike(term))
+
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = (
+            query.order_by(PokemonEntry.full_name.asc())
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
+        total_pages = max(1, (total + page_size - 1) // page_size)
+
+        return AdminPokemonListResponse(
+            items=[_pokemon_entry_from_model(item) for item in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
     names = _load_inimigos()
     if search:
         term = search.strip().lower()
@@ -951,11 +1000,22 @@ def admin_list_pokemon(
 @router.post("/pokemon", response_model=AdminPokemonEntry, status_code=201)
 def admin_create_pokemon(
     data: AdminPokemonCreateRequest,
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
     dex_id = data.dex_id.strip()
     name = data.name.strip()
     full_name = f"{dex_id} - {name}"
+    if settings.use_database_catalog:
+        exists = db.query(PokemonEntry.id).filter(PokemonEntry.full_name.ilike(full_name)).first()
+        if exists:
+            raise HTTPException(status_code=409, detail="PokÃ©mon jÃ¡ existe na lista.")
+        item = PokemonEntry(full_name=full_name, dex_id=dex_id, name=name)
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+        return _pokemon_entry_from_model(item)
+
     names = _load_inimigos()
     if any(n.lower() == full_name.lower() for n in names):
         raise HTTPException(status_code=409, detail="Pokémon já existe na lista.")
@@ -967,14 +1027,30 @@ def admin_create_pokemon(
 @router.put("/pokemon", response_model=AdminPokemonEntry)
 def admin_update_pokemon(
     data: AdminPokemonUpdateRequest,
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
-    names = _load_inimigos()
     original = data.original_full_name.strip()
+    new_full = f"{data.dex_id.strip()} - {data.name.strip()}"
+    if settings.use_database_catalog:
+        item = db.query(PokemonEntry).filter(PokemonEntry.full_name == original).first()
+        if item is None:
+            raise HTTPException(status_code=404, detail="PokÃ©mon nÃ£o encontrado.")
+        if new_full != original:
+            exists = db.query(PokemonEntry.id).filter(PokemonEntry.full_name.ilike(new_full)).first()
+            if exists:
+                raise HTTPException(status_code=409, detail="JÃ¡ existe um PokÃ©mon com esse nome.")
+        item.dex_id = data.dex_id.strip()
+        item.name = data.name.strip()
+        item.full_name = new_full
+        db.commit()
+        db.refresh(item)
+        return _pokemon_entry_from_model(item)
+
+    names = _load_inimigos()
     idx = next((i for i, n in enumerate(names) if n == original), None)
     if idx is None:
         raise HTTPException(status_code=404, detail="Pokémon não encontrado.")
-    new_full = f"{data.dex_id.strip()} - {data.name.strip()}"
     if new_full != original and any(n.lower() == new_full.lower() for n in names):
         raise HTTPException(status_code=409, detail="Já existe um Pokémon com esse nome.")
     names[idx] = new_full
@@ -985,8 +1061,17 @@ def admin_update_pokemon(
 @router.delete("/pokemon", response_model=ActionResponse)
 def admin_delete_pokemon(
     full_name: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
     _: dict = Depends(get_current_admin),
 ):
+    if settings.use_database_catalog:
+        item = db.query(PokemonEntry).filter(PokemonEntry.full_name == full_name).first()
+        if item is None:
+            raise HTTPException(status_code=404, detail="PokÃ©mon nÃ£o encontrado.")
+        db.delete(item)
+        db.commit()
+        return ActionResponse(detail="PokÃ©mon removido da lista.")
+
     names = _load_inimigos()
     before = len(names)
     names = [n for n in names if n != full_name]

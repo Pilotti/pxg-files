@@ -149,7 +149,7 @@ async def process_drops_ocr(
             warnings.append(f"Falha ao processar imagem: {file_name}")
 
     unique_lines, duplicates_ignored = deduplicate_drop_lines(recognized_lines)
-    player_prices = get_account_player_prices(current_user.id)
+    player_prices = get_account_player_prices(current_user.id, db=db)
 
     seen_row_keys: set[str] = set()
     rows: list[HuntDropRow] = []
@@ -170,6 +170,7 @@ async def process_drops_ocr(
             item_name=canonical_name,
             quantity=line.quantity,
             ocr_total_price=line.npc_total_price,
+            db=db,
         )
         row_id = len(rows) + 1
         rows.append(
@@ -204,19 +205,24 @@ async def process_drops_ocr(
 
 
 @router.get("/player-prices/me")
-async def list_player_prices(current_user: User = Depends(get_current_user)):
-    return {"items": get_account_player_prices(current_user.id)}
+async def list_player_prices(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return {"items": get_account_player_prices(current_user.id, db=db)}
 
 
 @router.put("/player-prices")
 async def update_player_price(
     payload: SavePlayerPricePayload,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     save_account_player_price(
         account_id=current_user.id,
         item_name=payload.item_name,
         player_unit_price=payload.player_unit_price,
+        db=db,
     )
     return {"ok": True}
 
@@ -330,7 +336,17 @@ async def delete_hunt_session(
 @router.get("/enemies")
 async def list_enemies(
     _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> list[str]:
+    if settings.use_database_catalog:
+        from app.models.catalog import PokemonEntry
+
+        return [
+            item.full_name
+            for item in db.query(PokemonEntry).order_by(PokemonEntry.full_name.asc()).all()
+            if item.full_name
+        ]
+
     from pathlib import Path
     import json
 
@@ -346,5 +362,6 @@ async def list_enemies(
 @router.get("/consumables")
 async def list_consumables(
     _current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> list[dict]:
-    return list_consumables_service()
+    return list_consumables_service(db=db)

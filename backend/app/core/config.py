@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     OCR_TESSERACT_LANG: str = "eng"
     OCR_TESSERACT_OEM: int = 1
     OCR_REVIEW_DIR: str = "backend/app/data/ocr_review"
+    CATALOG_STORAGE: str = "json"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -119,6 +120,17 @@ class Settings(BaseSettings):
     @property
     def ocr_review_dir(self) -> str:
         return str(self.OCR_REVIEW_DIR or "backend/app/data/ocr_review").strip() or "backend/app/data/ocr_review"
+
+    @property
+    def catalog_storage(self) -> str:
+        value = str(self.CATALOG_STORAGE or "json").strip().lower()
+        if value not in {"json", "database"}:
+            raise ValueError("CATALOG_STORAGE deve ser 'json' ou 'database'.")
+        return value
+
+    @property
+    def use_database_catalog(self) -> bool:
+        return self.catalog_storage == "database"
 
 
 settings = Settings()

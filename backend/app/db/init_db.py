@@ -5,6 +5,8 @@ import logging
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
 
+from app.core.config import settings
+from app.models.catalog import ConsumableCatalogItem, HuntNpcPrice, PokemonEntry
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.models.character import Character
@@ -12,6 +14,7 @@ from app.models.tasks import TaskTemplate, QuestTemplate, CharacterTask, Charact
 from app.models.hunt_item_alias import HuntItemAlias
 from app.models.hunt_session import HuntSession
 from app.models.sidebar_menu import SidebarMenuSetting
+from app.services.catalog_seed import seed_database_catalogs_if_empty
 from app.services.task_json_storage import ensure_task_json_files, import_task_templates_from_json_files
 from app.services.quest_json_storage import ensure_quest_json_files, import_quest_templates_from_json_files
 
@@ -139,20 +142,28 @@ def init_db() -> None:
                 "('diarias', 'Diárias', '/diarias', 5, true, false) "
                 "ON CONFLICT (menu_key) DO NOTHING"
             ))
+            conn.execute(text(
+                "INSERT INTO sidebar_menu_settings (menu_key, label, path, sort_order, is_enabled, is_beta) "
+                "VALUES ('rainbow_orbs', 'Rainbow Orbs', '/rainbow-orbs', 6, true, false) "
+                "ON CONFLICT (menu_key) DO NOTHING"
+            ))
             conn.commit()
         except Exception:
             conn.rollback()
             logger.exception("Falha critica durante migracoes de banco.")
             raise
 
-    # Task/quest seed is intentionally disabled.
-    # Catalog data will now be managed manually from admin.
     ensure_task_json_files()
     ensure_quest_json_files()
 
     db = SessionLocal()
     try:
-        import_task_templates_from_json_files(db)
+        if settings.use_database_catalog:
+            seed_database_catalogs_if_empty(db)
+            if db.query(TaskTemplate.id).first() is None:
+                import_task_templates_from_json_files(db)
+        else:
+            import_task_templates_from_json_files(db)
     except Exception as exc:
         print(f"Falha ao sincronizar task JSONs: {exc}")
         db.rollback()
@@ -161,7 +172,11 @@ def init_db() -> None:
 
     db = SessionLocal()
     try:
-        import_quest_templates_from_json_files(db)
+        if settings.use_database_catalog:
+            if db.query(QuestTemplate.id).first() is None:
+                import_quest_templates_from_json_files(db)
+        else:
+            import_quest_templates_from_json_files(db)
     except Exception as exc:
         print(f"Falha ao sincronizar quest JSONs: {exc}")
         db.rollback()

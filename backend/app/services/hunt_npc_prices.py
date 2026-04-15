@@ -4,6 +4,11 @@ import json
 from pathlib import Path
 import unicodedata
 
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.models.catalog import HuntNpcPrice
+
 
 DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "hunts_npc_prices.json"
 
@@ -17,6 +22,12 @@ def normalize_item_name(name: str) -> str:
         if char.isalnum() or char == " ":
             cleaned.append(char)
     return " ".join("".join(cleaned).split())
+
+
+def _require_db(db: Session | None) -> Session:
+    if db is None:
+        raise RuntimeError("db e obrigatorio quando CATALOG_STORAGE=database")
+    return db
 
 
 def _ensure_store() -> None:
@@ -38,12 +49,39 @@ def _read_store() -> dict[str, float]:
     }
 
 
-def get_npc_unit_price(item_name: str) -> float:
+def _read_database_store(db: Session) -> dict[str, float]:
+    return {
+        item.normalized_name: float(item.unit_price or 0)
+        for item in db.query(HuntNpcPrice).all()
+        if item.normalized_name
+    }
+
+
+def _get_store(db: Session | None = None) -> dict[str, float]:
+    if settings.use_database_catalog:
+        return _read_database_store(_require_db(db))
+    return _read_store()
+
+
+def get_known_item_display_map(db: Session | None = None) -> dict[str, str]:
+    if settings.use_database_catalog:
+        session = _require_db(db)
+        return {
+            item.normalized_name: item.name
+            for item in session.query(HuntNpcPrice).all()
+            if item.normalized_name and item.name
+        }
+
+    store = _read_store()
+    return {name: name for name in store}
+
+
+def get_npc_unit_price(item_name: str, db: Session | None = None) -> float:
     normalized_name = normalize_item_name(item_name)
     if not normalized_name:
         return 0.0
 
-    store = _read_store()
+    store = _get_store(db)
     return float(store.get(normalized_name, 0.0))
 
 
@@ -51,15 +89,14 @@ def get_npc_unit_price_from_ocr_context(
     item_name: str,
     quantity: float | int | None,
     ocr_total_price: float | int | None,
+    db: Session | None = None,
 ) -> float:
     normalized_name = normalize_item_name(item_name)
     if not normalized_name:
         return 0.0
 
-    store = _read_store()
+    store = _get_store(db)
 
-    # Ambiguous OCR case: Bee Sting can be read as two close names with very different prices.
-    # Use OCR total/quantity to infer which official NPC unit value is the best fit.
     if normalized_name in {"bee sting", "bec sting"}:
         candidate_prices = []
         if "bee sting" in store:
@@ -82,16 +119,37 @@ def get_npc_unit_price_from_ocr_context(
     return float(store.get(normalized_name, 0.0))
 
 
-def has_npc_price_item(item_name: str) -> bool:
+def has_npc_price_item(item_name: str, db: Session | None = None) -> bool:
     normalized_name = normalize_item_name(item_name)
     if not normalized_name:
         return False
+
+    if settings.use_database_catalog:
+        session = _require_db(db)
+        return session.query(HuntNpcPrice.id).filter(
+            HuntNpcPrice.normalized_name == normalized_name
+        ).first() is not None
 
     store = _read_store()
     return normalized_name in store
 
 
-def list_npc_prices(search: str | None = None) -> list[dict[str, float | str]]:
+def list_npc_prices(search: str | None = None, db: Session | None = None) -> list[dict[str, float | str]]:
+    if settings.use_database_catalog:
+        session = _require_db(db)
+        query = session.query(HuntNpcPrice)
+        if search:
+            needle = normalize_item_name(search)
+            query = query.filter(HuntNpcPrice.normalized_name.contains(needle))
+        return [
+            {
+                "name": item.name,
+                "normalized_name": item.normalized_name,
+                "unit_price": float(item.unit_price or 0),
+            }
+            for item in query.order_by(HuntNpcPrice.normalized_name.asc()).all()
+        ]
+
     store = _read_store()
     items = [
         {"name": item_name, "normalized_name": item_name, "unit_price": float(value)}
@@ -106,11 +164,46 @@ def list_npc_prices(search: str | None = None) -> list[dict[str, float | str]]:
     return items
 
 
-def update_npc_price(previous_name: str, new_name: str, unit_price: float) -> dict[str, float | str]:
+def update_npc_price(
+    previous_name: str,
+    new_name: str,
+    unit_price: float,
+    db: Session | None = None,
+) -> dict[str, float | str]:
     previous_normalized = normalize_item_name(previous_name)
     new_normalized = normalize_item_name(new_name)
     if not new_normalized:
-        raise ValueError("Nome inválido para preço NPC")
+        raise ValueError("Nome invalido para preco NPC")
+
+    if settings.use_database_catalog:
+        session = _require_db(db)
+        item = None
+        if previous_normalized:
+            item = session.query(HuntNpcPrice).filter(
+                HuntNpcPrice.normalized_name == previous_normalized
+            ).first()
+
+        if item is None:
+            item = session.query(HuntNpcPrice).filter(
+                HuntNpcPrice.normalized_name == new_normalized
+            ).first()
+
+        if item is None:
+            item = HuntNpcPrice(name=new_normalized, normalized_name=new_normalized, unit_price=float(unit_price))
+            session.add(item)
+        else:
+            if previous_normalized != new_normalized and has_npc_price_item(new_name, db=session):
+                raise ValueError(f"Item '{new_name}' ja existe na tabela de precos NPC.")
+            item.name = new_normalized
+            item.normalized_name = new_normalized
+            item.unit_price = float(unit_price)
+
+        session.flush()
+        return {
+            "name": item.name,
+            "normalized_name": item.normalized_name,
+            "unit_price": float(item.unit_price or 0),
+        }
 
     store = _read_store()
 
